@@ -1,0 +1,8 @@
+node_modules
+dist
+out
+release
+coverage
+apps/server/drizzle
+apps/desktop/.stage
+package-lock.json

@@ -1,0 +1,46 @@
+{
+  "name": "@pmp/desktop",
+  "productName": "Pocket Money Pal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pocket Money Pal kiosk app",
+  "author": "Chris Hammond-Ross",
+  "license": "MIT",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "stage": "node scripts/stage-server.mjs",
+    "dev": "npm run build && npm run stage && node scripts/launch.mjs",
+    "dist": "npm run build && npm run stage && electron-builder --win",
+    "typecheck": "tsc --noEmit"
+  },
+  "build": {
+    "appId": "io.github.pocketmoneypal",
+    "productName": "Pocket Money Pal",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": ".stage/server",
+        "to": "server"
+      }
+    ],
+    "npmRebuild": false,
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3"
+  }
+}

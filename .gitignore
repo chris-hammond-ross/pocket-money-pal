@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+release/
+apps/desktop/.stage/
+*.tsbuildinfo
+
+# Local data
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# Throwaway prototypes (see prototypes/README.md, lives locally only)
+prototypes/
+
+# Env / OS / editor
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Test output
+coverage/
+playwright-report/
+test-results/
