@@ -10,6 +10,28 @@ import {
   type ReactNode,
 } from 'react';
 
+/** Queries that only make sense while setup is needed (they answer 409 afterwards). */
+export const SETUP_ONLY_QUERIES = ['setup-kiosk', 'setup-draft'];
+
+/** Queries showing the family's chores, points and money: refetched on every data event. */
+const FAMILY_QUERIES = [
+  'kiosk-today',
+  'day',
+  'claimed',
+  'chores',
+  'players',
+  'settings',
+  'money',
+  'savings',
+  'payday-latest',
+];
+
+/** Queries about paired devices: refetched on `devices.changed`. */
+const DEVICE_QUERIES = ['device-me', 'devices', 'pc-invite', 'game-masters'];
+
+/** Events that aren't about the family's data, so the kiosk board needn't refetch. */
+const PLUMBING_EVENTS: ServerEvent['type'][] = ['hello', 'presence', 'ping'];
+
 export type ConnectionStatus = 'connecting' | 'open' | 'closed';
 
 interface LiveEventsState {
@@ -54,6 +76,23 @@ export function LiveEventsProvider({ children }: { children: ReactNode }) {
         if (event.type === 'hello' || event.type === 'presence') setClients(event.clients);
         if (event.type === 'settings.updated')
           void queryClient.invalidateQueries({ queryKey: ['settings'] });
+        if (event.type === 'devices.changed') {
+          // Pairing changed: a revoked phone finds out here, and the PC's card may go.
+          for (const key of DEVICE_QUERIES) void queryClient.invalidateQueries({ queryKey: [key] });
+        } else if (
+          event.type === 'setup.completed' ||
+          event.type === 'data.changed' ||
+          event.type === 'clock.changed'
+        ) {
+          // Setup finished, a write from outside the server, or the dev clock moved:
+          // anything may have changed.
+          void queryClient.invalidateQueries({
+            predicate: (q) => !SETUP_ONLY_QUERIES.includes(String(q.queryKey[0])),
+          });
+        } else if (!PLUMBING_EVENTS.includes(event.type)) {
+          // Every change to the family's data refreshes the board, the Day tab and the tray.
+          for (const key of FAMILY_QUERIES) void queryClient.invalidateQueries({ queryKey: [key] });
+        }
         setLastEvent(event);
         listeners.current.forEach((listener) => listener(event));
       };

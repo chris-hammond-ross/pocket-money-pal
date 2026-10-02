@@ -1,0 +1,136 @@
+.heading {
+  flex: 1;
+  font-size: 10px;
+  color: var(--pmp-gold);
+}
+
+.editor {
+  text-align: center;
+}
+
+.carousel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 10px;
+  margin: 0 auto;
+  width: 260px;
+  max-width: 100%;
+  border-radius: 26px;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--c) 45%, transparent),
+    transparent 70%
+  );
+
+  & button {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 0;
+    background: var(--pmp-panel-2);
+    color: var(--pmp-text);
+    font-size: 24px;
+    cursor: pointer;
+  }
+}
+
+.avatar {
+  font-size: 104px;
+  line-height: 1.1;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
+  animation: spin 0.25s;
+}
+
+@keyframes spin {
+  from {
+    transform: scale(0.6) rotate(-20deg);
+    opacity: 0.3;
+  }
+}
+
+.name {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid var(--pmp-line);
+  font: inherit;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--pmp-text);
+  padding: 4px 0;
+  outline: none;
+  text-align: center;
+
+  &:focus {
+    border-color: var(--pmp-gold);
+  }
+}
+
+.error {
+  color: var(--pmp-late);
+  margin: 6px 0 0;
+  font-size: 14px;
+}
+
+.age {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  margin: 16px 0;
+
+  & button {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 0;
+    background: var(--pmp-panel-2);
+    color: var(--pmp-text);
+    font-size: 24px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.35;
+    }
+  }
+
+  & small {
+    display: block;
+    color: var(--pmp-dim);
+  }
+
+  & b {
+    font-size: 20px;
+    display: inline-block;
+    min-width: 60px;
+    margin-top: 4px;
+  }
+}
+
+.swatches {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  & button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    cursor: pointer;
+    transition: transform 0.1s;
+
+    &[data-on] {
+      border-color: white;
+      transform: scale(1.15);
+    }
+  }
+}
+
+.remove {
+  margin-top: 24px;
+}

@@ -1,0 +1,1 @@
+ALTER TABLE `setup_drafts` ADD `token` text;

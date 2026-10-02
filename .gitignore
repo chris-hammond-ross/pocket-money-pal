@@ -16,6 +16,7 @@ data/
 
 # Throwaway prototypes (see prototypes/README.md, lives locally only)
 prototypes/
+docs/
 
 # Env / OS / editor
 .env

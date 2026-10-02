@@ -1,0 +1,128 @@
+/* The kiosk title screen, read from across the room at 1920×1080. */
+
+.screen {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  align-items: center;
+  gap: 4vw;
+  padding: 6vh 7vw;
+}
+
+.hero {
+  text-align: center;
+
+  & h1 {
+    font-family: var(--pmp-font-pixel);
+    font-weight: 400;
+    font-size: clamp(28px, 3.4vw, 64px);
+    line-height: 1.5;
+    color: var(--pmp-gold);
+    text-shadow: 0 0 28px rgba(255, 212, 59, 0.6);
+    margin: 24px 0;
+  }
+
+  & p {
+    color: var(--pmp-dim);
+    font-size: clamp(18px, 1.6vw, 30px);
+    margin: 0;
+  }
+}
+
+.logo {
+  font-size: clamp(100px, 11vw, 200px);
+  line-height: 1;
+  animation: pmp-bob 2.2s ease-in-out infinite;
+}
+
+.blink {
+  font-family: var(--pmp-font-pixel);
+  font-size: clamp(14px, 1.2vw, 22px) !important;
+  color: var(--pmp-text) !important;
+  margin-top: 6vh !important;
+  animation: pmp-blink 1s steps(2) infinite;
+}
+
+.card {
+  background: var(--pmp-panel);
+  border: 3px solid var(--pmp-gold);
+  border-radius: 28px;
+  box-shadow: 0 0 40px rgba(255, 212, 59, 0.25);
+  padding: 32px;
+  text-align: center;
+  max-width: 560px;
+  justify-self: center;
+  width: 100%;
+}
+
+.cardTitle {
+  font-size: clamp(12px, 1vw, 18px);
+  color: var(--pmp-gold);
+  line-height: 1.6;
+}
+
+.qr {
+  margin: 24px auto;
+  width: min(100%, 360px);
+  aspect-ratio: 1;
+  background: white;
+  border-radius: 18px;
+  padding: 14px;
+  display: grid;
+  place-items: center;
+
+  & > div,
+  & svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+}
+
+.qrPlaceholder {
+  color: var(--pmp-bg);
+  font-size: 18px;
+  padding: 20px;
+}
+
+.steps {
+  font-size: clamp(16px, 1.2vw, 22px);
+  margin: 0 0 12px;
+}
+
+.address {
+  font-size: clamp(15px, 1.1vw, 20px);
+  color: var(--pmp-gold);
+  font-weight: 600;
+  word-break: break-all;
+  margin: 0 0 16px;
+
+  & small {
+    display: block;
+    color: var(--pmp-dim);
+    font-weight: 400;
+    font-size: 0.8em;
+    margin-top: 4px;
+  }
+}
+
+.here {
+  display: inline-block;
+  color: var(--pmp-dim);
+  font-size: clamp(15px, 1.1vw, 20px);
+  padding: 12px 20px;
+  border: 2px dashed var(--pmp-line);
+  border-radius: 14px;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--pmp-text);
+    border-color: var(--pmp-dim);
+  }
+}
+
+@media (max-width: 900px) {
+  .screen {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,1 @@
+ALTER TABLE `chores` ADD `skipped_on` text;

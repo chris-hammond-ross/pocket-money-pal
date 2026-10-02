@@ -69,12 +69,12 @@ CLAUDE.md       Project conventions and the prototyping workflow, for the LLM
 ### Data model (first draft)
 
 - **family_settings**: currency, points-to-money rate, timezone, sound volume, quiet hours
-- **users**: `role` (parent or child), name, avatar and colour, PIN hash, column order
+- **users**: `role` (parent or child), name, avatar and colour, column order
 - **chores** (templates): title and icon, base points, recurrence (daily or chosen weekdays), `due_by`, `bonus_before`, `late_after`, penalty, whether it needs approval, and whether it is shared and how points split between kids
 - **chore_assignments**: chore ↔ child (many-to-many, which covers shared chores)
 - **chore_instances**: one row per chore per child per day, created by the scheduler. State goes `open → claimed → approved | rejected`, plus `claimed_at`, the child's "did it without being asked" flag, and the bonuses the parent confirmed
 - **ledger** (append-only; every balance is calculated from it): child, kind (`chore_points`, `bonus`, `penalty`, `conversion`, `extra_income`, `goal_allocation`, `spend`, `adjustment`), points and/or money **stored as whole cents**, note, and who made the entry
-- **goals**: child, name, target in cents, term (short, medium or long), image path, shop URL, priority, and `achieved_at`
+- **goals** (the jars, as built by spec 004): child, name, emoji, target in cents, shop URL and its picture, order, who made it, price checked, smashed, bought and soft delete. A jar's money is its `goal_allocation` and `spend` ledger rows. Also **envelopes** (gifts waiting on the kiosk) and **paydays** (one per payday slot)
 - **surprise_tasks**: title, reward, who can claim it (a named child or first to claim), expiry, and trigger source (parent, schedule or HA)
 - **devices / api_tokens**: paired parent phones and HA tokens (stored hashed)
 - **events** (audit and activity feed): drives the "what happened today" view and later badges
@@ -82,13 +82,13 @@ CLAUDE.md       Project conventions and the prototyping workflow, for the LLM
 ### Accounts and security
 
 - **Kids** on the kiosk: they tap their column or avatar. A PIN is optional, since siblings share the screen.
-- **Parents on the kiosk**: a PIN opens a **short elevated session** (about 60 seconds, a visible countdown, restarts on each action, and an "End" button). Failed attempts are rate-limited.
-- **Parents on a phone**: pair once by scanning a **QR code** shown on the kiosk during a parent session. The phone gets a long-lived device token, and each device can be revoked. After that, opening the page on the phone logs the parent straight in.
+- **Parents act only from a paired phone** ([ADR 0008](decisions/0008-approvals-on-the-phone.md)). The kiosk has no parent mode and no PIN.
+- **Pairing**: a paired phone shows a short-lived **QR code** that invites the next phone. While no phone is paired at all (for example, after setup was done on the PC), the kiosk shows that QR code instead. Each phone gets a long-lived device token, and each device can be revoked from any paired phone. After that, opening the page on the phone logs the parent straight in.
 - Access is limited to the home network at first. Plain HTTP on the network means the phone can't install it as a full app with offline support (browsers require HTTPS for that), but a bookmarked page or home-screen shortcut works fine. HTTPS comes for free later through Tailscale or HA remote access.
 
 ### Remote access and Home Assistant (in stages)
 
-1. **Home network (MVP)**: the server listens on the network at `http://<pc-ip>:4789/parent`. It also announces itself as `pocketmoneypal.local` (mDNS) so nobody has to remember the IP. The installer adds the Windows firewall rule.
+1. **Home network (MVP)**: the server listens on the network at `http://<pc-ip>:4789/parent`. Nobody types the IP: phones get it from the kiosk's QR codes. (An mDNS name such as `pocketmoneypal.local` was dropped: Android phones didn't resolve `.local` names in session 3.3's check, ADR 0002.) The installer adds the Windows firewall rule.
 2. **HA add-on (later)**: HA uses long-lived API tokens to call the REST API (create a surprise task, read balances). The app sends webhooks to HA (chore overdue, goal reached), so HA can announce them on speakers, flash lights or notify parents' phones through the HA app. After that, possibly MQTT discovery so kids' points show up as HA sensors.
 3. **Away from home (later)**: Tailscale on the PC, or HA's remote access. No port forwarding.
 
@@ -122,7 +122,7 @@ The prototyping rules go in `CLAUDE.md`: 3 genuinely different approaches, one f
 
 ### Feature list (tidied up from your brain dump)
 
-**Family and accounts**: 2 parents and any number of children; the screen and permissions change with the role; kiosk PIN session with countdown; phone pairing.
+**Family and accounts**: 2 parents and any number of children; the screen and permissions change with the role; phone pairing (parents act from their phones, never on the kiosk).
 
 **Kiosk dashboard**: one column per child, side by side (Billy | Alice), in each child's colour and avatar. Each column shows today's chores, points today and this week, the top goal's progress bar, and alerts. Shared chores show in both columns and are marked as shared. Designed to be read from across the room on the second monitor.
 
@@ -135,11 +135,11 @@ The prototyping rules go in `CLAUDE.md`: 3 genuinely different approaches, one f
 
 **Alerts and timers**: "Bonus ends in 15 minutes" countdowns, a ticking-clock sound in the final minutes, an overdue state, and quiet hours.
 
-**Points and money**: chore screens show **points**; savings and goal screens show **money**. The conversion rate is set per family. _Still to decide (a good first prototype): does conversion happen automatically, or on a weekly "payday" that the kids watch happen?_
+**Points and money**: chore screens show **points**; savings and goal screens show **money**. The conversion rate is set per family. Points become money at a **weekly payday** the kids watch on the kiosk, then each child pours it into their jars ([spec 004](features/004-goals-and-payday.md)).
 
-**Savings and extra income**: a child or parent adds money from other sources (for example, £20 from Grandma), which adds to savings and brings goal dates forward. The ledger history shows each child's full money story.
+**Savings and extra income**: a parent adds money from other sources (for example, £20 from Grandma), which arrives on the kiosk as an envelope, and records spending. The savings book shows each child's full money story ([spec 004](features/004-goals-and-payday.md)).
 
-**Goals**: set by the child, with a name, price, term (short, medium or long), an image (upload or paste), and a shop link. The app can fetch the product image from the link automatically. Stats include: amount still needed, **chores still needed** (based on the child's recent average points), and an **estimated date**, for example "2 weeks or 5 chores to go!". A celebration plays when a goal is reached.
+**Goals**: each goal is a **jar** the child fills. Children make jars on the kiosk (a parent checks the price); parents can make and edit them on the phone, with a shop link and its picture. Big jars fill towards milestones, and stats ("~2 paydays", "about 11 quests to £25") come from the child's recent averages. A full jar is smashed to ask for it ([spec 004](features/004-goals-and-payday.md)).
 
 **Game layer**: party popper on early completion, sounds for claim, approve, goal progress and level-up, a daily streak counter, badges (first unprompted chore, 7-day streak, first goal reached), and possibly weekly XP levels.
 
@@ -151,11 +151,13 @@ The prototyping rules go in `CLAUDE.md`: 3 genuinely different approaches, one f
 
 ### Roadmap
 
+The session-by-session build plan, with a prompt for each session, is in [roadmap.md](roadmap.md).
+
 | Phase                     | Goal                                                                                                                                                                                                                         | Prototype rounds                                                    |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | **0. Foundations**        | `CLAUDE.md`, `.gitignore`, `prototypes/` with shared mock data, monorepo scaffold, Fastify + SQLite + Drizzle with one migration, React + Mantine shell, WebSocket "ping" shown live, Electron window loading the server, CI | none                                                                |
-| **1. Look and feel**      | Choose the visual style and kiosk layout                                                                                                                                                                                     | **Kiosk column dashboard** (3 styles); **parent PIN approval flow** |
-| **2. Core loop (MVP)**    | Family setup, chores and daily instances, child claims, parent PIN approval, points ledger, live kiosk                                                                                                                       | Chore claim interaction                                             |
+| **1. Look and feel**      | Choose the visual style and kiosk layout                                                                                                                                                                                     | **Kiosk column dashboard** (3 styles); **parent approval flow**     |
+| **2. Core loop (MVP)**    | Family setup, chores and daily instances, child claims, points ledger, live kiosk (approvals come with the phone in Phase 3)                                                                                                 | Chore claim interaction                                             |
 | **3. Parent phone**       | Home network access, QR pairing, approval queue, chore management on the phone                                                                                                                                               | Phone approval screen                                               |
 | **4. Money and goals**    | Conversion and payday, savings, extra income, goals with images and links, stats and estimated date                                                                                                                          | **Payday model**; goal card and progress                            |
 | **5. Game layer**         | Bonus and penalty tiers, alerts and timers, sounds, confetti, streaks, badges                                                                                                                                                | Celebration and alert styles                                        |

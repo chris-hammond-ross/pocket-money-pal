@@ -1,12 +1,25 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
-import { WS_PATH, familySettingsSchema, pingRequestSchema, type Health } from '@pmp/shared';
-import { eq } from 'drizzle-orm';
+import { WS_PATH, pingRequestSchema, type Health } from '@pmp/shared';
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
+import type { ServerClock } from './clock';
 import type { Db } from './db/client';
-import { familySettings } from './db/schema';
+import { createImageFetcher, GoalImages, type ImageFetcher } from './goal-image';
+import { ClaimNotifier, ensureVapidKeys, webPushSender, type PushSender } from './push';
+import { getSettings } from './repo/settings';
+import { choreRoutes } from './routes/chores';
+import { devRoutes } from './routes/dev';
+import { deviceRoutes } from './routes/devices';
+import { instanceRoutes } from './routes/instances';
+import { kioskRoutes } from './routes/kiosk';
+import { moneyRoutes } from './routes/money';
+import { playerRoutes } from './routes/players';
+import { pushRoutes } from './routes/push';
+import { setupRoutes } from './routes/setup';
+import { SecureUrl } from './secure-url';
 import { WsHub } from './ws';
 
 export const VERSION = '0.1.0';
@@ -15,17 +28,64 @@ export interface AppOptions {
   db: Db;
   webDist: string | null;
   logger?: FastifyServerOptions['logger'];
+  /** The clock for domain timestamps (faked in tests). Defaults to `devClock`, then real time. */
+  now?: () => number;
+  /**
+   * The movable development clock (`PMP_DEV_CLOCK=1`): adds `/api/dev/clock`. Null in
+   * production, where those routes don't exist.
+   */
+  devClock?: ServerClock | null;
+  /** `PMP_PUBLIC_URL`: the address phones should use, when the LAN guess is wrong. */
+  publicUrl?: string | null;
+  /** `PMP_SECURE_URL`: the HTTPS address; otherwise it's learned (ADR 0009). */
+  secureUrl?: string | null;
+  /** Sends Web Push messages. Defaults to the browser vendors' push services (tests fake it). */
+  pushSender?: PushSender;
+  /** `PMP_VAPID_SUBJECT`: the contact push services see in the VAPID token. */
+  vapidSubject?: string;
+  /** Where jar pictures are kept (`images/` next to the database); null keeps none. */
+  imagesDir?: string | null;
+  /** Fetches a shop link's picture. Defaults to the internet (tests fake it). */
+  imageFetcher?: ImageFetcher;
+  /** The payday settings changed: the scheduler re-plans (and may run a payday). */
+  onScheduleChanged?: () => void;
 }
 
 export async function buildApp({
   db,
   webDist,
   logger = false,
+  devClock = null,
+  now = devClock?.now ?? Date.now,
+  publicUrl = null,
+  secureUrl = null,
+  pushSender,
+  vapidSubject = 'mailto:pocketmoneypal@localhost',
+  imagesDir = null,
+  imageFetcher = createImageFetcher(),
+  onScheduleChanged,
 }: AppOptions): Promise<FastifyInstance> {
-  const app = Fastify({ logger });
+  // Trust X-Forwarded-For from loopback only: Vite's dev proxy (and a local HTTPS proxy such
+  // as `tailscale serve`) forward the real client, so a phone is never mistaken for the PC.
+  const app = Fastify({ logger, trustProxy: 'loopback' });
   const hub = new WsHub();
   app.decorate('hub', hub);
 
+  const vapid = ensureVapidKeys(db);
+  const notifier = new ClaimNotifier({
+    db,
+    now,
+    send: pushSender ?? webPushSender(vapid, vapidSubject),
+    onError: (err) => app.log.warn({ err }, 'Push failed'),
+  });
+  app.decorate('notifier', notifier);
+  app.addHook('onClose', async () => notifier.stop());
+
+  const secure = new SecureUrl(db, secureUrl);
+  // After the cookie is parsed, so a paired phone counts as trusted.
+  app.addHook('preHandler', async (req) => secure.learn(req));
+
+  await app.register(fastifyCookie);
   await app.register(fastifyWebsocket);
   app.get(WS_PATH, { websocket: true }, (socket) => hub.add(socket));
 
@@ -35,10 +95,23 @@ export async function buildApp({
     uptimeSeconds: Math.round(process.uptime()),
   }));
 
-  app.get('/api/settings', async () => {
-    const row = db.select().from(familySettings).where(eq(familySettings.id, 1)).get();
-    return familySettingsSchema.parse(row);
+  app.get('/api/settings', async () => getSettings(db));
+
+  await app.register(setupRoutes, { db, now, publicUrl });
+  await app.register(deviceRoutes, { db, now, publicUrl });
+  await app.register(kioskRoutes, { db, now, devClock });
+  await app.register(instanceRoutes, { db, now });
+  await app.register(choreRoutes, { db, now });
+  await app.register(playerRoutes, { db, now, onScheduleChanged });
+  await app.register(moneyRoutes, { db, now, images: new GoalImages(imagesDir, imageFetcher) });
+  await app.register(pushRoutes, {
+    db,
+    now,
+    notifier,
+    vapidPublicKey: vapid.publicKey,
+    secureUrl: secure,
   });
+  if (devClock) await app.register(devRoutes, { db, clock: devClock });
 
   // Phase 0 plumbing check: any client can ping every connected screen.
   app.post('/api/ping', async (req, reply) => {
@@ -50,9 +123,15 @@ export async function buildApp({
 
   if (webDist && existsSync(resolve(webDist, 'index.html'))) {
     await app.register(fastifyStatic, { root: webDist, wildcard: false });
-    // SPA fallback: unknown non-API GETs get index.html so client routes like /kiosk work.
+    // SPA fallback: unknown page GETs get index.html so client routes like /kiosk work. A
+    // missing file (an old /assets/ bundle after an update) is a 404, never the page: a
+    // service worker would otherwise cache HTML as the script and the app would go blank.
     app.setNotFoundHandler((req, reply) => {
-      if (req.method === 'GET' && !req.url.startsWith('/api')) return reply.sendFile('index.html');
+      const path = req.url.split('?')[0]!;
+      const isFile = path.startsWith('/assets/') || /\.[a-z0-9]+$/i.test(path);
+      if (req.method === 'GET' && !path.startsWith('/api') && !isFile) {
+        return reply.sendFile('index.html');
+      }
       return reply.code(404).send({ error: 'Not found' });
     });
   }
@@ -63,5 +142,6 @@ export async function buildApp({
 declare module 'fastify' {
   interface FastifyInstance {
     hub: WsHub;
+    notifier: ClaimNotifier;
   }
 }

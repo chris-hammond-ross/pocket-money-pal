@@ -1,0 +1,58 @@
+/* Global arcade look: the navy background with its soft top glow, and shared keyframes. */
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: radial-gradient(1200px 700px at 50% -15%, var(--pmp-glow) 0%, var(--pmp-bg) 70%) fixed
+    var(--pmp-bg);
+  color: var(--pmp-text);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pixel {
+  font-family: var(--pmp-font-pixel);
+  letter-spacing: 0.04em;
+}
+
+@keyframes pmp-bob {
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes pmp-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes pmp-rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+@keyframes pmp-pop {
+  from {
+    transform: scale(0);
+  }
+}
+
+@keyframes pmp-glow {
+  50% {
+    box-shadow: 0 0 10px var(--pmp-gold);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

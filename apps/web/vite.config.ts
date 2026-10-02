@@ -10,9 +10,10 @@ export default defineConfig({
   server: {
     host: true, // reachable from phones on the LAN during development
     port: 5173,
+    // xfwd: pass the client's address on, so the server can tell a phone from the PC (ADR 0005).
     proxy: {
-      '/api': server,
-      '/ws': { target: server, ws: true },
+      '/api': { target: server, xfwd: true },
+      '/ws': { target: server, ws: true, xfwd: true },
     },
   },
 });

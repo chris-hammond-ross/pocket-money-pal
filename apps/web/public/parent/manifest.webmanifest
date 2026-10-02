@@ -1,0 +1,22 @@
+{
+  "name": "Pocket Money Pal",
+  "short_name": "Money Pal",
+  "description": "Approve chores and plan the day from your phone.",
+  "id": "/parent",
+  "start_url": "/parent",
+  "scope": "/parent",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0f1024",
+  "background_color": "#0f1024",
+  "icons": [
+    { "src": "/parent/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/parent/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    {
+      "src": "/parent/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

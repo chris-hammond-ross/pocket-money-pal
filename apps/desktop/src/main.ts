@@ -48,6 +48,8 @@ async function startServer(): Promise<string> {
       ...process.env,
       PMP_PORT: String(PORT),
       PMP_DB_PATH: join(app.getPath('userData'), 'pmp.db'),
+      // `npm run desktop:dev` gets the movable development clock; a packaged app never does.
+      ...(!app.isPackaged && { PMP_DEV_CLOCK: process.env.PMP_DEV_CLOCK ?? '1' }),
     },
   });
   server.on('exit', (code) => {

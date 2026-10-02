@@ -1,41 +1,30 @@
-import { Box, Container, Group, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
-import { ConnectionBadge } from '../components/ConnectionBadge';
-import { PingPanel } from '../components/PingPanel';
+import { KioskBoard } from '../components/kiosk/KioskBoard';
+import { KioskTitleScreen } from '../components/KioskTitleScreen';
 import { api } from '../lib/api';
+import { useDevClockParam } from '../lib/dev-clock';
 
-/** Placeholder kiosk. The real column dashboard comes from the Phase 1 prototype round. */
+/** Re-sync the clock with the server this often, even when nothing changes. */
+const RESYNC_MS = 10 * 60_000;
+
+/**
+ * The kiosk. While setup is needed it shows the title screen with the setup QR code, and
+ * switches over by itself when setup finishes. Then it's the Quest Track board, which
+ * refetches on every WebSocket event about the family's data.
+ */
 export function KioskPage() {
-  const settings = useQuery({ queryKey: ['settings'], queryFn: api.settings });
+  useDevClockParam();
+  const status = useQuery({ queryKey: ['setup-status'], queryFn: api.setupStatus });
+  const ready = status.data?.needed === false;
+  const board = useQuery({
+    queryKey: ['kiosk-today'],
+    queryFn: api.kioskToday,
+    enabled: ready,
+    refetchInterval: RESYNC_MS,
+  });
 
-  return (
-    <Container fluid p="xl" h="100vh">
-      <Stack h="100%">
-        <Group justify="space-between">
-          <Title order={1}>🪙 Pocket Money Pal</Title>
-          <ConnectionBadge />
-        </Group>
-        <Text c="dimmed">{settings.data?.familyName ?? '…'} · Kiosk</Text>
-        <SimpleGrid cols={2} style={{ flex: 1 }}>
-          {['Child one', 'Child two'].map((name) => (
-            <Box
-              key={name}
-              bg="gray.1"
-              p="xl"
-              style={{
-                borderRadius: 'var(--mantine-radius-lg)',
-                display: 'grid',
-                placeItems: 'center',
-              }}
-            >
-              <Text size="xl" c="dimmed">
-                {name}’s column
-              </Text>
-            </Box>
-          ))}
-        </SimpleGrid>
-        <PingPanel from="Kiosk" />
-      </Stack>
-    </Container>
-  );
+  if (!status.data) return null;
+  if (status.data.needed) return <KioskTitleScreen />;
+  if (!board.data) return null;
+  return <KioskBoard board={board.data} />;
 }

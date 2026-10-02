@@ -1,0 +1,788 @@
+/* The Quest Track kiosk board (spec 001), after prototype 001-D. Sized for 1920×1080. */
+
+.screen {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 32px 2px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--pmp-font-pixel);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--pmp-gold);
+  text-shadow: 0 0 18px rgba(255, 212, 59, 0.5);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.day {
+  color: var(--pmp-dim);
+  font-size: 18px;
+  text-align: right;
+}
+
+.clock {
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--pmp-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.pill {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 6px 14px;
+  border: 2px solid currentColor;
+  background: transparent;
+}
+
+.devPill {
+  composes: pill;
+  color: #cc5de8;
+  cursor: pointer;
+}
+
+.offlinePill {
+  composes: pill;
+  color: var(--pmp-late);
+}
+
+/* Columns */
+.board {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: 28px;
+  padding: 8px 32px 16px;
+}
+
+.player {
+  --c: #4c6ef5;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--c) 22%, var(--pmp-panel)) 0%,
+    var(--pmp-panel) 40%
+  );
+  border: 2px solid color-mix(in srgb, var(--c) 60%, transparent);
+  border-radius: 26px;
+  padding: 16px 20px;
+  box-shadow:
+    0 0 40px color-mix(in srgb, var(--c) 25%, transparent),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+/* Player panel */
+.hud {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+}
+
+.avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 56px;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 70%, white), var(--c));
+  box-shadow:
+    0 0 0 5px color-mix(in srgb, var(--c) 35%, transparent),
+    0 0 30px var(--c);
+}
+
+.name {
+  margin: 0;
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.level {
+  font-family: var(--pmp-font-pixel);
+  font-size: 12px;
+  color: var(--pmp-gold);
+  margin: 8px 0;
+}
+
+.xp {
+  height: 18px;
+  border-radius: 10px;
+  background: #0b0c1d;
+  overflow: hidden;
+  position: relative;
+  border: 2px solid #34366b;
+
+  & > i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--c), color-mix(in srgb, var(--c) 40%, white));
+    transition: width 1s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  }
+
+  & > span {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 600;
+  }
+}
+
+.stats {
+  text-align: right;
+}
+
+.points {
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--pmp-gold);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.statLabel {
+  font-size: 14px;
+  color: var(--pmp-dim);
+}
+
+.streak {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffa94d;
+}
+
+.flame {
+  display: inline-block;
+  animation: flicker 1.2s infinite alternate;
+}
+
+@keyframes flicker {
+  from {
+    transform: scale(1) rotate(-4deg);
+  }
+  to {
+    transform: scale(1.15) rotate(4deg);
+  }
+}
+
+/* Stage colours: set --pc from data-stage on a Next-up panel or quest card. */
+[data-stage] {
+  --pc: var(--pmp-bonus);
+}
+[data-stage='due'] {
+  --pc: var(--pmp-due);
+}
+[data-stage='overdue'] {
+  --pc: var(--pmp-overdue);
+}
+[data-stage='late'] {
+  --pc: var(--pmp-late);
+}
+[data-stage='done'] {
+  --pc: var(--pmp-gold);
+}
+
+/* Next up */
+.next {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 12px 20px;
+  border-radius: 20px;
+  background: #0d0e22;
+  border: 2px solid color-mix(in srgb, var(--pc) 70%, transparent);
+  box-shadow:
+    0 0 24px color-mix(in srgb, var(--pc) 25%, transparent),
+    inset 0 0 30px color-mix(in srgb, var(--pc) 8%, transparent);
+  transition:
+    border-color 0.4s,
+    box-shadow 0.4s;
+
+  &[data-stage='overdue'],
+  &[data-stage='late'] {
+    animation: pulse 1.2s infinite;
+  }
+
+  &[data-stage='done'] {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+}
+
+@keyframes pulse {
+  50% {
+    box-shadow: 0 0 36px color-mix(in srgb, var(--pc) 60%, transparent);
+  }
+}
+
+.nextIcon {
+  font-size: 50px;
+  line-height: 1;
+}
+
+.nextLabel {
+  font-family: var(--pmp-font-pixel);
+  font-size: 11px;
+  color: var(--pc);
+  margin-bottom: 6px;
+}
+
+.nextTitle {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.countdown {
+  font-family: var(--pmp-font-pixel);
+  font-size: 40px;
+  color: var(--pc);
+  text-align: right;
+  line-height: 1;
+  text-shadow: 0 0 16px color-mix(in srgb, var(--pc) 70%, transparent);
+  font-variant-numeric: tabular-nums;
+
+  & small {
+    display: block;
+    font-family: var(--mantine-font-family);
+    font-size: 15px;
+    color: var(--pmp-dim);
+    margin-top: 8px;
+    text-shadow: none;
+  }
+}
+
+.urgent .countdown {
+  animation: throb 1s infinite;
+}
+
+@keyframes throb {
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+/* Quest list */
+.sectionTitle {
+  font-family: var(--pmp-font-pixel);
+  font-size: 11px;
+  color: var(--pmp-dim);
+  margin: 4px 4px -2px;
+}
+
+.quests {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  padding: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pmp-line) transparent;
+}
+
+.allDone {
+  text-align: center;
+  font-size: 24px;
+  padding: 20px;
+}
+
+.quest {
+  position: relative;
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  background: var(--pmp-panel-2);
+  border-radius: 20px;
+  padding: 7px 16px 6px;
+  border: 2px solid transparent;
+  transition:
+    transform 0.15s,
+    border-color 0.2s,
+    opacity 0.4s;
+
+  &[data-stage]:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--pc) 60%, transparent);
+  }
+
+  &[data-stage='late'] {
+    border-color: rgba(255, 77, 109, 0.5);
+  }
+}
+
+.questIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 32px;
+  background: #14153a;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--pc, #5c5fb0) 45%, transparent);
+}
+
+.questTitle {
+  font-size: 23px;
+  font-weight: 600;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  font-size: 16px;
+  color: var(--pmp-dim);
+  margin-top: 2px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.phase {
+  color: var(--pc);
+  font-weight: 600;
+}
+
+.tag {
+  font-size: 13px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--pmp-text);
+}
+
+.reward {
+  text-align: center;
+  font-weight: 700;
+  font-size: 26px;
+  color: var(--pmp-gold);
+  min-width: 70px;
+  font-variant-numeric: tabular-nums;
+
+  & small {
+    display: block;
+    font-size: 12px;
+    color: var(--pmp-dim);
+    font-weight: 400;
+  }
+}
+
+/* Claimed: waiting for a parent */
+.claimed {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--pmp-panel-2),
+    var(--pmp-panel-2) 12px,
+    #292a58 12px,
+    #292a58 24px
+  );
+
+  & .reward {
+    color: var(--pmp-dim);
+  }
+
+  & .phase {
+    color: #a5b4fc;
+  }
+}
+
+.waiting {
+  display: inline-block;
+  animation: bob 1.6s ease-in-out infinite;
+}
+
+@keyframes bob {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Approved today */
+.approved {
+  opacity: 0.55;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  padding: 8px 16px;
+
+  & .questTitle {
+    font-size: 18px;
+    text-decoration: line-through;
+    text-decoration-color: rgba(255, 255, 255, 0.3);
+  }
+
+  & .reward {
+    font-size: 18px;
+  }
+}
+
+.doneIcon {
+  font-size: 26px;
+  text-align: center;
+}
+
+/* Tracking bar: the quest's own window, start → ⚡ bonus ends → 🏁 due → late */
+.track {
+  position: relative;
+  height: 12px;
+  margin: 9px 0 18px;
+  border-radius: 6px;
+  background: #0b0c1d;
+}
+
+.zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.zoneBonus {
+  composes: zone;
+  background: var(--pmp-bonus);
+  border-radius: 6px 0 0 6px;
+}
+
+.zoneDue {
+  composes: zone;
+  background: var(--pmp-due);
+}
+
+.zoneLate {
+  composes: zone;
+  right: 0;
+  background: repeating-linear-gradient(135deg, var(--pmp-late) 0 6px, #b3263f 6px 12px);
+  border-radius: 0 6px 6px 0;
+}
+
+.gone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(8, 9, 24, 0.78);
+  border-radius: 6px 0 0 6px;
+  transition: width 0.3s;
+}
+
+.marker {
+  position: absolute;
+  top: -7px;
+  bottom: -7px;
+  width: 0;
+  border-left: 2px dashed rgba(255, 255, 255, 0.55);
+
+  & span {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-size: 13px;
+    color: var(--pmp-dim);
+    margin-top: 1px;
+  }
+
+  &[data-passed] span {
+    opacity: 0.45;
+    text-decoration: line-through;
+  }
+}
+
+.now {
+  position: absolute;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border-radius: 50%;
+  background: white;
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--pc) 70%, transparent),
+    0 0 16px var(--pc);
+  transition: left 0.3s;
+  z-index: 2;
+}
+
+[data-stage='bonus'] .now {
+  animation: nowPulse 1.6s infinite;
+}
+
+@keyframes nowPulse {
+  50% {
+    box-shadow:
+      0 0 0 7px color-mix(in srgb, var(--pc) 40%, transparent),
+      0 0 22px var(--pc);
+  }
+}
+
+/* Open quests can be tapped to claim (2.5) */
+.quest[data-stage] {
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--pmp-gold);
+    outline-offset: 2px;
+  }
+}
+
+/* "↩️ Mum says: Needs a redo" (spec 002): cleared when the quest is claimed again */
+.sentBack {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffd8a8;
+  background: rgba(255, 138, 60, 0.14);
+  border-radius: 999px;
+  padding: 0 10px;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+/* Claim pop-up */
+.sheetBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: rgba(5, 5, 20, 0.7);
+}
+
+.sheet {
+  width: min(620px, 92vw);
+  padding: 30px;
+  text-align: center;
+  background: var(--pmp-panel);
+  border: 2px solid var(--c);
+  border-radius: 28px;
+  box-shadow: 0 0 60px color-mix(in srgb, var(--c) 40%, transparent);
+
+  & h3 {
+    font-size: 32px;
+    margin: 6px 0 4px;
+  }
+
+  & p {
+    color: var(--pmp-dim);
+    font-size: 20px;
+    margin: 0 0 22px;
+  }
+}
+
+.sheetIcon {
+  font-size: 70px;
+  line-height: 1.1;
+}
+
+.sheetButtons {
+  display: grid;
+  gap: 12px;
+}
+
+.sheetButton {
+  font: inherit;
+  font-size: 24px;
+  font-weight: 600;
+  border: 0;
+  border-radius: 18px;
+  padding: 18px;
+  cursor: pointer;
+  color: var(--pmp-bg);
+  transition: transform 0.1s;
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.sheetYes {
+  background: var(--pmp-bonus);
+  box-shadow: 0 6px 0 var(--pmp-bonus-shadow);
+}
+
+.sheetReminded {
+  background: #c5c9ff;
+  box-shadow: 0 6px 0 #8a8fd6;
+}
+
+.sheetCancel {
+  background: transparent;
+  color: var(--pmp-dim);
+  font-size: 18px;
+  padding: 8px;
+}
+
+.sheetError {
+  margin-top: 14px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--pmp-overdue);
+}
+
+/* Floating "+N" over a card (celebrations) */
+.floatLayer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 150;
+}
+
+.float {
+  position: absolute;
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--pmp-gold);
+  text-shadow:
+    0 0 12px rgba(0, 0, 0, 0.6),
+    0 0 18px color-mix(in srgb, var(--pmp-gold) 50%, transparent);
+  white-space: nowrap;
+  translate: -50% -50%;
+}
+
+/* The motion wrappers around cards mustn't shrink either (see .quest) */
+.quests > * {
+  flex-shrink: 0;
+}
+
+/* "Pair a parent phone" (ADR 0008): only while no phone is paired */
+.pairCard {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 120;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  max-width: 420px;
+  padding: 12px 16px 12px 12px;
+  border-radius: 18px;
+  background: var(--pmp-panel);
+  border: 2px solid var(--pmp-gold);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  animation: pmp-rise 0.4s;
+
+  & b {
+    font-size: 20px;
+  }
+
+  & p {
+    margin: 4px 0 0;
+    color: var(--pmp-dim);
+    font-size: 15px;
+    line-height: 1.3;
+  }
+}
+
+.pairQr {
+  width: 120px;
+  height: 120px;
+  flex: none;
+  border-radius: 10px;
+  overflow: hidden;
+  background: white;
+
+  & svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+p.pairCode {
+  font-family: var(--pmp-font-pixel);
+  font-size: 14px;
+  color: var(--pmp-gold);
+  letter-spacing: 0.08em;
+}
+
+/* Level-up overlay (spec 001), after an approval from a phone */
+.levelUp {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--c) 35%, transparent),
+    rgba(5, 5, 20, 0.7) 70%
+  );
+  text-align: center;
+
+  & .levelUpAvatar {
+    font-size: 140px;
+    line-height: 1;
+    filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.5));
+  }
+
+  & h2 {
+    margin: 0;
+    font-family: var(--pmp-font-pixel);
+    font-weight: 400;
+    font-size: 54px;
+    color: var(--pmp-gold);
+    text-shadow: 0 0 24px color-mix(in srgb, var(--pmp-gold) 60%, transparent);
+  }
+
+  & p {
+    margin: 0;
+    font-size: 34px;
+    font-weight: 600;
+  }
+}

@@ -1,6 +1,6 @@
 # Pocket Money Pal
 
-A game-like chore and pocket-money app for kids. Read `docs/plan.md` for the full plan (architecture, process, roadmap).
+A game-like chore and pocket-money app for kids. Read `docs/plan.md` for the full plan (architecture, process, roadmap). Build work runs in sessions listed in `docs/roadmap.md`: follow its standard session rules and write a handover note when you finish.
 
 ## Architecture in one breath
 
@@ -50,7 +50,7 @@ Features are prototyped **before** they are built. When asked to prototype a fea
 ## Product context worth remembering
 
 - Kiosk: a shared family PC, second monitor dedicated to the app, used by kids and almost never by adults. Readable from across the room; touch/mouse friendly; sounds and animations are core, not garnish.
-- Parents act mainly from their phones on the home Wi-Fi. On the kiosk, a parent PIN opens a short (~60 s) elevated session with a visible countdown and an End button.
+- Parents act from their paired phones on the home Wi-Fi: approvals and every other parent action happen there, never on the kiosk. There's no kiosk PIN or parent mode (ADR 0008).
 - Chores speak in **points**; goals/savings speak in **money**.
 - Home Assistant is an optional integration, never a dependency.
 - Open source is a long-term goal: keep things configurable, but don't sacrifice features for it.

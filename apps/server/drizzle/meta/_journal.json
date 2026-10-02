@@ -8,6 +8,55 @@
       "when": 1790655020913,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790769857279,
+      "tag": "0001_data_model",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790771573867,
+      "tag": "0002_setup_token",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790776078249,
+      "tag": "0003_claims_volume",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790779273587,
+      "tag": "0004_pairing_codes",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1790822611583,
+      "tag": "0005_chore_skipped_on",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790827158060,
+      "tag": "0006_players_push",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1790858053302,
+      "tag": "0007_money",
+      "breakpoints": true
     }
   ]
 }
