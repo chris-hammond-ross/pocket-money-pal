@@ -88,6 +88,9 @@ export const healthSchema = z.object({
   ok: z.literal(true),
   version: z.string(),
   uptimeSeconds: z.number(),
+  /** The web build being served, and the API version (ADR 0011). */
+  build: z.string().nullable(),
+  apiVersion: z.number().int(),
 });
 export type Health = z.infer<typeof healthSchema>;
 

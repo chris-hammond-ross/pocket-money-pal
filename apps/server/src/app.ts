@@ -5,6 +5,7 @@ import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
 import { WS_PATH, pingRequestSchema, type Health } from '@pmp/shared';
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
+import { serverVersion } from './build-info';
 import type { ServerClock } from './clock';
 import type { Db } from './db/client';
 import { createImageFetcher, GoalImages, type ImageFetcher } from './goal-image';
@@ -68,7 +69,10 @@ export async function buildApp({
   // Trust X-Forwarded-For from loopback only: Vite's dev proxy (and a local HTTPS proxy such
   // as `tailscale serve`) forward the real client, so a phone is never mistaken for the PC.
   const app = Fastify({ logger, trustProxy: 'loopback' });
-  const hub = new WsHub();
+  // Only a served bundle has a build to compare: without one, clients never see an update.
+  const servedDist = webDist && existsSync(resolve(webDist, 'index.html')) ? webDist : null;
+  const version = () => serverVersion(servedDist);
+  const hub = new WsHub(version);
   app.decorate('hub', hub);
 
   const vapid = ensureVapidKeys(db);
@@ -93,6 +97,7 @@ export async function buildApp({
     ok: true,
     version: VERSION,
     uptimeSeconds: Math.round(process.uptime()),
+    ...version(),
   }));
 
   app.get('/api/settings', async () => getSettings(db));
@@ -121,8 +126,11 @@ export async function buildApp({
     return { ok: true, clients: hub.size };
   });
 
-  if (webDist && existsSync(resolve(webDist, 'index.html'))) {
-    await app.register(fastifyStatic, { root: webDist, wildcard: false });
+  if (servedDist) {
+    // wildcard: files are looked up on disk per request. With `false` the plugin lists them
+    // once at start-up, so a rebuild while the server runs (new hashed /assets/ names) was
+    // served index.html pointing at 404s: a blank app (ADR 0011).
+    await app.register(fastifyStatic, { root: servedDist, wildcard: true });
     // SPA fallback: unknown page GETs get index.html so client routes like /kiosk work. A
     // missing file (an old /assets/ bundle after an update) is a 404, never the page: a
     // service worker would otherwise cache HTML as the script and the app would go blank.

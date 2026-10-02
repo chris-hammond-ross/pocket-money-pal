@@ -13,6 +13,97 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Money Pal" />
     <title>Pocket Money Pal</title>
+    <script>
+      // Recovery (ADR 0011). Inline on purpose: it must work when the app's own files don't.
+      // If a file under /assets/ fails to load (an old page asking for files a newer build
+      // replaced), reload; if that doesn't help, drop the service worker and its caches and
+      // reload again; after that, give up, so this can never loop.
+      (function () {
+        var KEY = 'pmp.recovery';
+        var WINDOW_MS = 60000;
+        function read() {
+          try {
+            return JSON.parse(sessionStorage.getItem(KEY) || 'null');
+          } catch (e) {
+            return null;
+          }
+        }
+        window.pmpRecover = function () {
+          var last = read();
+          var step = last && Date.now() - last.at < WINDOW_MS ? last.step + 1 : 1;
+          if (step > 2) return false;
+          var mark = { step: step, at: Date.now() };
+          try {
+            sessionStorage.setItem(KEY, JSON.stringify(mark));
+          } catch (e) {
+            // No storage (private mode): we couldn't tell a loop, so don't start one.
+          }
+          if (!read() || read().at !== mark.at) return false;
+          var jobs = [];
+          if (step === 2 && navigator.serviceWorker) {
+            jobs.push(
+              navigator.serviceWorker.getRegistrations().then(function (regs) {
+                return Promise.all(
+                  regs.map(function (r) {
+                    return r.unregister();
+                  }),
+                );
+              }),
+            );
+          }
+          if (step === 2 && window.caches) {
+            jobs.push(
+              caches.keys().then(function (keys) {
+                return Promise.all(
+                  keys.map(function (k) {
+                    return caches.delete(k);
+                  }),
+                );
+              }),
+            );
+          }
+          Promise.all(jobs)
+            .catch(function () {})
+            .then(function () {
+              location.reload();
+            });
+          return true;
+        };
+        addEventListener(
+          'error',
+          function (e) {
+            var el = e.target;
+            var url = el && (el.src || el.href);
+            if (typeof url === 'string' && url.indexOf('/assets/') !== -1) {
+              if (!window.pmpRecover()) stuck();
+            }
+          },
+          true,
+        );
+        // Given up and the app never started: say so, rather than leave a blank page.
+        function stuck() {
+          var root = document.getElementById('root');
+          if (!root) return void addEventListener('DOMContentLoaded', stuck);
+          if (root.childElementCount) return;
+          root.innerHTML =
+            '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;' +
+            'justify-content:center;gap:16px;padding:24px;text-align:center;background:#0f1024;' +
+            'color:#fff;font-family:system-ui,sans-serif">' +
+            '<div style="font-size:48px">🐷</div><b style="font-size:20px">The app didn’t load</b>' +
+            '<span style="opacity:.75">This can happen just after an update.</span>' +
+            '<button id="pmp-retry" style="font:inherit;font-weight:700;padding:12px 28px;' +
+            'border:0;border-radius:12px;background:#ffd23f;color:#111">Try again</button></div>';
+          document.getElementById('pmp-retry').onclick = function () {
+            try {
+              sessionStorage.removeItem(KEY);
+            } catch (e) {
+              // Nothing to clear.
+            }
+            location.reload();
+          };
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

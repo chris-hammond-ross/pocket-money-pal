@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { API_VERSION } from '@pmp/shared';
 import { buildApp } from './app';
 import { openDb } from './db/client';
 
@@ -26,7 +27,8 @@ describe('server app', () => {
   it('reports health', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/health' });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ ok: true });
+    // No web bundle in tests: nothing to compare, but the API version is always there.
+    expect(res.json()).toMatchObject({ ok: true, build: null, apiVersion: API_VERSION });
   });
 
   it('seeds default family settings', async () => {
@@ -62,6 +64,9 @@ describe('serving the web app', () => {
     mkdirSync(join(dir, 'assets'));
     writeFileSync(join(dir, 'index.html'), '<!doctype html><div id="root"></div>');
     writeFileSync(join(dir, 'assets', 'index-NEW.js'), 'console.log(1)');
+    // Like the real bundle: /parent is both a page and a folder of PWA files.
+    mkdirSync(join(dir, 'parent'));
+    writeFileSync(join(dir, 'parent', 'manifest.webmanifest'), '{}');
     const opened = openDb(':memory:', resolve(import.meta.dirname, '../drizzle'));
     close = opened.close;
     app = await buildApp({ db: opened.db, webDist: dir });
@@ -73,7 +78,14 @@ describe('serving the web app', () => {
   });
 
   it('answers client routes with the page', async () => {
-    for (const url of ['/kiosk', '/parent', '/parent?tab=payday', '/parent/pair']) {
+    for (const url of [
+      '/',
+      '/kiosk',
+      '/parent',
+      '/parent/',
+      '/parent?tab=payday',
+      '/parent/pair',
+    ]) {
       const res = await app.inject({ method: 'GET', url });
       expect(res.statusCode, url).toBe(200);
       expect(res.headers['content-type']).toContain('text/html');
@@ -87,5 +99,36 @@ describe('serving the web app', () => {
       expect(res.statusCode, url).toBe(404);
       expect(res.headers['content-type']).not.toContain('text/html');
     }
+  });
+
+  it('serves a build made while it was running (a rebuild without a restart)', async () => {
+    rmSync(join(dir, 'assets', 'index-NEW.js'));
+    writeFileSync(join(dir, 'assets', 'index-NEWER.js'), 'console.log(2)');
+    writeFileSync(join(dir, 'build.json'), JSON.stringify({ build: 'b43' }));
+    for (const url of ['/assets/index-NEWER.js', '/build.json']) {
+      const res = await app.inject({ method: 'GET', url });
+      expect(res.statusCode, url).toBe(200);
+      expect(res.headers['content-type'], url).not.toContain('text/html');
+    }
+    expect((await app.inject({ method: 'GET', url: '/assets/index-NEW.js' })).statusCode).toBe(404);
+  });
+
+  it('tells clients which build it serves, in health and the WebSocket hello (ADR 0011)', async () => {
+    writeFileSync(join(dir, 'build.json'), JSON.stringify({ build: 'b42' }));
+    const health = await app.inject({ method: 'GET', url: '/api/health' });
+    expect(health.json()).toMatchObject({ build: 'b42', apiVersion: API_VERSION });
+
+    // Listen before the upgrade finishes: the hello is the very first message.
+    let received: (message: unknown) => void = () => undefined;
+    const hello = new Promise<unknown>((done) => (received = done));
+    const ws = await app.injectWS(
+      '/ws',
+      {},
+      {
+        onInit: (socket) => socket.once('message', (data) => received(JSON.parse(String(data)))),
+      },
+    );
+    expect(await hello).toMatchObject({ type: 'hello', build: 'b42', apiVersion: API_VERSION });
+    ws.terminate();
   });
 });

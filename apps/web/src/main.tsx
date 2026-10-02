@@ -11,14 +11,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router';
+import { UpdateBanner } from './components/UpdateBanner';
 import { LiveEventsProvider } from './lib/live-events';
 import { captureInstallPrompt } from './lib/pwa';
+import { watchForUpdates } from './lib/updates';
 import { router } from './router';
 import { cssVariablesResolver, theme } from './theme';
 
 const queryClient = new QueryClient();
 // Chrome offers its install prompt early; keep it for the Players tab's "📲 Install".
 captureInstallPrompt();
+// Every screen follows the server's build: reloads quietly, or offers it (ADR 0011).
+watchForUpdates();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -31,6 +35,7 @@ createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <LiveEventsProvider>
           <RouterProvider router={router} />
+          <UpdateBanner />
         </LiveEventsProvider>
       </QueryClientProvider>
     </MantineProvider>

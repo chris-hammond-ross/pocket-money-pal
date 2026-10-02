@@ -16,3 +16,4 @@ export * from './savings';
 export * from './schemas';
 export * from './setup';
 export * from './time';
+export * from './version';

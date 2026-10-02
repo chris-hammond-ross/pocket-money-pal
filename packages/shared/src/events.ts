@@ -11,7 +11,14 @@ import {
  * Clients generally react by invalidating the matching query cache.
  */
 export const serverEventSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('hello'), serverTime: z.string(), clients: z.number().int() }),
+  /** Sent to each new connection. `build` and `apiVersion` drive client updates (ADR 0011). */
+  z.object({
+    type: z.literal('hello'),
+    serverTime: z.string(),
+    clients: z.number().int(),
+    build: z.string().nullable(),
+    apiVersion: z.number().int(),
+  }),
   z.object({ type: z.literal('presence'), clients: z.number().int() }),
   z.object({ type: z.literal('ping'), from: z.string(), at: z.string() }),
   z.object({ type: z.literal('settings.updated') }),

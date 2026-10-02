@@ -1,5 +1,6 @@
 import { serverEventSchema, WS_PATH, type ServerEvent } from '@pmp/shared';
 import { useQueryClient } from '@tanstack/react-query';
+import { reportServerVersion } from './updates';
 import {
   createContext,
   useCallback,
@@ -70,7 +71,11 @@ export function LiveEventsProvider({ children }: { children: ReactNode }) {
       };
 
       socket.onmessage = (message) => {
-        const parsed = serverEventSchema.safeParse(JSON.parse(String(message.data)));
+        const raw: unknown = JSON.parse(String(message.data));
+        // Read the version on its own, before the strict parse: a newer server's hello may
+        // not match this build's schema, and that's exactly when it matters (ADR 0011).
+        if ((raw as { type?: unknown } | null)?.type === 'hello') reportServerVersion(raw);
+        const parsed = serverEventSchema.safeParse(raw);
         if (!parsed.success) return;
         const event = parsed.data;
         if (event.type === 'hello' || event.type === 'presence') setClients(event.clients);

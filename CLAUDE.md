@@ -30,6 +30,7 @@ docs/           plan.md, features/ (committed specs), decisions/ (ADRs)
 - The ledger is append-only; balances are derived from it.
 - Validate every API input with the Zod schemas from `@pmp/shared`.
 - After a state change, the server broadcasts a WS event; clients invalidate TanStack Query caches rather than patching state by hand.
+- A change an already-open client can't cope with (removed/renamed endpoint, changed response or event shape) bumps `API_VERSION` in `packages/shared/src/constants.ts`: every screen then reloads at once (ADR 0011).
 - Branches `feat/…` / `fix/…`, conventional commits, PR to `main`; CI (lint, typecheck, test) must pass.
 - Record notable decisions as short ADRs in `docs/decisions/NNNN-title.md`.
 
