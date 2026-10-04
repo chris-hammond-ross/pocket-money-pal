@@ -1125,3 +1125,11 @@
   border-radius: 20px;
   letter-spacing: -2px;
 }
+
+/* The version line at the very bottom of the Players tab. */
+.appVersion {
+  margin: 20px 0 4px;
+  text-align: center;
+  color: var(--pmp-dim);
+  font-size: 12px;
+}

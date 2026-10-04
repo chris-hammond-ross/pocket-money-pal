@@ -1,7 +1,9 @@
 // Bundles the server (and @pmp/shared) into dist/server.mjs.
 // better-sqlite3 stays external: it is a native module resolved at runtime.
 import { build } from 'esbuild';
-import { cp, rm } from 'node:fs/promises';
+import { cp, readFile, rm } from 'node:fs/promises';
+
+const { version } = JSON.parse(await readFile('../../package.json', 'utf8'));
 
 await rm('dist', { recursive: true, force: true });
 await build({
@@ -13,6 +15,7 @@ await build({
   format: 'esm',
   sourcemap: true,
   external: ['better-sqlite3'],
+  define: { __PMP_VERSION__: JSON.stringify(version) },
   // Some CJS deps call require(); give the ESM bundle one.
   banner: {
     js: "import { createRequire as __pmpCreateRequire } from 'node:module'; const require = __pmpCreateRequire(import.meta.url);",

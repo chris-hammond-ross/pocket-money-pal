@@ -11,8 +11,9 @@
     "build": "node scripts/build.mjs",
     "stage": "node scripts/stage-server.mjs",
     "dev": "npm run build && npm run stage && node scripts/launch.mjs",
-    "dist": "npm run build && npm run stage && electron-builder --win",
-    "typecheck": "tsc --noEmit"
+    "dist": "npm run build && npm run stage && electron-builder --win --publish never",
+    "typecheck": "tsc --noEmit",
+    "release": "npm run build && npm run stage && electron-builder --win --publish always"
   },
   "build": {
     "appId": "io.github.pocketmoneypal",
@@ -22,12 +23,17 @@
     },
     "files": [
       "dist/**/*",
+      "assets/**/*",
       "package.json"
     ],
     "extraResources": [
       {
         "from": ".stage/server",
         "to": "server"
+      },
+      {
+        "from": ".stage/server/node_modules",
+        "to": "server/node_modules"
       }
     ],
     "npmRebuild": false,
@@ -36,11 +42,21 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "include": "build/installer.nsh",
+      "artifactName": "Pocket-Money-Pal-Setup-${version}.${ext}"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "chris-hammond-ross",
+      "repo": "pocket-money-pal",
+      "releaseType": "release"
     }
   },
   "devDependencies": {
-    "electron": "^44.4.5",
-    "electron-builder": "^26.15.3"
+    "electron": "44.4.5",
+    "electron-builder": "^26.15.3",
+    "electron-updater": "^6.8.9"
   }
 }

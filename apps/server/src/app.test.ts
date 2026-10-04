@@ -29,6 +29,8 @@ describe('server app', () => {
     expect(res.statusCode).toBe(200);
     // No web bundle in tests: nothing to compare, but the API version is always there.
     expect(res.json()).toMatchObject({ ok: true, build: null, apiVersion: API_VERSION });
+    // Not built by esbuild and not under Electron: no version to report.
+    expect(res.json().version).toBe(process.env.PMP_APP_VERSION || 'dev');
   });
 
   it('seeds default family settings', async () => {

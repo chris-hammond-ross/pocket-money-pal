@@ -25,7 +25,15 @@ import { surpriseRoutes } from './routes/surprises';
 import { SecureUrl } from './secure-url';
 import { WsHub } from './ws';
 
-export const VERSION = '0.1.0';
+/** Set by the server build from the root package.json (`scripts/build.mjs`). */
+declare const __PMP_VERSION__: string | undefined;
+
+/**
+ * The app's version. The kiosk app passes its own (`PMP_APP_VERSION`), so an installed copy
+ * always shows the installer's version; a source build uses the root package.json's.
+ */
+export const VERSION =
+  process.env.PMP_APP_VERSION || (typeof __PMP_VERSION__ === 'string' ? __PMP_VERSION__ : 'dev');
 
 export interface AppOptions {
   db: Db;

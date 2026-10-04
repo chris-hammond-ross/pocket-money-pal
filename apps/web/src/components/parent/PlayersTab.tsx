@@ -100,6 +100,7 @@ export function PlayersTab() {
 
       <PixelLabel>DANGER ZONE</PixelLabel>
       <FactoryReset />
+      <AppVersion />
 
       {inviting && <InviteSheet onClose={() => setInviting(false)} />}
     </>
@@ -870,6 +871,19 @@ function InviteSheet({ onClose }: { onClose: () => void }) {
       )}
     </Sheet>
   );
+}
+
+// ---------------------------------------------------------------------------
+// App version (session 8.2; moves into settings with 8.1)
+
+/** "Pocket Money Pal v0.2.0": the version running on the family PC. */
+function AppVersion() {
+  const health = useQuery({ queryKey: ['health'], queryFn: api.health });
+  if (!health.data) return null;
+  const { version } = health.data;
+  // A source run without a build has no number: "(dev)".
+  const label = /^\d/.test(version) ? `v${version}` : `(${version})`;
+  return <p className={classes.appVersion}>Pocket Money Pal {label}</p>;
 }
 
 // ---------------------------------------------------------------------------

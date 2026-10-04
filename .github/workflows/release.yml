@@ -1,0 +1,31 @@
+# Pushing a version tag (v0.2.0) builds the Windows installer and publishes it as a GitHub
+# release. Installed copies find it there and update themselves (electron-updater, ADR 0015).
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # The tag is the version: the installer, the updater feed and /api/health all read it.
+      - name: Set the version from the tag
+        shell: bash
+        run: npm pkg set version="${GITHUB_REF_NAME#v}" --workspaces --include-workspace-root
+      - run: npm run typecheck
+      - run: npm test
+      - name: Build the installer and publish the release
+        run: npm run desktop:release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
