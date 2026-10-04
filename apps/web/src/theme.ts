@@ -29,6 +29,8 @@ export const arcade = {
   gold: '#ffd43b',
   goldShadow: '#b8941f',
   bonusShadow: '#1f9e5f',
+  /** Surprise quests (spec 006). */
+  surprise: '#9d6bff',
 } as const;
 
 export const FONT_TEXT = 'Fredoka, "Segoe UI", system-ui, sans-serif';
@@ -117,6 +119,7 @@ export const cssVariablesResolver: CSSVariablesResolver = () => ({
     '--pmp-gold': arcade.gold,
     '--pmp-gold-shadow': arcade.goldShadow,
     '--pmp-bonus-shadow': arcade.bonusShadow,
+    '--pmp-surprise': arcade.surprise,
   },
   light: {},
   dark: {

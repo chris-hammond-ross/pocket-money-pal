@@ -3,6 +3,7 @@ import {
   busyFold,
   flameTier,
   isBusyDay,
+  nextUpQuest,
   orderKioskQuests,
   type Envelope,
   type KioskChild,
@@ -112,7 +113,12 @@ export function PlayerColumn({
         <StreakFlame days={child.streak.days} best={child.streak.best} />
       </div>
 
-      <NextUp quest={open[0]} hadQuests={quests.length > 0} sick={child.sickToday} now={now} />
+      <NextUp
+        quest={nextUpQuest(quests)}
+        hadQuests={quests.length > 0}
+        sick={child.sickToday}
+        now={now}
+      />
 
       {/* Claimed quests are done as far as the child is concerned: only open ones are left. */}
       <div className={classes.sectionTitle}>

@@ -213,3 +213,62 @@ export function WindowBar({
     </div>
   );
 }
+
+/** A stretch of a surprise's day on its bar (spec 006), in minutes since midnight. */
+export interface SurpriseSpan {
+  from: number;
+  to: number;
+  /** Planned (faint), live (purple), up to the grab (purple), or expired (hatched grey). */
+  tone: 'planned' | 'live' | 'grabbed' | 'expired';
+}
+
+/**
+ * A surprise quest's row bar on the 6am–9pm axis (spec 006, "SURPRISES TODAY"): its span,
+ * a marker (⚡ at a set time, ⏳ while queued), the takers' dots and the now-line.
+ */
+export function SurpriseBar({
+  span,
+  marker,
+  nowMinutes,
+  dots = [],
+}: {
+  span?: SurpriseSpan;
+  marker?: { minutes: number; icon: string };
+  nowMinutes?: number;
+  dots?: ClaimDot[];
+}) {
+  return (
+    <div className={classes.bar}>
+      {span && (
+        <div
+          className={`${classes.seg} ${classes.segSurprise}`}
+          data-tone={span.tone}
+          style={{
+            left: `${axisPercent(span.from)}%`,
+            // At least a sliver, so a 1-minute surprise still shows.
+            width: `max(4px, ${axisPercent(span.to) - axisPercent(span.from)}%)`,
+          }}
+        />
+      )}
+      {marker && (
+        <div className={classes.marker} style={{ left: `${axisPercent(marker.minutes)}%` }}>
+          {marker.icon}
+        </div>
+      )}
+      {dots.map((dot, i) => (
+        <div
+          key={dot.key}
+          className={classes.dot}
+          data-approved={dot.approved || undefined}
+          // Takers grabbed at the same moment: side by side, not on top of each other.
+          style={{ left: `calc(${axisPercent(dot.minutes)}% + ${i * 14}px)` }}
+        >
+          {dot.avatar}
+        </div>
+      ))}
+      {nowMinutes !== undefined && (
+        <div className={classes.now} style={{ left: `${axisPercent(nowMinutes)}%` }} />
+      )}
+    </div>
+  );
+}

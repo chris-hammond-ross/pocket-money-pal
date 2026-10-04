@@ -1,6 +1,8 @@
 /**
  * The scheduler: creates each day's chore instances in the family time zone, decides the
- * days that ended for streaks (spec 005), and runs payday. It runs at startup, just after each midnight and at each payday slot. Running it
+ * days that ended for streaks (spec 005), runs payday, and moves surprise quests along
+ * (spec 006: set times, expiry, the queue). It runs at startup, just after each midnight,
+ * at each payday slot, and at each surprise's next moment. Running it
  * any number of times is safe: the unique (chore, child, date) index makes the day
  * idempotent, and a payday slot can only be covered once (ADR 0010).
  *
@@ -20,6 +22,12 @@ import { checkPayday, paydayInfo, type PaydayResult } from './repo/payday';
 import { sickChildren, snapshotOf, waitingStatus } from './repo/today';
 import { getSettings } from './repo/settings';
 import { decideStreaks, type StreakUpdate } from './repo/streaks';
+import {
+  advanceSurprises,
+  endSurpriseDays,
+  nextSurpriseAt,
+  type SurpriseMove,
+} from './repo/surprises';
 
 export interface EnsureDayResult {
   date: string;
@@ -64,6 +72,8 @@ export function ensureDayIn(db: DbOrTx, date: string, now: number): EnsureDayRes
 export const MAX_SLEEP_MS = 15 * 60_000;
 /** Retry delay after a failed run (e.g. the DB was busy). */
 export const RETRY_MS = 60_000;
+/** The shortest sleep before a surprise's moment (never a busy loop). */
+const SURPRISE_WAKE_MS = 50;
 
 export interface SchedulerOptions {
   db: Db;
@@ -76,6 +86,8 @@ export interface SchedulerOptions {
   onPayday?: (result: PaydayResult) => void;
   /** A payday slot passed in "When I press start" mode. Called once per slot. */
   onPaydayWaiting?: (slot: number) => void;
+  /** Surprise runs moved: a set time came, one expired, or the next went up (spec 006). */
+  onSurprises?: (moves: SurpriseMove[]) => void;
   onError?: (err: unknown) => void;
 }
 
@@ -112,6 +124,7 @@ export function startScheduler({
   onStreaks,
   onPayday,
   onPaydayWaiting,
+  onSurprises,
   onError,
 }: SchedulerOptions): Scheduler {
   let lastDate: string | null = null;
@@ -125,6 +138,8 @@ export function startScheduler({
     if (date !== lastDate) {
       lastDate = date;
       onNewDay?.(result);
+      // Yesterday's surprises still open are skipped (they never count for streaks).
+      db.transaction((tx) => endSurpriseDays(tx, date));
       const streaks = db.transaction((tx) => decideStreaks(tx, date, t));
       if (streaks.length > 0) onStreaks?.(streaks);
     }
@@ -140,11 +155,17 @@ export function startScheduler({
       const { timezone } = getSettings(db);
       if (zonedDateOf(t, timezone) !== lastDate) run();
       paydayTick(db, t, { onPayday, onPaydayWaiting });
-      // Wake just after the next midnight or at the next payday, but never sleep longer
-      // than MAX_SLEEP_MS.
+      const moves = db.transaction((tx) => advanceSurprises(tx, t));
+      if (moves.length > 0) onSurprises?.(moves);
+      // Wake just after the next midnight, at the next payday or the next surprise moment,
+      // but never sleep longer than MAX_SLEEP_MS.
       const nextMidnight = startOfZonedDay(addDays(lastDate!, 1), timezone);
       const nextPayday = paydayInfo(db, t).nextAt;
-      delay = Math.min(Math.max(Math.min(nextMidnight, nextPayday) - t, 1_000), MAX_SLEEP_MS);
+      const nextSurprise = nextSurpriseAt(db) ?? Infinity;
+      const next = Math.min(nextMidnight, nextPayday, nextSurprise);
+      // A surprise wakes on the dot (its expiry is exact); the rest within a second.
+      const floor = next === nextSurprise ? SURPRISE_WAKE_MS : 1_000;
+      delay = Math.min(Math.max(next - t, floor), MAX_SLEEP_MS);
     } catch (err) {
       onError?.(err);
     }

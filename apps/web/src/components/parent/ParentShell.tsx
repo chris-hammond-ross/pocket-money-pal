@@ -13,6 +13,7 @@ import { DayTab } from './DayTab';
 import {
   ParentUiContext,
   problemText,
+  useDay,
   useParentUi,
   useTray,
   type Banner,
@@ -22,9 +23,18 @@ import classes from './parent.module.css';
 import { PhoneQuestEditor, type EditorTarget } from './PhoneQuestEditor';
 import { PaydayTab } from './money/PaydayTab';
 import { PlayersTab } from './PlayersTab';
+import { SurprisePanel } from './SurprisePanel';
+import { SurpriseSheet } from './Surprises';
 import { Tray } from './Tray';
 import { WeekTab } from './WeekTab';
-import { formatMoney, type DayPlan, type MoneyOverview, type ServerEvent } from '@pmp/shared';
+import {
+  formatMoney,
+  surpriseBanner,
+  type DayPlan,
+  type MoneyOverview,
+  type ServerEvent,
+  type SurpriseRun,
+} from '@pmp/shared';
 
 type Tab = 'day' | 'week' | 'players' | 'payday';
 const TABS: { key: Tab; label: string }[] = [
@@ -36,6 +46,8 @@ const TABS: { key: Tab; label: string }[] = [
 
 const BANNER_MS = 4500;
 const FLASH_MS = 1500;
+/** A team's claims arrive together: one "done" banner for them. */
+const SAME_MOMENT_MS = 2000;
 
 /**
  * The parent phone (spec 003): Day / Week / Players tabs with no header above them, the
@@ -57,6 +69,11 @@ export function ParentShell({ welcome }: { welcome: Banner | null }) {
   const [flash, setFlash] = useState<number | null>(null);
   const [editing, setEditing] = useState<(EditorTarget & { id: number }) | null>(null);
   const [picking, setPicking] = useState<{ offerOneOff: boolean; childId?: number } | null>(null);
+  // Surprise quests (spec 006): the panel, a row's sheet, and the row that just changed.
+  const [panel, setPanel] = useState<{ id: number; scheduled: SurpriseRun | null } | null>(null);
+  const [surpriseSheet, setSurpriseSheet] = useState<number | null>(null);
+  const [flashRun, setFlashRun] = useState<number | null>(null);
+  const today = useDay('today');
   const nextId = useRef(1);
 
   const notify = useCallback((b: Banner) => setBanner({ ...b, id: nextId.current++ }), []);
@@ -78,11 +95,18 @@ export function ParentShell({ welcome }: { welcome: Banner | null }) {
         setPicking(options);
       },
       openTray: () => setTrayOpen(true),
+      newSurprise: (scheduled) => setPanel({ id: nextId.current++, scheduled: scheduled ?? null }),
+      openSurprise: (runId) => setSurpriseSheet(runId),
+      flashSurprise: (runId) => {
+        setFlashRun(runId);
+        setTimeout(() => setFlashRun((r) => (r === runId ? null : r)), FLASH_MS);
+      },
     }),
     [notify],
   );
 
   // A child claimed a chore: the banner slides down, the badge pops, the row flashes.
+  const lastDone = useRef<{ runId: number; at: number } | null>(null);
   useEffect(
     () =>
       subscribe((event) => {
@@ -90,6 +114,30 @@ export function ParentShell({ welcome }: { welcome: Banner | null }) {
         const { claim } = event;
         const plan = queryClient.getQueryData<DayPlan>(['day', 'today']);
         const child = plan?.children.find((c) => c.id === claim.childId);
+        // A surprise's "done" (spec 006): one banner for a team, naming everyone on it.
+        const run = queryClient
+          .getQueryData<SurpriseRun[]>(['surprises', 'today'])
+          ?.find((r) => r.takers.some((t) => t.instanceId === claim.instanceId));
+        if (run) {
+          const last = lastDone.current;
+          lastDone.current = { runId: run.id, at: Date.now() };
+          if (last?.runId === run.id && Date.now() - last.at < SAME_MOMENT_MS) return;
+          const names = run.takers.map(
+            (t) => plan?.children.find((c) => c.id === t.childId)?.name ?? 'Someone',
+          );
+          sound.pop();
+          notify({
+            ...surpriseBanner({
+              kind: 'done',
+              title: run.title,
+              names: run.team ? names : [child?.name ?? 'Someone'],
+              avatar: child?.avatar ?? '🙋',
+            }),
+            onClick: () => setTrayOpen(true),
+          });
+          ui.flashSurprise(run.id);
+          return;
+        }
         const quest = plan?.quests.find((q) => q.instances.some((i) => i.id === claim.instanceId));
         sound.pop();
         notify({
@@ -103,7 +151,46 @@ export function ParentShell({ welcome }: { welcome: Banner | null }) {
           setTimeout(() => setFlash(null), FLASH_MS);
         }
       }),
-    [subscribe, queryClient, notify],
+    [subscribe, queryClient, notify, ui],
+  );
+
+  // Surprise moments (spec 006): grabbed, nobody grabbed it, a scheduled one popped up.
+  useEffect(
+    () =>
+      subscribe((event) => {
+        const plan = queryClient.getQueryData<DayPlan>(['day', 'today']);
+        const childOf = (id: number) => plan?.children.find((c) => c.id === id);
+        let banner: Banner | null = null;
+        if (event.type === 'surprise.grabbed') {
+          const { run } = event;
+          const ms =
+            run.grabbedAt !== null && run.shownAt !== null ? run.grabbedAt - run.shownAt : null;
+          const taker = childOf(event.childIds[0] ?? 0);
+          banner = event.team
+            ? surpriseBanner({
+                kind: 'team',
+                title: run.title,
+                names: event.childIds.map((id) => childOf(id)?.name ?? 'Someone'),
+                reward: run.rewardPoints,
+              })
+            : surpriseBanner({
+                kind: 'grabbed',
+                title: run.title,
+                taker: { name: taker?.name ?? 'Someone', avatar: taker?.avatar ?? '⚡' },
+                ms,
+              });
+        } else if (event.type === 'surprise.expired') {
+          banner = surpriseBanner({ kind: 'expired', title: event.run.title });
+        } else if (event.type === 'surprise.live' && event.run.appearAt !== null) {
+          banner = surpriseBanner({ kind: 'appeared', title: event.run.title });
+        }
+        if (!banner || !('run' in event)) return;
+        const runId = event.run.id;
+        sound.pop();
+        notify({ ...banner, onClick: () => setSurpriseSheet(runId) });
+        ui.flashSurprise(runId);
+      }),
+    [subscribe, queryClient, notify, ui],
   );
 
   // Money moments a parent should hear about (spec 004, ADR 0010): banners only; the
@@ -166,7 +253,7 @@ export function ParentShell({ welcome }: { welcome: Banner | null }) {
           ))}
         </nav>
         <main className={classes.main} data-tray={items.length > 0 || undefined}>
-          {tab === 'day' && <DayTab flashChoreId={flash} />}
+          {tab === 'day' && <DayTab flashChoreId={flash} flashRunId={flashRun} />}
           {tab === 'week' && <WeekTab />}
           {tab === 'players' && <PlayersTab />}
           {tab === 'payday' && <PaydayTab />}
@@ -217,6 +304,17 @@ export function ParentShell({ welcome }: { welcome: Banner | null }) {
       )}
       {editing && (
         <PhoneQuestEditor key={editing.id} target={editing} onClose={() => setEditing(null)} />
+      )}
+      {panel && (
+        <SurprisePanel key={panel.id} scheduled={panel.scheduled} onClose={() => setPanel(null)} />
+      )}
+      {surpriseSheet !== null && today.data && (
+        <SurpriseSheet
+          runId={surpriseSheet}
+          kids={today.data.children}
+          clockOffsetMs={today.data.clockOffsetMs}
+          onClose={() => setSurpriseSheet(null)}
+        />
       )}
       <PushOptIn />
     </ParentUiContext.Provider>

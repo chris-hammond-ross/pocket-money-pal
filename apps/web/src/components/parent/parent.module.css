@@ -1084,3 +1084,16 @@
   display: grid;
   gap: 8px;
 }
+
+/* A surprise in the tray (spec 006): a purple stripe, and a team's avatars side by side. */
+.swipe[data-surprise] .card {
+  box-shadow: inset 5px 0 0 var(--pmp-surprise);
+}
+
+.card .avatar[data-team] {
+  width: auto;
+  min-width: 40px;
+  padding: 0 8px;
+  border-radius: 20px;
+  letter-spacing: -2px;
+}

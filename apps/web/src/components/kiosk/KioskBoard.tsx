@@ -6,7 +6,7 @@ import { clockTime, clockTimeAt } from '../../lib/format';
 import { useLiveEvents } from '../../lib/live-events';
 import { useServerNow } from '../../lib/server-clock';
 import { sound } from '../../lib/sounds';
-import { KioskCelebrations } from './Celebrations';
+import { BANNER_MS, KioskCelebrations } from './Celebrations';
 import { ClaimSheet } from './ClaimSheet';
 import { EnvelopeCard } from './money/EnvelopeCard';
 import { NewJarScreen } from './money/NewJarScreen';
@@ -15,6 +15,7 @@ import { SavingsScreen } from './money/SavingsScreen';
 import { PairPhoneCard } from './PairPhoneCard';
 import classes from './kiosk.module.css';
 import { PlayerColumn } from './PlayerColumn';
+import { SurpriseOverlay } from './SurpriseOverlay';
 import { ringingIds, useBonusAlerts, useKioskSound, useMorningReports } from './use-game-layer';
 
 /** A full-screen money view over the board (spec 004). */
@@ -30,12 +31,13 @@ type MoneyView =
  */
 export function KioskBoard({ board }: { board: Board }) {
   const now = useServerNow(board.clockOffsetMs);
-  const { status } = useLiveEvents();
+  const { status, subscribe } = useLiveEvents();
   const [claiming, setClaiming] = useState<number | null>(null);
   const [view, setView] = useState<MoneyView | null>(null);
   const closeSheet = useCallback(() => setClaiming(null), []);
   const closeView = useCallback(() => setView(null), []);
   const show = usePaydayShow(board);
+  const surpriseShown = useSurpriseAfterGrab(subscribe);
   const { quiet, until } = useKioskSound(now, board.timezone);
   const ringing = ringingIds(board, now);
   useBonusAlerts(board, now, ringing);
@@ -174,10 +176,43 @@ export function KioskBoard({ board }: { board: Board }) {
           />
         )}
       </AnimatePresence>
+      <AnimatePresence>
+        {/* Closes by itself when its countdown runs out here; the server expires it too. */}
+        {board.surprise && (board.surprise.run.expiresAt ?? 0) > now && surpriseShown && (
+          <SurpriseOverlay
+            key={`surprise-${board.surprise.run.id}`}
+            surprise={board.surprise}
+            players={board.children}
+            now={now}
+          />
+        )}
+      </AnimatePresence>
       <PairPhoneCard />
       <KioskCelebrations />
     </div>
   );
+}
+
+/**
+ * After a grab, the next surprise waits on this screen until the grab's banner and
+ * confetti have played (spec 006): otherwise its overlay would cover them at once.
+ */
+function useSurpriseAfterGrab(subscribe: ReturnType<typeof useLiveEvents>['subscribe']) {
+  const [held, setHeld] = useState(false);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = subscribe((event) => {
+      if (event.type !== 'surprise.grabbed') return;
+      setHeld(true);
+      clearTimeout(timer);
+      timer = setTimeout(() => setHeld(false), BANNER_MS);
+    });
+    return () => {
+      unsubscribe();
+      clearTimeout(timer);
+    };
+  }, [subscribe]);
+  return !held;
 }
 
 /** The last payday this kiosk showed (spec 004): display state, so it lives here. */

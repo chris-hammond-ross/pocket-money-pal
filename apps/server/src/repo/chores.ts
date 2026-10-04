@@ -90,13 +90,16 @@ export function toChoreDto(chore: Chore, childIds: readonly number[]): ChoreDto 
   };
 }
 
-/** Chores that aren't deleted, oldest first, with their active players. */
+/**
+ * Chores that aren't deleted, oldest first, with their active players. A grabbed
+ * surprise's one-off isn't one of the family's quests: its SURPRISES TODAY row stands for it.
+ */
 export function listChores(db: DbOrTx): ChoreDto[] {
   const active = new Set(listChildren(db).map((c) => c.id));
   const rows = db
     .select()
     .from(chores)
-    .where(isNull(chores.deletedAt))
+    .where(and(isNull(chores.deletedAt), isNull(chores.surpriseRunId)))
     .orderBy(asc(chores.id))
     .all();
   const assignments = db.select().from(choreAssignments).all();
@@ -176,6 +179,8 @@ const EDITABLE_FIELDS = [
  */
 export function updateChore(db: DbOrTx, id: number, patch: ChorePatch, ctx: EditContext): ChoreDto {
   const chore = getActiveChore(db, id);
+  // A grabbed surprise's quest can be deleted, but not edited into an ordinary quest.
+  if (chore.surpriseRunId !== null) throw new NotFoundError(`Chore ${id} is a surprise`);
   const current = listChores(db).find((c) => c.id === id)!;
   // The schema drops `id` and `libraryId`, which a patch can't change.
   const merged = choreInputSchema.safeParse({ ...current, ...patch });

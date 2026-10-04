@@ -1171,3 +1171,134 @@ p.pairCode {
   margin-top: 6px;
   box-shadow: 0 5px 0 var(--pmp-gold-shadow, #b8941f);
 }
+
+/* Surprise quest (spec 001, spec 006): full screen, over everything, until it's grabbed. */
+.surprise {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 40%, #7a4dff 0%, #4c22b8 45%, #2a0f6e 100%);
+}
+
+.surpriseCard {
+  width: min(1180px, 92vw);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.surpriseHead {
+  margin: 0 0 10px;
+  font-family: var(--pmp-font-pixel);
+  font-weight: 400;
+  font-size: 56px;
+  color: var(--pmp-gold);
+  text-shadow: 5px 5px 0 #3a1a8f;
+
+  & span {
+    display: inline-block;
+    font-size: 46px;
+    animation: bob 1.2s ease-in-out infinite;
+  }
+}
+
+.surpriseTitle {
+  font-size: 68px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #f1edff;
+}
+
+.surprisePoints {
+  font-size: 44px;
+  font-weight: 800;
+  color: var(--pmp-gold);
+}
+
+.surpriseLine {
+  font-size: 28px;
+  color: #dcd3ff;
+  margin-bottom: 18px;
+
+  & b {
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+  }
+}
+
+.surpriseButtons {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr));
+  gap: 26px 30px;
+}
+
+.grabButton {
+  font: inherit;
+  font-size: 38px;
+  font-weight: 800;
+  color: #fff;
+  min-height: 108px;
+  padding: 16px 24px;
+  border: 0;
+  border-radius: 32px;
+  cursor: pointer;
+  background: var(--c);
+  box-shadow: 0 10px 0 color-mix(in srgb, var(--c) 45%, #1a0b4a);
+  transition: transform 0.1s;
+
+  &:active {
+    transform: translateY(6px);
+    box-shadow: 0 4px 0 color-mix(in srgb, var(--c) 45%, #1a0b4a);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.75;
+  }
+}
+
+/* "We'll all do it!": the whole row, through the children's colours. */
+.teamButton {
+  grid-column: 1 / -1;
+  color: #0f1024;
+  background: var(--team);
+  box-shadow: 0 10px 0 #2a0f6e;
+
+  & small {
+    font-size: 26px;
+    margin-left: 8px;
+  }
+
+  &:active {
+    box-shadow: 0 4px 0 #2a0f6e;
+  }
+}
+
+.surpriseQueued {
+  position: absolute;
+  right: 36px;
+  bottom: 28px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  padding: 8px 20px;
+}
+
+/* A grabbed surprise in a column (spec 006): a purple outline, no bar. */
+.quest[data-surprise] {
+  border-color: var(--pmp-surprise);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--pmp-surprise) 35%, transparent);
+}
+
+.surpriseTag {
+  composes: tag;
+  color: #e5dbff;
+  background: color-mix(in srgb, var(--pmp-surprise) 30%, transparent);
+}

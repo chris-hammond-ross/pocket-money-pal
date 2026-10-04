@@ -1,3 +1,4 @@
+import type { SurpriseRun } from '@pmp/shared';
 import { useQuery } from '@tanstack/react-query';
 import { createContext, useContext } from 'react';
 import { api, ApiError } from '../../lib/api';
@@ -17,6 +18,12 @@ export interface ParentUi {
   /** Opens the new-quest picker; the one-off tile shows when today is selected. */
   newQuest: (options: { offerOneOff: boolean; childId?: number }) => void;
   openTray: () => void;
+  /** The surprise panel (spec 006): a new one, or a scheduled one to change. */
+  newSurprise: (scheduled?: SurpriseRun) => void;
+  /** A SURPRISES TODAY row's sheet. */
+  openSurprise: (runId: number) => void;
+  /** The row of a surprise just sent flashes. */
+  flashSurprise: (runId: number) => void;
 }
 
 export const ParentUiContext = createContext<ParentUi | null>(null);
@@ -41,6 +48,21 @@ export function useDay(date: string) {
 
 export function useTray() {
   return useQuery({ queryKey: ['claimed'], queryFn: api.claimed });
+}
+
+/** Today's surprise runs (spec 006, SURPRISES TODAY). */
+export function useSurprises() {
+  return useQuery({ queryKey: ['surprises', 'today'], queryFn: api.surprisesToday });
+}
+
+/** The saved surprise quests. */
+export function useSurpriseTasks() {
+  return useQuery({ queryKey: ['surprise-tasks'], queryFn: api.surpriseTasks });
+}
+
+/** The player cards (sick days, for the surprise panel's "who"). */
+export function usePlayers() {
+  return useQuery({ queryKey: ['players'], queryFn: api.players });
 }
 
 /** A failed call, in words for the banner. */

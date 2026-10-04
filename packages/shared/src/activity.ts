@@ -41,6 +41,15 @@ export const ACTIVITY_TYPES = [
   'goal.bought',
   // Game layer (spec 005)
   'streak.decided',
+  // Surprise quests (spec 006; 'surprise.sent' is above, from spec 002)
+  'surprise.scheduled',
+  'surprise.updated',
+  'surprise.cancelled',
+  'surprise.grabbed',
+  'surprise.expired',
+  'surprise_task.created',
+  'surprise_task.updated',
+  'surprise_task.deleted',
   // System
   'day.scheduled',
 ] as const;

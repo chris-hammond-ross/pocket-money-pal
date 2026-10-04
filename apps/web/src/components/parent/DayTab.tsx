@@ -6,13 +6,21 @@ import { sound } from '../../lib/sounds';
 import { DashedButton, DayAxis, PlayerBadge, WindowBar, type ClaimDot } from '../arcade';
 import { useDay, useParentUi } from './context';
 import classes from './parent.module.css';
+import { SurpriseButton, SurprisesToday } from './Surprises';
 
 /**
  * The Day tab (spec 003): the week's day strip, a player filter, and a row per quest on
  * the shared 6am–9pm axis. Today also shows each child's status, a live now-line and the
- * claim dots; other days show the current plan.
+ * claim dots; other days show the current plan. Today also has its surprises (spec 006):
+ * their rows above the quests, and the "⚡ Surprise quest" button at the bottom.
  */
-export function DayTab({ flashChoreId }: { flashChoreId: number | null }) {
+export function DayTab({
+  flashChoreId,
+  flashRunId,
+}: {
+  flashChoreId: number | null;
+  flashRunId: number | null;
+}) {
   const ui = useParentUi();
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState<number | 'all'>('all');
@@ -71,6 +79,15 @@ export function DayTab({ flashChoreId }: { flashChoreId: number | null }) {
       </div>
 
       <DayAxis />
+      {isToday && (
+        <SurprisesToday
+          kids={plan.children}
+          timezone={plan.timezone}
+          clockOffsetMs={day.data?.clockOffsetMs ?? 0}
+          flashRunId={flashRunId}
+          filter={filter}
+        />
+      )}
       {quests.map(({ chore, skipped, instances }) => {
         const range = pointsRange(chore);
         const players = chore.childIds.filter((id) => filter === 'all' || id === filter);
@@ -137,6 +154,7 @@ export function DayTab({ flashChoreId }: { flashChoreId: number | null }) {
       >
         ＋ New quest{isToday ? ' · or a one-off for today' : ''}
       </DashedButton>
+      {isToday && <SurpriseButton />}
     </>
   );
 }

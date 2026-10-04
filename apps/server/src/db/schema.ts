@@ -1,4 +1,4 @@
-import type { Weekday } from '@pmp/shared';
+import type { SurpriseRunStatus, Weekday } from '@pmp/shared';
 import { sql } from 'drizzle-orm';
 import {
   index,
@@ -96,6 +96,11 @@ export const chores = sqliteTable('chores', {
   skippedOn: text('skipped_on'),
   /** Soft delete (epoch ms): history and ledger rows keep pointing at it. */
   deletedAt: integer('deleted_at'),
+  /**
+   * The surprise run whose grab made this one-off (spec 006). The Day and Week tabs, the
+   * quest list and streaks leave these out: the run's own row stands for it.
+   */
+  surpriseRunId: integer('surprise_run_id').references((): AnySQLiteColumn => surpriseRuns.id),
   ...timestamps,
 });
 
@@ -303,6 +308,76 @@ export const streakDays = sqliteTable(
     decidedAt: integer('decided_at').notNull(),
   },
   (t) => [primaryKey({ columns: [t.childId, t.date] })],
+);
+
+/** The family's saved surprise quests (spec 006; the plan's `surprise_tasks`). */
+export const surpriseTasks = sqliteTable('surprise_tasks', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  title: text('title').notNull(),
+  icon: text('icon').notNull(),
+  rewardPoints: integer('reward_points').notNull(),
+  /** Default time frame: how long it stays up on the kiosk to be accepted. */
+  timeFrameMin: integer('time_frame_min').notNull(),
+  /** Default who: one child, or null for all children. */
+  childId: integer('child_id').references(() => users.id),
+  /** Soft delete (epoch ms): runs already sent keep their own copy anyway. */
+  deletedAt: integer('deleted_at'),
+  ...timestamps,
+});
+
+export const SURPRISE_RUN_STATUS_VALUES = [
+  'scheduled',
+  'queued',
+  'live',
+  'grabbed',
+  'expired',
+  'cancelled',
+] as const satisfies readonly SurpriseRunStatus[];
+
+/**
+ * One row per surprise sent (spec 006): `scheduled` → `queued` → `live` → `grabbed` |
+ * `expired` | `cancelled`. It copies its quest when it's made, so editing or deleting the
+ * saved quest never changes it. After the grab, progress lives on the one-off chore's
+ * instances (`chore_id`).
+ */
+export const surpriseRuns = sqliteTable(
+  'surprise_runs',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    /** The saved quest it came from; null for a new one that wasn't kept. */
+    taskId: integer('task_id').references(() => surpriseTasks.id),
+    title: text('title').notNull(),
+    icon: text('icon').notNull(),
+    rewardPoints: integer('reward_points').notNull(),
+    timeFrameMin: integer('time_frame_min').notNull(),
+    /** One child, or null for all children. */
+    childId: integer('child_id').references(() => users.id),
+    status: text('status', { enum: SURPRISE_RUN_STATUS_VALUES }).notNull(),
+    /** The family date it's for: surprises are today only. */
+    date: text('date').notNull(),
+    /** A set time (epoch ms); null when sent right away. */
+    appearAt: integer('appear_at'),
+    /** When it was sent or last changed on a phone (epoch ms): the queue's order. */
+    sentAt: integer('sent_at').notNull(),
+    /** When it went live, and when its time frame runs out (epoch ms). */
+    shownAt: integer('shown_at'),
+    expiresAt: integer('expires_at'),
+    grabbedAt: integer('grabbed_at'),
+    /** "We'll all do it!": every eligible child took it. */
+    team: integer('team', { mode: 'boolean' }).notNull().default(false),
+    /** When it was grabbed, expired or cancelled (epoch ms). */
+    endedAt: integer('ended_at'),
+    /** Who sent it: `phone` (a parent), or `ha` later (Phase 7). */
+    source: text('source', { enum: ['phone', 'ha'] })
+      .notNull()
+      .default('phone'),
+    sentBy: integer('sent_by').references(() => users.id),
+    cancelledBy: integer('cancelled_by').references(() => users.id),
+    /** The one-off chore the grab made. */
+    choreId: integer('chore_id').references((): AnySQLiteColumn => chores.id),
+    ...timestamps,
+  },
+  (t) => [index('surprise_runs_status').on(t.status), index('surprise_runs_date').on(t.date)],
 );
 
 /** Audit trail and activity feed: every parent action and notable system action. */

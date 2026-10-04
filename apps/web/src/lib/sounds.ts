@@ -26,7 +26,8 @@ export type SoundName =
   | 'bloop'
   | 'grow'
   | 'fizzle'
-  | 'flip';
+  | 'flip'
+  | 'alarm';
 
 /** Each sound's level relative to the others, so none drowns the rest out. */
 const LEVELS: Record<SoundName, number> = {
@@ -47,6 +48,7 @@ const LEVELS: Record<SoundName, number> = {
   grow: 0.7,
   fizzle: 0.6,
   flip: 0.6,
+  alarm: 0.7,
 };
 
 /** Master volume away from the kiosk. */
@@ -103,6 +105,7 @@ export const sound: Record<Exclude<SoundName, 'clink'>, () => void> = {
   grow: () => play('grow'),
   fizzle: () => play('fizzle'),
   flip: () => play('flip'),
+  alarm: () => play('alarm'),
 };
 
 /** Spec 005's tick-tock: one a second while a bonus is ending, the tock a little lower. */

@@ -132,13 +132,13 @@ export class ClaimNotifier {
 
   constructor(private readonly opts: NotifierOptions) {}
 
-  /** A child claimed `instanceId`. */
-  claimed(instanceId: number): void {
+  /** A child claimed these (several at once: a team surprise, spec 006). */
+  claimed(...instanceIds: number[]): void {
     if (this.timer) {
-      this.held.push(instanceId);
+      this.held.push(...instanceIds);
       return;
     }
-    this.track(this.push([instanceId]));
+    this.track(this.push(instanceIds));
     this.openWindow();
   }
 

@@ -76,7 +76,7 @@ export function KioskCelebrations() {
     };
     const jarOf = (childId: number, goalId: number) =>
       childOf(childId)?.jars.find((j) => j.id === goalId);
-    const ctx = { colourOf, addFloat, showLevelUp, showBanner, jarOf };
+    const ctx = { childOf, colourOf, addFloat, showLevelUp, showBanner, jarOf };
     const unsubscribe = subscribe((event) => {
       for (const step of stepsFor(event, ctx)) queue.current.push(step);
     });
@@ -140,9 +140,12 @@ const LEVEL_UP_MS = 4200;
 /** When the old level number flips over to the new one. */
 const LEVEL_FLIP_MS = 900;
 /** How long a big banner ("💥 SMASH! 💥") shows. */
-const BANNER_MS = 2400;
+export const BANNER_MS = 2400;
 /** Approvals in a batch play this far apart (spec 002). */
 const APPROVAL_GAP_MS = 500;
+/** Claims this close together (a team surprise's) share one sound. */
+const SAME_CLAIM_MS = 400;
+let lastClaimSound = 0;
 
 interface LevelUp {
   id: number;
@@ -256,6 +259,7 @@ interface Step {
 }
 
 interface StepContext {
+  childOf: (childId: number) => { name: string; avatar: string } | undefined;
   colourOf: (childId: number) => string;
   addFloat: (text: string, rect: DOMRect) => void;
   showLevelUp: (childId: number, xp: number) => void;
@@ -281,7 +285,8 @@ function stepsFor(event: ServerEvent, ctx: StepContext): Step[] {
         {
           holdMs: 0,
           play: () => {
-            sound[feedback.sound]();
+            if (performance.now() - lastClaimSound > SAME_CLAIM_MS) sound[feedback.sound]();
+            lastClaimSound = performance.now();
             if (!rect) return;
             ctx.addFloat(`+${claim.points.total}`, rect);
             if (feedback.confetti) {
@@ -331,6 +336,35 @@ function stepsFor(event: ServerEvent, ctx: StepContext): Step[] {
     }
     case 'instance.sent_back':
       return [{ holdMs: 0, play: () => sound.sad() }];
+    case 'surprise.grabbed': {
+      // Grabbed (spec 006): the fanfare, confetti (gold for a team), and who's on it.
+      const { run, childIds, team } = event;
+      const names = childIds.map((id) => ctx.childOf(id)?.name ?? '').filter(Boolean);
+      const colours = team
+        ? [arcade.gold, '#fff3bf', '#ffffff']
+        : [ctx.colourOf(childIds[0]!), arcade.gold, '#ffffff'];
+      return [
+        {
+          holdMs: BANNER_MS,
+          play: () => {
+            sound.fanfare();
+            celebrate({ colours, count: team ? 260 : 180 });
+            ctx.showBanner(
+              [
+                team
+                  ? '👫 ALL ON IT!'
+                  : `${ctx.childOf(childIds[0]!)?.avatar ?? '⚡'} ${names[0]?.toUpperCase() ?? ''}’S ON IT!`,
+                `${run.icon} ${run.title.toUpperCase()}`,
+              ],
+              team ? arcade.gold : ctx.colourOf(childIds[0]!),
+            );
+          },
+        },
+      ];
+    }
+    case 'surprise.expired':
+      // Nobody took it: the overlay has closed; a soft fizzle if it was up on the kiosk.
+      return event.run.shownAt === null ? [] : [{ holdMs: 0, play: () => sound.fizzle() }];
     case 'envelope.created':
       // A gift arrived (spec 004): a paper whoosh and a chime; the tag wiggles on the card.
       return [

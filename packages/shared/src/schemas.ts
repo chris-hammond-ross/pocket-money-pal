@@ -3,6 +3,12 @@ import { LIBRARY_SECTIONS } from './library';
 import { normalisePairingCode } from './pairing';
 import { NOTE_MAX } from './payday';
 import { JAR_EMOJI_LIST, JAR_MAX_CENTS, JAR_MIN_CENTS, JAR_NAME_MAX } from './savings';
+import {
+  SURPRISE_REWARD,
+  SURPRISE_RUN_STATUSES,
+  SURPRISE_TIME_FRAMES,
+  SURPRISE_TITLE_MAX,
+} from './surprises';
 import { isIsoDate, isValidTimeZone, parseTimeOfDay, WEEKDAYS } from './time';
 
 export const currencySchema = z.string().regex(/^[A-Z]{3}$/, 'ISO 4217 code, e.g. GBP');
@@ -502,6 +508,17 @@ export const trayItemSchema = z.object({
   /** The stage when it was claimed, and the points that gives with the default chips. */
   stage: choreStageSchema,
   points: pointsBreakdownSchema,
+  /**
+   * A grabbed surprise (spec 006): its run, whether it was taken on together (the tray
+   * shows the team as one card), and how fast it was grabbed.
+   */
+  surprise: z
+    .object({
+      runId: idSchema,
+      team: z.boolean(),
+      grabbedInMs: z.number().int().nullable(),
+    })
+    .nullable(),
 });
 export type TrayItem = z.infer<typeof trayItemSchema>;
 
@@ -870,6 +887,159 @@ export const goalMoveResultSchema = z.object({
 export type GoalMoveResult = z.infer<typeof goalMoveResultSchema>;
 
 // ---------------------------------------------------------------------------
+// Surprise quests (spec 006)
+
+export const surpriseTitleSchema = z
+  .string()
+  .trim()
+  .min(1, 'Give the quest a title')
+  .max(SURPRISE_TITLE_MAX);
+
+/** 5–100 points, in steps of 5. */
+export const surpriseRewardSchema = z
+  .number()
+  .int()
+  .min(SURPRISE_REWARD.min)
+  .max(SURPRISE_REWARD.max)
+  .refine((p) => p % SURPRISE_REWARD.step === 0, 'Rewards go in steps of 5');
+
+/** One of the stepper's stops (1, 2, 5, 10, 15, 20, 30, 45 or 60 minutes). */
+export const surpriseTimeFrameSchema = z
+  .number()
+  .int()
+  .refine(
+    (m) => (SURPRISE_TIME_FRAMES as readonly number[]).includes(m),
+    'Pick one of the time frames',
+  );
+
+/** Who can accept it: `'all'` children, or one child's id. */
+export const surpriseWhoSchema = z.union([z.literal('all'), idSchema]);
+
+/** A saved surprise quest (`GET /api/surprise-tasks`). */
+export const surpriseTaskSchema = z.object({
+  id: idSchema,
+  title: z.string(),
+  icon: z.string(),
+  rewardPoints: z.number().int(),
+  timeFrameMin: z.number().int(),
+  who: surpriseWhoSchema,
+});
+export type SurpriseTask = z.infer<typeof surpriseTaskSchema>;
+export const surpriseTaskListSchema = z.array(surpriseTaskSchema);
+
+/** `POST /api/surprise-tasks`. */
+export const surpriseTaskInputSchema = z.object({
+  title: surpriseTitleSchema,
+  icon: iconSchema,
+  rewardPoints: surpriseRewardSchema,
+  timeFrameMin: surpriseTimeFrameSchema,
+  who: surpriseWhoSchema,
+});
+export type SurpriseTaskInput = z.infer<typeof surpriseTaskInputSchema>;
+
+/** `PATCH /api/surprise-tasks/:id`: any of its fields. */
+export const surpriseTaskPatchSchema = surpriseTaskInputSchema.partial().strict();
+export type SurpriseTaskPatch = z.infer<typeof surpriseTaskPatchSchema>;
+
+/**
+ * `POST /api/surprises` (send or schedule), and `PATCH /api/surprises/:id` (change a
+ * scheduled one: the panel sends its whole state again). Either a saved quest (`taskId`),
+ * whose defaults fill `who` and `timeFrameMin` when left out (spec 002's `{ taskId }`
+ * form), or a new one (`task`), which needs both and is kept for next time with `save`.
+ * `appearAt` is a set time today ("HH:MM"); without it, it pops up right away.
+ */
+export const surpriseSendSchema = z
+  .object({
+    taskId: idSchema.optional(),
+    task: z
+      .object({ title: surpriseTitleSchema, icon: iconSchema, rewardPoints: surpriseRewardSchema })
+      .strict()
+      .optional(),
+    who: surpriseWhoSchema.optional(),
+    timeFrameMin: surpriseTimeFrameSchema.optional(),
+    appearAt: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Expected a time as HH:MM')
+      .optional(),
+    save: z.boolean().default(false),
+  })
+  .strict()
+  .superRefine((s, ctx) => {
+    if ((s.taskId === undefined) === (s.task === undefined)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['taskId'],
+        message: 'Pick a quest, or make a new one',
+      });
+    }
+    if (s.task && (s.who === undefined || s.timeFrameMin === undefined)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['who'],
+        message: 'A new quest needs who and how long',
+      });
+    }
+    if (s.save && !s.task) {
+      ctx.addIssue({ code: 'custom', path: ['save'], message: 'Only a new quest can be saved' });
+    }
+  });
+export type SurpriseSend = z.input<typeof surpriseSendSchema>;
+
+/** `POST /api/surprises/:id/grab` from the kiosk: one child, or "We'll all do it!". */
+export const surpriseGrabSchema = z.union([
+  z.object({ childId: idSchema }).strict(),
+  z.object({ all: z.literal(true) }).strict(),
+]);
+
+/** A child who took a surprise, and where their quest is now. */
+export const surpriseTakerSchema = z.object({
+  childId: idSchema,
+  instanceId: idSchema,
+  status: instanceStatusSchema,
+  claimedAt: z.number().int().nullable(),
+});
+
+/**
+ * A sent surprise (a "run", spec 006). Its quest is copied when it's sent, so editing the
+ * saved quest never changes it. Instants are epoch ms.
+ */
+export const surpriseRunSchema = z.object({
+  id: idSchema,
+  taskId: idSchema.nullable(),
+  title: z.string(),
+  icon: z.string(),
+  rewardPoints: z.number().int(),
+  timeFrameMin: z.number().int(),
+  who: surpriseWhoSchema,
+  status: z.enum(SURPRISE_RUN_STATUSES),
+  /** A set time; null when sent right away. */
+  appearAt: z.number().int().nullable(),
+  sentAt: z.number().int(),
+  shownAt: z.number().int().nullable(),
+  expiresAt: z.number().int().nullable(),
+  grabbedAt: z.number().int().nullable(),
+  endedAt: z.number().int().nullable(),
+  /** Taken on together ("We'll all do it!"). */
+  team: z.boolean(),
+  /** The children who can accept it now (its child, or all of them, but not a sick one). */
+  eligibleIds: z.array(idSchema),
+  /** After the grab: each taker's quest. */
+  takers: z.array(surpriseTakerSchema),
+});
+export type SurpriseRun = z.infer<typeof surpriseRunSchema>;
+
+/** `GET /api/surprises/today`: today's runs (not cancelled), in the order they were sent. */
+export const surpriseTodaySchema = z.array(surpriseRunSchema);
+
+/** The surprise on the kiosk now, with "We'll all do it!" and how many wait behind it. */
+export const kioskSurpriseSchema = z.object({
+  run: surpriseRunSchema,
+  canTeam: z.boolean(),
+  queued: z.number().int(),
+});
+export type KioskSurprise = z.infer<typeof kioskSurpriseSchema>;
+
+// ---------------------------------------------------------------------------
 // Kiosk dashboard (spec 001)
 
 /** Any wall-clock "HH:MM" (instances may hold times edited outside the quest editor). */
@@ -914,6 +1084,8 @@ export const kioskQuestSchema = z.object({
    * Cleared when the child claims it again.
    */
   sentBack: z.object({ reason: sendBackReasonSchema, by: z.string().nullable() }).nullable(),
+  /** A grabbed surprise (spec 006): drawn with a purple outline and no bar. */
+  surprise: z.object({ runId: idSchema, team: z.boolean() }).nullable(),
 });
 export type KioskQuest = z.infer<typeof kioskQuestSchema>;
 
@@ -984,6 +1156,8 @@ export const kioskTodaySchema = z.object({
   payday: paydayInfoSchema,
   /** In column order (`users.sort_order`). */
   children: z.array(kioskChildSchema),
+  /** The surprise up on the kiosk now (spec 006), or null. */
+  surprise: kioskSurpriseSchema.nullable(),
 });
 export type KioskToday = z.infer<typeof kioskTodaySchema>;
 

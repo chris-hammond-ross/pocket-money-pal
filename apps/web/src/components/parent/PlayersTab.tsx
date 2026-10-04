@@ -34,7 +34,7 @@ import { sound } from '../../lib/sounds';
 import { ArcadeButton, CloseButton, DashedButton, PixelLabel, RateSlider, Sheet } from '../arcade';
 import { Flame, flameColours } from '../Flame';
 import { PlayerEditor } from '../PlayerEditor';
-import { problemText, useParentUi } from './context';
+import { problemText, useParentUi, usePlayers } from './context';
 import classes from './parent.module.css';
 
 /** Where the plain-HTTP hint sends a parent: the install guide's Tailscale section. */
@@ -192,10 +192,6 @@ function SwitchToSecure() {
 // Players and game masters
 
 type Editing = { player: PlayerCard | null };
-
-function usePlayers() {
-  return useQuery({ queryKey: ['players'], queryFn: api.players });
-}
 
 function Players() {
   const ui = useParentUi();

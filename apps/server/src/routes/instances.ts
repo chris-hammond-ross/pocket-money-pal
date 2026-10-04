@@ -13,6 +13,7 @@ import { ConflictError, NotFoundError } from '../repo/db';
 import {
   approveClaim,
   claimInstance,
+  getInstance,
   ClaimRefusedError,
   listClaimed,
   markDone,
@@ -20,6 +21,7 @@ import {
   undoApprovalBy,
 } from '../repo/instances';
 import { refreshStreaksFor, type StreakUpdate } from '../repo/streaks';
+import { teamSiblings } from '../repo/surprises';
 
 export interface InstanceRouteOptions {
   db: Db;
@@ -46,7 +48,8 @@ export async function instanceRoutes(
 ): Promise<void> {
   /**
    * A child claims a quest (spec 001). Scored on the server's clock (the dev clock when
-   * it's on), then every screen hears `instance.claimed` and plays the animation.
+   * it's on), then every screen hears `instance.claimed` and plays the animation. A team
+   * surprise needs one claim (spec 006): everyone's quest is claimed with the same time.
    */
   app.post('/api/instances/:id/claim', async (req, reply) => {
     const id = instanceId(req);
@@ -56,17 +59,26 @@ export async function instanceRoutes(
 
     const at = now();
     try {
-      const claim = db.transaction((tx) =>
-        claimInstance(tx, {
+      const claims = db.transaction((tx) => {
+        const claim = claimInstance(tx, {
           instanceId: id,
           childId: body.data.childId,
           unprompted: body.data.unprompted,
           now: at,
-        }),
-      );
-      app.hub.broadcast({ type: 'instance.claimed', claim });
-      app.notifier.claimed(claim.instanceId);
-      return claim;
+        });
+        const team = teamSiblings(tx, id, ['open']).map((siblingId) =>
+          claimInstance(tx, {
+            instanceId: siblingId,
+            childId: getInstance(tx, siblingId).childId,
+            unprompted: body.data.unprompted,
+            now: at,
+          }),
+        );
+        return [claim, ...team];
+      });
+      for (const claim of claims) app.hub.broadcast({ type: 'instance.claimed', claim });
+      app.notifier.claimed(...claims.map((c) => c.instanceId));
+      return claims[0];
     } catch (err) {
       if (err instanceof ClaimRefusedError) {
         return reply.code(CLAIM_STATUS[err.problem]).send({ error: err.problem });
@@ -101,7 +113,8 @@ export async function instanceRoutes(
 
   /**
    * Approve one or more claimed chores, in one transaction: all of them or none. Then one
-   * `instance.approved` per chore, which the kiosk plays one at a time (spec 002).
+   * `instance.approved` per chore, which the kiosk plays one at a time (spec 002). A team
+   * surprise's claimed quests are approved together, with the same chips (spec 006).
    */
   app.post('/api/instances/approve', parentOnly, async (req, reply) => {
     const body = approveRequestSchema.safeParse(req.body);
@@ -110,7 +123,16 @@ export async function instanceRoutes(
     const at = now();
     try {
       const { approvals, streaks } = db.transaction((tx) => {
-        const approvals = body.data.items.map(({ id, ...chips }) =>
+        const items = [...body.data.items];
+        const asked = new Set(items.map((i) => i.id));
+        for (const item of body.data.items) {
+          for (const id of teamSiblings(tx, item.id, ['claimed'])) {
+            if (asked.has(id)) continue;
+            asked.add(id);
+            items.push({ ...item, id });
+          }
+        }
+        const approvals = items.map(({ id, ...chips }) =>
           approveClaim(tx, { instanceId: id, chips, parentId: parent.id, now: at }),
         );
         const ids = approvals.map((a) => a.instanceId);
@@ -131,20 +153,26 @@ export async function instanceRoutes(
     if (!body.success) return reply.code(400).send({ error: body.error.issues });
     try {
       const at = now();
-      const { instance, streaks } = db.transaction((tx) => {
-        const instance = sendBackInstance(tx, {
-          instanceId: id,
-          reason: body.data.reason,
-          parentId: authOf(req).parent.id,
-          now: at,
+      // A team surprise goes back for all of them (spec 006).
+      const { instances, streaks } = db.transaction((tx) => {
+        const ids = [id, ...teamSiblings(tx, id, ['claimed'])];
+        const instances = ids.map((instanceId) =>
+          sendBackInstance(tx, {
+            instanceId,
+            reason: body.data.reason,
+            parentId: authOf(req).parent.id,
+            now: at,
+          }),
+        );
+        return { instances, streaks: refreshStreaksFor(tx, ids, at) };
+      });
+      for (const instance of instances) {
+        app.hub.broadcast({
+          type: 'instance.sent_back',
+          instanceId: instance.id,
+          childId: instance.childId,
         });
-        return { instance, streaks: refreshStreaksFor(tx, [id], at) };
-      });
-      app.hub.broadcast({
-        type: 'instance.sent_back',
-        instanceId: instance.id,
-        childId: instance.childId,
-      });
+      }
       streaksChanged(streaks);
       return reply.code(204).send();
     } catch (err) {

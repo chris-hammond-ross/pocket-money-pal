@@ -149,6 +149,7 @@ describe('kiosk schemas', () => {
         latestRanAt: null,
       },
       children: [],
+      surprise: null,
     };
     expect(kioskTodaySchema.parse(board)).toEqual(board);
   });

@@ -15,7 +15,7 @@ import {
   type TrayItem,
 } from '@pmp/shared';
 import { and, asc, eq } from 'drizzle-orm';
-import { choreInstances, chores, ledger, users } from '../db/schema';
+import { choreInstances, chores, ledger, surpriseRuns, users } from '../db/schema';
 import { ConflictError, NotFoundError, type DbOrTx } from './db';
 import { recordEvent } from './events';
 import { appendLedger, lifetimeXp, reverseLedgerEntry } from './ledger';
@@ -348,18 +348,28 @@ export function undoApprovalBy(
   return instance;
 }
 
-/** The to-check tray (spec 003): every claimed chore, any day, oldest claim first. */
+/**
+ * The to-check tray (spec 003): every claimed chore, any day, oldest claim first. A grabbed
+ * surprise says so, and how fast it was grabbed (spec 006).
+ */
 export function listClaimed(db: DbOrTx): TrayItem[] {
   const { timezone } = getSettings(db);
   return db
-    .select({ instance: choreInstances, title: chores.title, icon: chores.icon, child: users })
+    .select({
+      instance: choreInstances,
+      title: chores.title,
+      icon: chores.icon,
+      child: users,
+      run: surpriseRuns,
+    })
     .from(choreInstances)
     .innerJoin(chores, eq(chores.id, choreInstances.choreId))
     .innerJoin(users, eq(users.id, choreInstances.childId))
+    .leftJoin(surpriseRuns, eq(surpriseRuns.id, chores.surpriseRunId))
     .where(eq(choreInstances.status, 'claimed'))
     .orderBy(asc(choreInstances.claimedAt), asc(choreInstances.id))
     .all()
-    .map(({ instance, title, icon, child }) => {
+    .map(({ instance, title, icon, child, run }) => {
       const { stage, chips } = claimDefaults(instance, timezone);
       return {
         instanceId: instance.id,
@@ -377,6 +387,12 @@ export function listClaimed(db: DbOrTx): TrayItem[] {
         unprompted: instance.unprompted ?? false,
         stage,
         points: scorePoints(instance, chips),
+        surprise: run && {
+          runId: run.id,
+          team: run.team,
+          grabbedInMs:
+            run.grabbedAt !== null && run.shownAt !== null ? run.grabbedAt - run.shownAt : null,
+        },
       };
     });
 }

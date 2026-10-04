@@ -58,6 +58,11 @@ export function claimPushText(
     names.length === 1
       ? names[0]!
       : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  // A team surprise (spec 006): one quest, claimed for everyone at once.
+  const titles = new Set(claims.map((c) => c.title));
+  if (titles.size === 1 && names.length === claims.length) {
+    return { title: `${who} claimed ‘${claims[0]!.title}’`, body };
+  }
   return { title: `${who} claimed ${claims.length} quests`, body };
 }
 

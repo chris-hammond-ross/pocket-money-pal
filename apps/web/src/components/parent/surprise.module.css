@@ -1,0 +1,572 @@
+/* Surprise quests on the phone (spec 006): the button, the panel and SURPRISES TODAY. */
+
+/* "⚡ Surprise quest" under "+ New quest": purple, with a soft glow. */
+.button {
+  width: 100%;
+  margin-top: 10px;
+  min-height: 50px;
+  padding: 14px;
+  border: 2px solid var(--pmp-surprise);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--pmp-surprise) 14%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--pmp-surprise) 40%, transparent);
+  color: #e5dbff;
+  font: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+/* A numbered step: purple circle, pixel-font label */
+.step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 8px;
+  font-family: var(--pmp-font-pixel);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: var(--pmp-dim);
+
+  &:first-child {
+    margin-top: 2px;
+  }
+
+  & i {
+    font-style: normal;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--pmp-surprise);
+    color: white;
+    font-size: 9px;
+  }
+}
+
+/* 1 · WHICH QUEST */
+.task {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: 14px;
+  border: 2px solid transparent;
+  background: var(--pmp-panel);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &[data-on] {
+    border-color: var(--pmp-surprise);
+    background: color-mix(in srgb, var(--pmp-surprise) 16%, var(--pmp-panel));
+  }
+
+  &[data-new] {
+    border: 2px dashed var(--pmp-line);
+    background: none;
+    color: var(--pmp-dim);
+    font-weight: 600;
+  }
+
+  &[data-new][data-on] {
+    border-color: var(--pmp-surprise);
+    color: var(--pmp-text);
+  }
+}
+
+.taskIcon {
+  font-size: 24px;
+  width: 30px;
+  text-align: center;
+  flex: none;
+}
+
+.taskText {
+  flex: 1;
+  min-width: 0;
+
+  & b {
+    display: block;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  & small {
+    color: var(--pmp-dim);
+    font-size: 13px;
+
+    & em {
+      font-style: normal;
+      color: var(--pmp-gold);
+      font-weight: 700;
+    }
+  }
+}
+
+.edit {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 0;
+  background: var(--pmp-panel-2);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+/* The radio dot */
+.radio {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--pmp-line);
+
+  [data-on] > & {
+    border-color: var(--pmp-surprise);
+    background: radial-gradient(circle, white 0 4px, var(--pmp-surprise) 5px);
+  }
+}
+
+/* The inline form: a new quest, or editing a saved one */
+.form {
+  background: var(--pmp-panel);
+  border-radius: 14px;
+  padding: 12px;
+  margin: -2px 0 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.titleRow {
+  display: flex;
+  gap: 8px;
+
+  & input {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    border-radius: 12px;
+    border: 2px solid var(--pmp-line);
+    background: var(--pmp-panel-2);
+    color: var(--pmp-text);
+    font: inherit;
+    font-size: 16px;
+    padding: 0 12px;
+
+    &:focus {
+      outline: none;
+      border-color: var(--pmp-surprise);
+    }
+  }
+}
+
+.iconButton {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 2px solid var(--pmp-line);
+  background: var(--pmp-panel-2);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  & button {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background: var(--pmp-panel-2);
+    font-size: 20px;
+    cursor: pointer;
+
+    &[data-on] {
+      border-color: var(--pmp-surprise);
+    }
+  }
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--pmp-dim);
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--pmp-panel-2);
+  border-radius: 12px;
+  padding: 4px;
+  flex: none;
+
+  & button {
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 9px;
+    background: var(--pmp-panel);
+    color: var(--pmp-text);
+    font: inherit;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.35;
+    }
+  }
+
+  & span {
+    min-width: 70px;
+    text-align: center;
+    color: var(--pmp-gold);
+    font-weight: 700;
+  }
+}
+
+.keep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: none;
+  padding: 4px 0;
+  color: var(--pmp-dim);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+
+  & i {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 2px solid var(--pmp-line);
+    display: grid;
+    place-items: center;
+    font-style: normal;
+    font-size: 13px;
+    color: white;
+  }
+
+  &[data-on] i {
+    background: var(--pmp-surprise);
+    border-color: var(--pmp-surprise);
+  }
+}
+
+.formButtons {
+  display: flex;
+  gap: 8px;
+
+  & > * {
+    flex: 1;
+  }
+}
+
+/* 2 · WHO CAN ACCEPT IT */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tile {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 4px;
+  padding: 12px 6px;
+  min-height: 112px;
+  border-radius: 14px;
+  border: 2px solid transparent;
+  background: var(--pmp-panel);
+  color: var(--c, var(--pmp-text));
+  font: inherit;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+
+  &[data-on] {
+    border-color: var(--pmp-surprise);
+    background: color-mix(in srgb, var(--pmp-surprise) 16%, var(--pmp-panel));
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  & small {
+    color: var(--pmp-dim);
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.3;
+  }
+}
+
+.tileAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  background: color-mix(in srgb, var(--c, var(--pmp-surprise)) 45%, var(--pmp-panel-2));
+}
+
+/* The small 4-up who chips in the saved-quest editor */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  & button {
+    border-radius: 999px;
+    border: 2px solid var(--pmp-line);
+    background: none;
+    color: var(--pmp-text);
+    font: inherit;
+    font-size: 14px;
+    padding: 6px 12px;
+    cursor: pointer;
+
+    &[data-on] {
+      border-color: var(--pmp-surprise);
+      background: color-mix(in srgb, var(--pmp-surprise) 22%, transparent);
+    }
+  }
+}
+
+/* 3 · WHEN DOES IT APPEAR */
+.when {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+
+  & button {
+    min-height: 48px;
+    border-radius: 14px;
+    border: 2px solid transparent;
+    background: var(--pmp-panel);
+    color: var(--pmp-text);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+
+    &[data-on] {
+      border-color: var(--pmp-surprise);
+      background: color-mix(in srgb, var(--pmp-surprise) 16%, var(--pmp-panel));
+    }
+  }
+}
+
+.at {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  & select {
+    min-height: 44px;
+    border-radius: 12px;
+    border: 2px solid var(--pmp-surprise);
+    background: var(--pmp-panel-2);
+    color: var(--pmp-text);
+    font: inherit;
+    font-weight: 700;
+    padding: 0 10px;
+  }
+}
+
+.tooLate {
+  margin-top: 8px;
+  color: var(--pmp-overdue);
+  font-size: 14px;
+}
+
+/* Summary and footer */
+.summary {
+  margin-top: 18px;
+  background: var(--pmp-panel);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: var(--pmp-dim);
+  font-size: 14px;
+  line-height: 1.5;
+
+  & b {
+    color: var(--pmp-text);
+  }
+}
+
+.go {
+  width: 100%;
+  min-height: 54px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--pmp-surprise);
+  box-shadow: 0 5px 0 #6a3fd1;
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  font-size: 18px;
+  cursor: pointer;
+
+  &:active {
+    transform: translateY(3px);
+    box-shadow: 0 2px 0 #6a3fd1;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.cancel {
+  margin-top: 8px;
+  width: 100%;
+  border: 0;
+  background: none;
+  color: var(--pmp-late);
+  font: inherit;
+  font-weight: 600;
+  padding: 10px;
+  cursor: pointer;
+}
+
+/* SURPRISES TODAY rows: spec 003's quest row, tinted purple */
+.row {
+  background: color-mix(in srgb, var(--pmp-surprise) 14%, var(--pmp-panel));
+  border-color: color-mix(in srgb, var(--pmp-surprise) 45%, transparent);
+
+  &[data-state='scheduled'] {
+    border-style: dashed;
+  }
+
+  &[data-dim] {
+    opacity: 0.55;
+  }
+}
+
+.badgeDim {
+  opacity: 0.35;
+}
+
+.tag {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: #e5dbff;
+  background: color-mix(in srgb, var(--pmp-surprise) 30%, transparent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  &[data-state='live'] {
+    color: white;
+    background: var(--pmp-surprise);
+  }
+
+  &[data-state='done'] {
+    color: var(--pmp-bg);
+    background: var(--pmp-gold);
+  }
+
+  &[data-state='approved'] {
+    color: var(--pmp-bonus);
+    background: color-mix(in srgb, var(--pmp-bonus) 18%, transparent);
+  }
+}
+
+.again {
+  flex: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 3px 9px;
+  background: var(--pmp-surprise);
+  color: white;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* A row's sheet */
+.sheetBody {
+  display: grid;
+  gap: 10px;
+}
+
+.big {
+  text-align: center;
+  font-size: 44px;
+  line-height: 1.1;
+}
+
+.takers {
+  display: grid;
+  gap: 6px;
+}
+
+.taker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--pmp-panel);
+  border-radius: 12px;
+  padding: 8px 12px;
+
+  & span:last-child {
+    margin-left: auto;
+    color: var(--pmp-dim);
+    font-size: 14px;
+  }
+}
+
+.choices {
+  display: grid;
+  gap: 8px;
+
+  & button {
+    min-height: 50px;
+    border-radius: 14px;
+    border: 0;
+    background: var(--pmp-panel-2);
+    color: var(--pmp-text);
+    font: inherit;
+    font-weight: 600;
+    font-size: 16px;
+    text-align: left;
+    padding: 12px 14px;
+    cursor: pointer;
+  }
+
+  & button:first-child {
+    background: var(--pmp-surprise);
+    color: white;
+  }
+}

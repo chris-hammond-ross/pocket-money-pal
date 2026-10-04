@@ -6,6 +6,7 @@ import { loadConfig } from './config';
 import { openDb } from './db/client';
 import { watchExternalWrites } from './db/watch';
 import { lanAddresses } from './net';
+import { broadcastSurprises } from './routes/surprises';
 import { startScheduler } from './scheduler';
 
 const config = loadConfig();
@@ -50,6 +51,10 @@ const scheduler = startScheduler({
     app.log.info({ slot }, 'Scheduler: payday is waiting for a grown-up');
     app.hub.broadcast({ type: 'payday.waiting', slot });
     app.notifier.notifyAll({ ...paydayReadyPushText(), url: PAYDAY_PUSH_URL });
+  },
+  onSurprises: (moves) => {
+    app.log.info({ moves: moves.map((m) => `${m.type} ${m.run.id}`) }, 'Scheduler: surprises');
+    broadcastSurprises(app.hub, moves);
   },
   onError: (err) => app.log.error({ err }, 'Scheduler run failed; retrying in a minute'),
 });

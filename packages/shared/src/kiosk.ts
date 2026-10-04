@@ -68,23 +68,34 @@ export interface KioskOrderable {
   window: ChoreWindow;
   claimedAt: number | null;
   approvedAt: number | null;
+  /** A grabbed surprise (spec 006): it has no deadline to rank by. */
+  surprise?: unknown;
 }
 
 /**
- * A column's quests in spec order: open quests most pressing first (the Next-up ranking),
- * then claimed ones in claim order, then today's approved ones in approval order.
- * Skipped quests aren't shown.
+ * A column's quests in spec order: grabbed surprises still open first (newest grab last),
+ * then the other open quests most pressing first (the Next-up ranking), then claimed ones
+ * in claim order, then today's approved ones in approval order. Skipped quests aren't
+ * shown.
  */
 export function orderKioskQuests<T extends KioskOrderable>(quests: readonly T[], now: number): T[] {
-  const by = (key: 'claimedAt' | 'approvedAt') => (a: T, b: T) =>
-    (a[key] ?? 0) - (b[key] ?? 0) ||
+  const byId = (a: T, b: T) =>
     String(a.id).localeCompare(String(b.id), undefined, { numeric: true });
+  const by = (key: 'claimedAt' | 'approvedAt') => (a: T, b: T) =>
+    (a[key] ?? 0) - (b[key] ?? 0) || byId(a, b);
+  const open = quests.filter((q) => q.status === 'open');
   return [
+    ...open.filter((q) => q.surprise).sort(byId),
     ...rankNextUp(
-      quests.filter((q) => q.status === 'open'),
+      open.filter((q) => !q.surprise),
       now,
     ),
     ...quests.filter((q) => q.status === 'claimed').sort(by('claimedAt')),
     ...quests.filter((q) => q.status === 'approved').sort(by('approvedAt')),
   ];
+}
+
+/** The open quest the Next-up countdown shows: the first with a deadline (not a surprise). */
+export function nextUpQuest<T extends KioskOrderable>(ordered: readonly T[]): T | undefined {
+  return ordered.find((q) => q.status === 'open' && !q.surprise);
 }

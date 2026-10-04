@@ -17,7 +17,7 @@ import {
   type StreakReport,
   type StreakResult,
 } from '@pmp/shared';
-import { and, asc, desc, eq, gt, gte, inArray, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray, isNull, lt } from 'drizzle-orm';
 import { choreInstances, chores, events, streakDays } from '../db/schema';
 import type { DbOrTx } from './db';
 import { recordEvent } from './events';
@@ -43,12 +43,22 @@ function rowsOf(db: DbOrTx, childId: number): StreakDay[] {
     .all();
 }
 
-/** A day's result from its instances now, or null when the child had no chores that day. */
+/**
+ * A day's result from its instances now, or null when the child had no chores that day.
+ * Grabbed surprises don't count (spec 006): they're a bonus, never a streak breaker.
+ */
 function resultOf(db: DbOrTx, childId: number, date: string): StreakResult | null {
   const statuses = db
     .select({ status: choreInstances.status })
     .from(choreInstances)
-    .where(and(eq(choreInstances.childId, childId), eq(choreInstances.date, date)))
+    .innerJoin(chores, eq(chores.id, choreInstances.choreId))
+    .where(
+      and(
+        eq(choreInstances.childId, childId),
+        eq(choreInstances.date, date),
+        isNull(chores.surpriseRunId),
+      ),
+    )
     .all()
     .map((r) => r.status);
   return statuses.length === 0 ? null : streakDayResult(statuses);
@@ -66,6 +76,7 @@ function firstMissedQuest(db: DbOrTx, childId: number, date: string): string | n
           eq(choreInstances.childId, childId),
           eq(choreInstances.date, date),
           eq(choreInstances.status, 'open'),
+          isNull(chores.surpriseRunId),
         ),
       )
       .orderBy(asc(choreInstances.dueBy), asc(choreInstances.id))
@@ -157,11 +168,15 @@ export function rebuildStreakDays(db: DbOrTx, today: string, now: number): numbe
     .where(lt(choreInstances.date, today))
     .groupBy(choreInstances.childId, choreInstances.date)
     .all();
+  let written = 0;
   for (const { childId, date } of rows) {
-    const result = resultOf(db, childId, date)!;
+    // Null: the day had only surprises.
+    const result = resultOf(db, childId, date);
+    if (result === null) continue;
     db.insert(streakDays).values({ childId, date, result, decidedAt: now }).run();
+    written++;
   }
-  return rows.length;
+  return written;
 }
 
 /**

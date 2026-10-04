@@ -28,7 +28,12 @@ import {
   setupKioskInfoSchema,
   setupResultSchema,
   setupStatusSchema,
+  surpriseRunSchema,
+  surpriseTaskListSchema,
+  surpriseTaskSchema,
+  surpriseTodaySchema,
   trayListSchema,
+  type Grab,
   type ChildInput,
   type ChildPatch,
   type ChoreInput,
@@ -46,6 +51,9 @@ import {
   type SetupDraft,
   type SetupRequestInput,
   type SpendInput,
+  type SurpriseSend,
+  type SurpriseTaskInput,
+  type SurpriseTaskPatch,
 } from '@pmp/shared';
 import { setupTokenHeaders } from './setup-token';
 
@@ -222,6 +230,23 @@ export const api = {
   spend: (childId: number, body: SpendInput) =>
     request(`/api/children/${childId}/spend`, json('POST', body)),
   startPayday: () => request('/api/paydays', { method: 'POST' }),
+
+  // Surprise quests (spec 006)
+  surpriseTasks: async () => surpriseTaskListSchema.parse(await request('/api/surprise-tasks')),
+  createSurpriseTask: async (task: SurpriseTaskInput) =>
+    surpriseTaskSchema.parse(await request('/api/surprise-tasks', json('POST', task))),
+  updateSurpriseTask: async (id: number, patch: SurpriseTaskPatch) =>
+    surpriseTaskSchema.parse(await request(`/api/surprise-tasks/${id}`, json('PATCH', patch))),
+  deleteSurpriseTask: (id: number) => request(`/api/surprise-tasks/${id}`, { method: 'DELETE' }),
+  surprisesToday: async () => surpriseTodaySchema.parse(await request('/api/surprises/today')),
+  sendSurprise: async (body: SurpriseSend) =>
+    surpriseRunSchema.parse(await request('/api/surprises', json('POST', body))),
+  updateSurprise: async (id: number, body: SurpriseSend) =>
+    surpriseRunSchema.parse(await request(`/api/surprises/${id}`, json('PATCH', body))),
+  cancelSurprise: (id: number) => request(`/api/surprises/${id}`, { method: 'DELETE' }),
+  /** The kiosk's grab. A lost race comes back as an `ApiError` with the server's code. */
+  grabSurprise: (id: number, grab: Grab) =>
+    request(`/api/surprises/${id}/grab`, json('POST', grab)),
 
   // HTTPS and push (ADR 0002, ADR 0009)
   access: async () => accessInfoSchema.parse(await request('/api/access')),

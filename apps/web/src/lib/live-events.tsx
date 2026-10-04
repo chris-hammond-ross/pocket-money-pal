@@ -25,6 +25,8 @@ const FAMILY_QUERIES = [
   'money',
   'savings',
   'payday-latest',
+  'surprises',
+  'surprise-tasks',
 ];
 
 /** Queries about paired devices: refetched on `devices.changed`. */

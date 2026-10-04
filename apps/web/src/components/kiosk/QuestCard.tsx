@@ -29,7 +29,65 @@ export function statusLine(quest: KioskQuest, stage: ChoreStage, now: number): s
 }
 
 function SharedTag({ quest }: { quest: KioskQuest }) {
+  if (quest.surprise) {
+    return (
+      <span className={classes.surpriseTag}>
+        ⚡ Surprise{quest.surprise.team && ' · 👫 together'}
+      </span>
+    );
+  }
   return quest.shared ? <span className={classes.tag}>👫 Shared</span> : null;
+}
+
+/**
+ * A grabbed surprise, still to do (spec 006): a purple outline, no bar and no deadline,
+ * worth exactly its reward. Tapped like any quest when it's done.
+ */
+function OpenSurpriseCard({
+  quest,
+  onClaim,
+}: {
+  quest: KioskQuest;
+  onClaim: (quest: KioskQuest) => void;
+}) {
+  const claim = () => {
+    sound.tap();
+    onClaim(quest);
+  };
+  return (
+    <div
+      className={classes.quest}
+      data-stage="bonus"
+      data-surprise
+      data-quest-id={quest.id}
+      role="button"
+      tabIndex={0}
+      onClick={claim}
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        claim();
+      }}
+    >
+      <div className={classes.questIcon}>{quest.icon}</div>
+      <div>
+        <div className={classes.questTitle}>{quest.title}</div>
+        <div className={classes.meta}>
+          <span className={classes.phase}>✋ Tap it when it’s done!</span>
+          <SharedTag quest={quest} />
+          {quest.sentBack && (
+            <span className={classes.sentBack}>
+              {sendBackNote(quest.sentBack.reason, quest.sentBack.by)}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className={classes.reward}>
+        +{quest.loot.basePoints}
+        <small>{quest.surprise?.team ? 'each' : 'surprise'}</small>
+      </div>
+    </div>
+  );
 }
 
 /** The quest's own window, with ⚡ and 🏁 markers and the moving "now" dot. */
@@ -81,6 +139,7 @@ export function OpenQuestCard({
   ringing?: 'slow' | 'fast' | null;
   onClaim: (quest: KioskQuest) => void;
 }) {
+  if (quest.surprise) return <OpenSurpriseCard quest={quest} onClaim={onClaim} />;
   const stage = choreStage(quest.window, now);
   const claim = () => {
     sound.tap();
@@ -126,7 +185,11 @@ export function OpenQuestCard({
 
 export function ClaimedQuestCard({ quest, timezone }: { quest: KioskQuest; timezone: string }) {
   return (
-    <div className={`${classes.quest} ${classes.claimed}`} data-quest-id={quest.id}>
+    <div
+      className={`${classes.quest} ${classes.claimed}`}
+      data-quest-id={quest.id}
+      data-surprise={quest.surprise ? true : undefined}
+    >
       <div className={classes.questIcon}>{quest.icon}</div>
       <div>
         <div className={classes.questTitle}>{quest.title}</div>

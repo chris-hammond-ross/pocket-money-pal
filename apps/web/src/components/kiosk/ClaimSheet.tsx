@@ -80,34 +80,88 @@ export function ClaimSheet({
       >
         <div className={classes.sheetIcon}>{quest.icon}</div>
         <h3>{quest.title}</h3>
-        <p>Nice one, {child.name}! Did you do it without being asked?</p>
-        <div className={classes.sheetButtons}>
-          <button
-            type="button"
-            className={`${classes.sheetButton} ${classes.sheetYes}`}
-            disabled={sending}
-            onClick={() => void send(true)}
-          >
-            🦸 Yes, all by myself! (+{points(true)})
-          </button>
-          <button
-            type="button"
-            className={`${classes.sheetButton} ${classes.sheetReminded}`}
-            disabled={sending}
-            onClick={() => void send(false)}
-          >
-            🙋 Someone reminded me (+{points(false)})
-          </button>
-          <button
-            type="button"
-            className={`${classes.sheetButton} ${classes.sheetCancel}`}
-            onClick={onClose}
-          >
-            Oops, not done yet
-          </button>
-        </div>
+        {quest.surprise ? (
+          // A surprise has no "without being asked" bonus (spec 006): just "done?".
+          <>
+            <p>
+              Is it done, {child.name}?
+              {quest.surprise.team && ' It counts for everyone who took it on! 👫'}
+            </p>
+            <div className={classes.sheetButtons}>
+              <button
+                type="button"
+                className={`${classes.sheetButton} ${classes.sheetYes}`}
+                disabled={sending}
+                onClick={() => void send(false)}
+              >
+                ✋ Yes, it’s done! (+{quest.loot.basePoints})
+              </button>
+              <button
+                type="button"
+                className={`${classes.sheetButton} ${classes.sheetCancel}`}
+                onClick={onClose}
+              >
+                Oops, not done yet
+              </button>
+            </div>
+          </>
+        ) : (
+          <SheetChoices
+            childName={child.name}
+            sending={sending}
+            points={points}
+            onSend={(unprompted) => void send(unprompted)}
+            onClose={onClose}
+          />
+        )}
         {refusal && <div className={classes.sheetError}>{refusal}</div>}
       </motion.div>
     </motion.div>
+  );
+}
+
+/** An ordinary quest's choices: asked or not, which sets the unprompted bonus. */
+function SheetChoices({
+  childName,
+  sending,
+  points,
+  onSend,
+  onClose,
+}: {
+  childName: string;
+  sending: boolean;
+  points: (unprompted: boolean) => number;
+  onSend: (unprompted: boolean) => void;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <p>Nice one, {childName}! Did you do it without being asked?</p>
+      <div className={classes.sheetButtons}>
+        <button
+          type="button"
+          className={`${classes.sheetButton} ${classes.sheetYes}`}
+          disabled={sending}
+          onClick={() => onSend(true)}
+        >
+          🦸 Yes, all by myself! (+{points(true)})
+        </button>
+        <button
+          type="button"
+          className={`${classes.sheetButton} ${classes.sheetReminded}`}
+          disabled={sending}
+          onClick={() => onSend(false)}
+        >
+          🙋 Someone reminded me (+{points(false)})
+        </button>
+        <button
+          type="button"
+          className={`${classes.sheetButton} ${classes.sheetCancel}`}
+          onClick={onClose}
+        >
+          Oops, not done yet
+        </button>
+      </div>
+    </>
   );
 }

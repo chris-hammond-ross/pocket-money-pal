@@ -47,7 +47,7 @@ function getActiveChild(db: DbOrTx, id: number): User {
   return child;
 }
 
-/** Chores (not deleted) that `childId` is a player on. */
+/** Chores (not deleted) that `childId` is a player on, grabbed surprises included. */
 function choresOf(db: DbOrTx, childId: number): number[] {
   return db
     .select({ id: chores.id })
@@ -56,6 +56,22 @@ function choresOf(db: DbOrTx, childId: number): number[] {
     .where(and(eq(choreAssignments.childId, childId), isNull(chores.deletedAt)))
     .all()
     .map((c) => c.id);
+}
+
+/** The player card's quest count: the family's quests, not grabbed surprises. */
+function questCount(db: DbOrTx, childId: number): number {
+  return db
+    .select({ id: chores.id })
+    .from(choreAssignments)
+    .innerJoin(chores, eq(chores.id, choreAssignments.choreId))
+    .where(
+      and(
+        eq(choreAssignments.childId, childId),
+        isNull(chores.deletedAt),
+        isNull(chores.surpriseRunId),
+      ),
+    )
+    .all().length;
 }
 
 /** The PLAYERS cards, in kiosk column order. */
@@ -72,7 +88,7 @@ export function listPlayerCards(db: DbOrTx, now: number): PlayerCard[] {
     colour: c.colour ?? FALLBACK_COLOUR,
     streak: streakOf(db, c.id, date),
     sickToday: c.sickOn === date,
-    quests: choresOf(db, c.id).length,
+    quests: questCount(db, c.id),
     pointsToday: today.get(c.id) ?? 0,
     cents: money.get(c.id)?.cents ?? 0,
   }));

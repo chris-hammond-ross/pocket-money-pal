@@ -5,6 +5,7 @@ import {
   claimResultSchema,
   goalMoveResultSchema,
   streakReportSchema,
+  surpriseRunSchema,
 } from './schemas';
 
 /**
@@ -94,6 +95,33 @@ export const serverEventSchema = z.discriminatedUnion('type', [
   }),
   /** Money out from a phone. */
   z.object({ type: z.literal('money.spent'), childId: z.number().int(), cents: z.number().int() }),
+  /**
+   * A surprise run moved (spec 006): scheduled, waiting behind another (queued), up on the
+   * kiosk (live), expired untaken, taken back by a parent, or a scheduled one changed.
+   */
+  z.object({
+    type: z.enum([
+      'surprise.scheduled',
+      'surprise.queued',
+      'surprise.live',
+      'surprise.expired',
+      'surprise.cancelled',
+      'surprise.updated',
+    ]),
+    run: surpriseRunSchema,
+  }),
+  /** A child (or, together, every child) grabbed it: kiosks play the fanfare, phones a banner. */
+  z.object({
+    type: z.literal('surprise.grabbed'),
+    run: surpriseRunSchema,
+    childIds: z.array(z.number().int()),
+    team: z.boolean(),
+  }),
+  /** A saved surprise quest was made, edited or deleted on a phone. */
+  z.object({
+    type: z.enum(['surprise_task.created', 'surprise_task.updated', 'surprise_task.deleted']),
+    taskId: z.number().int(),
+  }),
 ]);
 export type ServerEvent = z.infer<typeof serverEventSchema>;
 export type ServerEventType = ServerEvent['type'];

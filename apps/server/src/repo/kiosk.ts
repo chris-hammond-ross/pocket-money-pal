@@ -4,6 +4,7 @@ import {
   claimPoints,
   levelProgress,
   maxPointsNow,
+  nextUpQuest,
   orderKioskQuests,
   startOfZonedDay,
   zonedDateOf,
@@ -13,13 +14,14 @@ import {
   type KioskToday,
 } from '@pmp/shared';
 import { and, eq, ne } from 'drizzle-orm';
-import { choreInstances, chores } from '../db/schema';
+import { choreInstances, chores, surpriseRuns } from '../db/schema';
 import type { DbOrTx } from './db';
 import { lifetimeXp, pointsToday } from './ledger';
 import { averagesFor, childMoneyView } from './money';
 import { paydayInfo } from './payday';
 import { getSettings } from './settings';
 import { latestReport, streakOf } from './streaks';
+import { kioskSurprise } from './surprises';
 import { FALLBACK_AVATAR, FALLBACK_COLOUR, listChildren, listParents } from './users';
 
 /**
@@ -35,9 +37,12 @@ export function kioskToday(db: DbOrTx, now: number, opts: { devClock: boolean })
       title: chores.title,
       icon: chores.icon,
       together: chores.together,
+      runId: chores.surpriseRunId,
+      team: surpriseRuns.team,
     })
     .from(choreInstances)
     .innerJoin(chores, eq(chores.id, choreInstances.choreId))
+    .leftJoin(surpriseRuns, eq(surpriseRuns.id, chores.surpriseRunId))
     .where(and(eq(choreInstances.date, date), ne(choreInstances.status, 'skipped')))
     .all();
   const xp = lifetimeXp(db);
@@ -45,7 +50,7 @@ export function kioskToday(db: DbOrTx, now: number, opts: { devClock: boolean })
   const parentNames = new Map(listParents(db).map((p) => [p.id, p.name]));
 
   const questsByChild = new Map<number, KioskQuest[]>();
-  for (const { instance: i, title, icon, together } of rows) {
+  for (const { instance: i, title, icon, together, runId, team } of rows) {
     if (i.status === 'skipped') continue; // filtered in SQL; this narrows the type
     const window = choreWindow(date, i, timezone);
     const open = i.status === 'open';
@@ -82,6 +87,7 @@ export function kioskToday(db: DbOrTx, now: number, opts: { devClock: boolean })
               by: i.sentBackBy === null ? null : (parentNames.get(i.sentBackBy) ?? null),
             }
           : null,
+      surprise: runId === null ? null : { runId, team: team ?? false },
     };
     questsByChild.set(i.childId, [...(questsByChild.get(i.childId) ?? []), quest]);
   }
@@ -101,7 +107,7 @@ export function kioskToday(db: DbOrTx, now: number, opts: { devClock: boolean })
       streak: { ...streakOf(db, child.id, date), last: latestReport(db, child.id, now) },
       sickToday: child.sickOn === date,
       ...childMoneyView(db, child.id, now),
-      nextUpId: quests[0]?.status === 'open' ? quests[0].id : null,
+      nextUpId: nextUpQuest(quests)?.id ?? null,
       quests,
     };
   });
@@ -116,5 +122,6 @@ export function kioskToday(db: DbOrTx, now: number, opts: { devClock: boolean })
     centsPerPoint,
     payday: paydayInfo(db, now),
     children,
+    surprise: kioskSurprise(db, now),
   };
 }

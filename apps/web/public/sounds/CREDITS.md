@@ -23,12 +23,13 @@ Each sound ships as the original `.ogg` and a 64 kbps mono `.mp3` copy (converte
 
 These were also generated for this project with ffmpeg (`aevalsrc` expressions of plain tones and noise, ADR 0012) and are released under CC0:
 
-| File     | Used for                             | How                                                    |
-| -------- | ------------------------------------ | ------------------------------------------------------ |
-| `bloop`  | a bonus that ran out unclaimed       | two soft sine notes falling, 660 Hz then 440 Hz        |
-| `grow`   | the morning report: the streak grows | a three-note rise (C5, E5, G5), triangle waves         |
-| `fizzle` | the morning report: the streak ended | a sine sliding down from 500 Hz, with a fading crackle |
-| `flip`   | the level-up number turning over     | a 1.4 kHz click with a little noise                    |
+| File     | Used for                             | How                                                         |
+| -------- | ------------------------------------ | ----------------------------------------------------------- |
+| `bloop`  | a bonus that ran out unclaimed       | two soft sine notes falling, 660 Hz then 440 Hz             |
+| `grow`   | the morning report: the streak grows | a three-note rise (C5, E5, G5), triangle waves              |
+| `fizzle` | the morning report: the streak ended | a sine sliding down from 500 Hz, with a fading crackle      |
+| `flip`   | the level-up number turning over     | a 1.4 kHz click with a little noise                         |
+| `alarm`  | a surprise quest pops up (spec 006)  | B5 and F#5 beeping 10 times a second, softened square waves |
 
 The tock of the tick-tock is `tick` played lower.
 

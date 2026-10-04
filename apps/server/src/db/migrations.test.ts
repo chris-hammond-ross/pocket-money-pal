@@ -27,6 +27,8 @@ const EXPECTED_TABLES = [
   'server_kv',
   'setup_drafts',
   'streak_days',
+  'surprise_runs',
+  'surprise_tasks',
   'users',
 ];
 

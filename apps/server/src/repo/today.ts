@@ -100,10 +100,11 @@ function activePlayers(db: DbOrTx, choreId: number): number[] {
 export function syncToday(db: DbOrTx, choreId: number, today: string): void {
   const chore = db.select().from(chores).where(eq(chores.id, choreId)).get();
   if (!chore) throw new NotFoundError(`Chore ${choreId} not found`);
+  // A grabbed surprise (spec 006) was taken on today, holiday pause or not.
   const runs =
     chore.deletedAt === null &&
     choreRunsOn({ days: chore.days, oneOffDate: chore.oneOffDate }, today) &&
-    !isPausedOn(getSettings(db).pause, today);
+    (chore.surpriseRunId !== null || !isPausedOn(getSettings(db).pause, today));
   const players = runs ? activePlayers(db, chore.id) : [];
   const onChore = and(eq(choreInstances.choreId, chore.id), eq(choreInstances.date, today))!;
 

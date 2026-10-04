@@ -45,7 +45,9 @@ export function useKioskSound(now: number, timezone: string): KioskQuiet {
 export function ringingIds(board: KioskBoard, now: number): Set<number> {
   return new Set(
     board.children.flatMap((c) =>
-      c.quests.filter((q) => q.status === 'open' && isBonusEnding(q.window, now)).map((q) => q.id),
+      c.quests
+        .filter((q) => q.status === 'open' && !q.surprise && isBonusEnding(q.window, now))
+        .map((q) => q.id),
     ),
   );
 }

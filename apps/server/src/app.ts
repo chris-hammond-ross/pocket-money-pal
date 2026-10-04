@@ -20,6 +20,7 @@ import { moneyRoutes } from './routes/money';
 import { playerRoutes } from './routes/players';
 import { pushRoutes } from './routes/push';
 import { setupRoutes } from './routes/setup';
+import { surpriseRoutes } from './routes/surprises';
 import { SecureUrl } from './secure-url';
 import { WsHub } from './ws';
 
@@ -48,7 +49,10 @@ export interface AppOptions {
   imagesDir?: string | null;
   /** Fetches a shop link's picture. Defaults to the internet (tests fake it). */
   imageFetcher?: ImageFetcher;
-  /** The payday settings changed: the scheduler re-plans (and may run a payday). */
+  /**
+   * The payday settings changed, or a surprise was sent or ended: the scheduler re-plans
+   * (and may run a payday, or put the next surprise up).
+   */
   onScheduleChanged?: () => void;
 }
 
@@ -109,6 +113,7 @@ export async function buildApp({
   await app.register(choreRoutes, { db, now });
   await app.register(playerRoutes, { db, now, onScheduleChanged });
   await app.register(moneyRoutes, { db, now, images: new GoalImages(imagesDir, imageFetcher) });
+  await app.register(surpriseRoutes, { db, now, onScheduleChanged });
   await app.register(pushRoutes, {
     db,
     now,

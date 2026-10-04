@@ -60,7 +60,14 @@ describe('claimPushText', () => {
       { childName: 'Cara', title: 'Homework' },
     ];
     expect(claimPushText(claims, 5).title).toBe('Alice, Billy and Cara claimed 4 quests');
-    expect(claimPushText(claims.slice(0, 2), 2).title).toBe('Alice and Billy claimed 2 quests');
+  });
+
+  it('names the one quest when each child claimed it (a shared quest, a team surprise)', () => {
+    const claims = [
+      { childName: 'Alice', title: 'Sweep the patio' },
+      { childName: 'Billy', title: 'Sweep the patio' },
+    ];
+    expect(claimPushText(claims, 2).title).toBe('Alice and Billy claimed ‘Sweep the patio’');
   });
 });
 
