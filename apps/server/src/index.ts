@@ -36,6 +36,12 @@ const scheduler = startScheduler({
     app.log.info(result, 'Scheduler: new day');
     app.hub.broadcast({ type: 'day.changed', date: result.date });
   },
+  onStreaks: (updates) => {
+    app.log.info({ updates: updates.length }, 'Scheduler: streaks decided');
+    for (const { childId, last } of updates) {
+      app.hub.broadcast({ type: 'streak.updated', childId, last });
+    }
+  },
   onPayday: (result) => {
     app.log.info(result, 'Scheduler: payday');
     app.hub.broadcast({ type: 'payday.done', paydayId: result.paydayId });

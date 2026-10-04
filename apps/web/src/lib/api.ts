@@ -185,6 +185,10 @@ export const api = {
     playerCardSchema.parse(await request(`/api/children/${id}`, json('PATCH', patch))),
   removePlayer: async (id: number) =>
     removedPlayerSchema.parse(await request(`/api/children/${id}`, { method: 'DELETE' })),
+  sickToday: async (id: number, sick: boolean) =>
+    playerCardSchema.parse(
+      await request(`/api/children/${id}/sick-today`, { method: sick ? 'POST' : 'DELETE' }),
+    ),
   adjustPoints: async (id: number, points: number) =>
     adjustmentSchema.parse(await request(`/api/children/${id}/adjust`, json('POST', { points }))),
   updateSettings: async (patch: PhoneSettingsPatch) =>

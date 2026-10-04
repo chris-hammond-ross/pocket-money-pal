@@ -22,6 +22,8 @@ export const ACTIVITY_TYPES = [
   'child.created',
   'child.updated',
   'child.removed',
+  'child.sick_day',
+  'child.sick_day_undone',
   'settings.updated',
   'device.paired',
   'device.revoked',
@@ -37,6 +39,8 @@ export const ACTIVITY_TYPES = [
   'goal.smashed',
   'goal.unsmashed',
   'goal.bought',
+  // Game layer (spec 005)
+  'streak.decided',
   // System
   'day.scheduled',
 ] as const;

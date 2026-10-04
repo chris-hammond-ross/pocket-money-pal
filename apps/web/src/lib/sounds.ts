@@ -4,9 +4,10 @@ import { Howl, Howler } from 'howler';
  * The app's game sounds, played with Howler.js from short CC0 files in `public/sounds`
  * (credited in `public/sounds/CREDITS.md`). Each ships as Ogg with an MP3 fallback.
  *
- * The kiosk sets the master volume from `family_settings.volume`; other screens (setup,
- * the phone) keep the quieter default, as spec 003 asks. Electron allows sound without a
- * first click; in a browser, Howler unlocks audio on the first tap.
+ * The kiosk sets the master volume from `family_settings.volume`, and mutes everything in
+ * quiet hours (spec 005); other screens (setup, the phone) keep the quieter default, as
+ * spec 003 asks. Electron allows sound without a first click; in a browser, Howler unlocks
+ * audio on the first tap.
  */
 export type SoundName =
   | 'tap'
@@ -21,7 +22,11 @@ export type SoundName =
   | 'whoosh'
   | 'chime'
   | 'chaching'
-  | 'drumroll';
+  | 'drumroll'
+  | 'bloop'
+  | 'grow'
+  | 'fizzle'
+  | 'flip';
 
 /** Each sound's level relative to the others, so none drowns the rest out. */
 const LEVELS: Record<SoundName, number> = {
@@ -38,6 +43,10 @@ const LEVELS: Record<SoundName, number> = {
   chime: 0.7,
   chaching: 0.8,
   drumroll: 0.7,
+  bloop: 0.6,
+  grow: 0.7,
+  fizzle: 0.6,
+  flip: 0.6,
 };
 
 /** Master volume away from the kiosk. */
@@ -72,7 +81,7 @@ export function setVolume(percent: number): void {
   Howler.volume(Math.min(100, Math.max(0, percent)) / 100);
 }
 
-/** The phone's mute setting (spec 003), kept per phone. The kiosk never mutes. */
+/** The phone's mute setting (spec 003), kept per phone; the kiosk's quiet hours (spec 005). */
 export function setMuted(muted: boolean): void {
   Howler.mute(muted);
 }
@@ -90,7 +99,16 @@ export const sound: Record<Exclude<SoundName, 'clink'>, () => void> = {
   chime: () => play('chime'),
   chaching: () => play('chaching'),
   drumroll: () => play('drumroll'),
+  bloop: () => play('bloop'),
+  grow: () => play('grow'),
+  fizzle: () => play('fizzle'),
+  flip: () => play('flip'),
 };
+
+/** Spec 005's tick-tock: one a second while a bonus is ending, the tock a little lower. */
+export function tickTock(second: number): void {
+  play('tick', second % 2 === 0 ? {} : { rate: 0.72 });
+}
 
 /** Spec 004's money sounds that need more than a plain play. */
 export const moneySound = {

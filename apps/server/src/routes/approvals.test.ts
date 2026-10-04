@@ -1,4 +1,4 @@
-import { approvalSchema, trayListSchema, zonedTimeToInstant } from '@pmp/shared';
+import { addDays, approvalSchema, trayListSchema, zonedTimeToInstant } from '@pmp/shared';
 import { and, eq } from 'drizzle-orm';
 import type { FastifyInstance, InjectOptions } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,6 +7,9 @@ import type { Db } from '../db/client';
 import { choreInstances, events, ledger } from '../db/schema';
 import { getInstance, listInstancesForDate } from '../repo/instances';
 import { balances } from '../repo/ledger';
+import { kioskToday } from '../repo/kiosk';
+import { setKv } from '../repo/kv';
+import { decideStreaks } from '../repo/streaks';
 import { insertParent } from '../repo/users';
 import { ensureDay } from '../scheduler';
 import { addChild, addChore, pairedCookie, PHONE_IP, testDb } from '../test-helpers';
@@ -261,5 +264,74 @@ describe('POST /api/instances/:id/undo-approval', () => {
 
     const again = await asPhone({ method: 'POST', url: `/api/instances/${f.bedId}/undo-approval` });
     expect(again.statusCode).toBe(409);
+  });
+});
+
+describe('streaks (spec 005): a past day changes', () => {
+  const NEXT = addDays(DAY, 1);
+
+  /** Billy claimed his bed yesterday; midnight left the day pending. It's 8am today. */
+  function pendingDay() {
+    const f = seed();
+    setKv(db, 'streaks-built', '0');
+    claimAt(f.bedId, '07:30', false);
+    decideStreaks(db, NEXT, at('00:01', NEXT));
+    now = at('08:00', NEXT);
+    return f;
+  }
+  const billyOnBoard = (id: number) =>
+    kioskToday(db, now, { devClock: false }).children.find((c) => c.id === id)!;
+
+  it('approving the last claim decides the day, tells every kiosk and shows the report', async () => {
+    const f = pendingDay();
+    const broadcast = vi.spyOn(app.hub, 'broadcast');
+    expect((await approve([{ id: f.bedId }])).statusCode).toBe(200);
+    const update = broadcast.mock.calls.map(([e]) => e).find((e) => e.type === 'streak.updated');
+    expect(update).toMatchObject({
+      childId: f.billy.id,
+      last: { dates: [DAY], result: 'done', before: 0, after: 1 },
+    });
+    expect(billyOnBoard(f.billy.id).streak).toMatchObject({
+      days: 1,
+      best: 1,
+      tier: 1,
+      last: { result: 'done', after: 1 },
+    });
+  });
+
+  it('sending it back instead ends the day as missed', async () => {
+    const f = pendingDay();
+    const broadcast = vi.spyOn(app.hub, 'broadcast');
+    await asPhone({
+      method: 'POST',
+      url: `/api/instances/${f.bedId}/send-back`,
+      payload: { reason: 'needs_redo' },
+    });
+    expect(broadcast).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'streak.updated', childId: f.billy.id }),
+    );
+    expect(billyOnBoard(f.billy.id).streak.days).toBe(0);
+  });
+
+  it('an undo moves the number without a new report', async () => {
+    const f = pendingDay();
+    await approve([{ id: f.bedId }]);
+    const reportId = billyOnBoard(f.billy.id).streak.last?.id;
+    const broadcast = vi.spyOn(app.hub, 'broadcast');
+    await asPhone({ method: 'POST', url: `/api/instances/${f.bedId}/undo-approval` });
+    expect(broadcast).toHaveBeenCalledWith({
+      type: 'streak.updated',
+      childId: f.billy.id,
+      last: null,
+    });
+    expect(billyOnBoard(f.billy.id).streak).toMatchObject({ days: 0, last: { id: reportId } });
+  });
+
+  it("approving today's chore changes no streak until midnight", async () => {
+    const f = seed();
+    claimAt(f.bedId, '07:30', false);
+    const broadcast = vi.spyOn(app.hub, 'broadcast');
+    await approve([{ id: f.bedId }]);
+    expect(broadcast.mock.calls.some(([e]) => e.type === 'streak.updated')).toBe(false);
   });
 });

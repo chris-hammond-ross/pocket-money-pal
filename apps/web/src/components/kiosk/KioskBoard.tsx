@@ -1,12 +1,11 @@
 import { PAYDAY_SHOW_FRESH_MS, type Envelope, type PaydaySummary } from '@pmp/shared';
-import { useQuery } from '@tanstack/react-query';
 import { AnimatePresence } from 'framer-motion';
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { api, type KioskBoard as Board } from '../../lib/api';
-import { clockTimeAt } from '../../lib/format';
+import { clockTime, clockTimeAt } from '../../lib/format';
 import { useLiveEvents } from '../../lib/live-events';
 import { useServerNow } from '../../lib/server-clock';
-import { preloadSounds, setVolume, sound } from '../../lib/sounds';
+import { sound } from '../../lib/sounds';
 import { KioskCelebrations } from './Celebrations';
 import { ClaimSheet } from './ClaimSheet';
 import { EnvelopeCard } from './money/EnvelopeCard';
@@ -16,6 +15,7 @@ import { SavingsScreen } from './money/SavingsScreen';
 import { PairPhoneCard } from './PairPhoneCard';
 import classes from './kiosk.module.css';
 import { PlayerColumn } from './PlayerColumn';
+import { ringingIds, useBonusAlerts, useKioskSound, useMorningReports } from './use-game-layer';
 
 /** A full-screen money view over the board (spec 004). */
 type MoneyView =
@@ -26,7 +26,7 @@ type MoneyView =
 /**
  * The Quest Track board (spec 001): a header with the clock, and one column per child,
  * each ending in its loot card (spec 004). The savings screen, new jar, envelopes and the
- * payday show open over it.
+ * payday show open over it. In quiet hours it's a silent night sky (spec 005).
  */
 export function KioskBoard({ board }: { board: Board }) {
   const now = useServerNow(board.clockOffsetMs);
@@ -36,7 +36,10 @@ export function KioskBoard({ board }: { board: Board }) {
   const closeSheet = useCallback(() => setClaiming(null), []);
   const closeView = useCallback(() => setView(null), []);
   const show = usePaydayShow(board);
-  useKioskVolume();
+  const { quiet, until } = useKioskSound(now, board.timezone);
+  const ringing = ringingIds(board, now);
+  useBonusAlerts(board, now, ringing);
+  const reports = useMorningReports(board.children, quiet);
   const viewChild = view && board.children.find((c) => c.id === view.childId);
   const moneyCtx = {
     currency: board.currency,
@@ -59,10 +62,16 @@ export function KioskBoard({ board }: { board: Board }) {
     .find(({ quest }) => quest.id === claiming && quest.status === 'open');
 
   return (
-    <div className={classes.screen}>
+    <div className={classes.screen} data-quiet={quiet || undefined}>
       <header className={classes.header}>
         <h1 className={classes.title}>★ POCKET MONEY PAL ★</h1>
         <div className={classes.headerRight}>
+          {quiet && (
+            <span className={classes.quietPill}>
+              <span className={classes.moon}>🌙</span> Quiet hours
+              {until && ` · sounds back at ${clockTime(until)}`}
+            </span>
+          )}
           {status === 'closed' && <span className={classes.offlinePill}>Reconnecting…</span>}
           {board.devClock && (
             <button
@@ -93,6 +102,12 @@ export function KioskBoard({ board }: { board: Board }) {
             timezone={board.timezone}
             payday={board.payday}
             currency={board.currency}
+            ringing={ringing}
+            report={reports.playing[child.id]}
+            onReportClose={() => {
+              const report = reports.playing[child.id];
+              if (report) reports.close(report.id);
+            }}
             onClaim={(quest) => setClaiming(quest.id)}
             onSavings={() => {
               sound.tap();
@@ -208,14 +223,4 @@ function usePaydayShow(board: Board) {
   }, [latestId, latestRanAt]);
 
   return { summary, close: useCallback(() => setSummary(null), []) };
-}
-
-/** Loads the sounds, and follows the family's volume setting (it refetches on change). */
-function useKioskVolume() {
-  const settings = useQuery({ queryKey: ['settings'], queryFn: api.settings });
-  const volume = settings.data?.volume;
-  useEffect(preloadSounds, []);
-  useEffect(() => {
-    if (volume !== undefined) setVolume(volume);
-  }, [volume]);
 }

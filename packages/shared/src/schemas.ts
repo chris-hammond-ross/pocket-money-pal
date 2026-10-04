@@ -68,12 +68,14 @@ export const paydayTimeSchema = z
   .regex(/^([01]\d|2[0-3]):00$/, 'Payday is on the hour, as HH:00');
 
 /**
- * `PATCH /api/settings` from a phone: the loot rate (from now on) and quiet hours on the
- * Players tab, and payday's day, time and how it starts on the Payday tab.
+ * `PATCH /api/settings` from a phone: the loot rate (from now on), quiet hours and the kiosk
+ * volume on the Players tab, and payday's day, time and how it starts on the Payday tab.
  */
 export const phoneSettingsPatchSchema = z
   .object({
     centsPerPoint: centsPerPointSchema,
+    /** The kiosk's sound volume (spec 005). */
+    volume: volumeSchema,
     quietHours: z.lazy(() => quietHoursSchema).nullable(),
     paydayDay: z.number().int().min(0).max(6),
     paydayTime: paydayTimeSchema,
@@ -813,6 +815,15 @@ export const savingsBookSchema = z.object({
 });
 export type SavingsBook = z.infer<typeof savingsBookSchema>;
 
+/** A child's streak: decided by the server from `streak_days`, never by a screen. */
+export const streakSchema = z.object({
+  days: z.number().int(),
+  best: z.number().int(),
+  /** `flameTier(days)`: the flame's colour. */
+  tier: z.number().int(),
+});
+export type Streak = z.infer<typeof streakSchema>;
+
 /** `GET /api/paydays/latest`: what the show displays. */
 export const paydaySummarySchema = z.object({
   id: idSchema,
@@ -835,6 +846,8 @@ export const paydaySummarySchema = z.object({
         unprompted: z.number().int(),
         bestDay: z.object({ date: z.string(), points: z.number().int() }).nullable(),
       }),
+      /** The streak on payday (spec 005), for the show's 🔥 Streak line. */
+      streak: streakSchema,
       /** Converted at this payday (0 when nothing was). */
       points: z.number().int(),
       cents: z.number().int(),
@@ -904,6 +917,26 @@ export const kioskQuestSchema = z.object({
 });
 export type KioskQuest = z.infer<typeof kioskQuestSchema>;
 
+/**
+ * The latest streak change worth a morning report (spec 005, ADR 0012). `id` is its
+ * `streak.decided` event, which each kiosk remembers once shown.
+ */
+export const streakReportSchema = z.object({
+  id: idSchema,
+  /** The days it covers, oldest first (several after the PC was off). */
+  dates: z.array(isoDateSchema),
+  result: z.enum(['done', 'missed']),
+  before: z.number().int(),
+  after: z.number().int(),
+  bestBefore: z.number().int(),
+  best: z.number().int(),
+  /** Missed only: the first quest left open on the newest missed day. */
+  missedQuest: z.string().nullable(),
+  /** When the server decided it (epoch ms). */
+  at: z.number().int(),
+});
+export type StreakReport = z.infer<typeof streakReportSchema>;
+
 export const kioskChildSchema = z.object({
   id: idSchema,
   name: z.string(),
@@ -916,9 +949,12 @@ export const kioskChildSchema = z.object({
     xpForThisLevel: z.number().int(),
     xpToNext: z.number().int(),
   }),
+  /** Average chore points (XP) per day over the last 14 days; null with no history. */
+  xpPerDay: z.number().nullable(),
   pointsToday: z.number().int(),
-  /** Always 0 until streaks are built (Phase 5). */
-  streakDays: z.number().int(),
+  streak: streakSchema.extend({ last: streakReportSchema.nullable() }),
+  /** A parent made today a sick day (ADR 0012): every waiting quest is skipped. */
+  sickToday: z.boolean(),
   /** Saved, to sort and this week's points (spec 004). */
   money: childMoneySchema,
   /** Live jars in jar order (the board shows the first four). */
@@ -993,8 +1029,9 @@ export const playerCardSchema = z.object({
   age: z.number().int().nullable(),
   avatar: z.string(),
   colour: z.string(),
-  /** Always 0 until streaks are built (Phase 5). */
-  streakDays: z.number().int(),
+  streak: streakSchema,
+  /** Today is a sick day: all their waiting quests are skipped (ADR 0012). */
+  sickToday: z.boolean(),
   /** Quests this child is a player on (not deleted). */
   quests: z.number().int(),
   pointsToday: z.number().int(),

@@ -697,6 +697,7 @@ describe('payday', () => {
       cents: 500,
       envelopes: [],
       stats: { bestDay: { date: DAY, points: 80 } },
+      streak: { days: 0, best: 0, tier: 0 },
     });
     expect(summary.children.find((c) => c.childId === alice.id)).toMatchObject({
       points: 0,

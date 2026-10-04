@@ -1,4 +1,11 @@
-import { claimFeedback, formatPointsChange, levelProgress, type ServerEvent } from '@pmp/shared';
+import {
+  claimFeedback,
+  daysToNextLevel,
+  formatPointsChange,
+  isMilestoneLevel,
+  levelProgress,
+  type ServerEvent,
+} from '@pmp/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
@@ -22,6 +29,9 @@ import moneyClasses from './money/money.module.css';
  * holds for none; approvals from a phone hold 500ms each, so a batch lands one chore at a
  * time (spec 002), and a level-up holds while its overlay shows.
  * To add one: a case in `stepsFor`, and a `data-quest-id` on whatever it animates.
+ *
+ * A few moments come from the kiosk's own clock instead (`playLocalMoment`): a bonus that
+ * ran out unclaimed (spec 005). They join the same queue.
  */
 export function KioskCelebrations() {
   const { subscribe } = useLiveEvents();
@@ -42,11 +52,23 @@ export function KioskCelebrations() {
     const childOf = (childId: number) =>
       queryClient.getQueryData<KioskBoard>(['kiosk-today'])?.children.find((c) => c.id === childId);
     const colourOf = (childId: number) => childOf(childId)?.colour ?? arcade.gold;
-    const showLevelUp = (childId: number, level: number) => {
+    const showLevelUp = (childId: number, xp: number) => {
       const child = childOf(childId);
       if (!child) return;
-      setLevelUp({ name: child.name, avatar: child.avatar, colour: child.colour, level });
-      setTimeout(() => setLevelUp(null), LEVEL_UP_MS);
+      const progress = levelProgress(xp);
+      const id = ++nextId.current;
+      setLevelUp({
+        id,
+        name: child.name,
+        avatar: child.avatar,
+        colour: child.colour,
+        from: progress.level - 1,
+        level: progress.level,
+        xp,
+        xpToNext: progress.xpToNext,
+        days: daysToNextLevel(progress.xpToNext, child.xpPerDay),
+      });
+      setTimeout(() => setLevelUp((l) => (l?.id === id ? null : l)), LEVEL_UP_MS);
     };
     const showBanner = (lines: string[], colour: string) => {
       setBanner({ lines, colour });
@@ -54,33 +76,25 @@ export function KioskCelebrations() {
     };
     const jarOf = (childId: number, goalId: number) =>
       childOf(childId)?.jars.find((j) => j.id === goalId);
-    return subscribe((event) => {
-      for (const step of stepsFor(event, { colourOf, addFloat, showLevelUp, showBanner, jarOf })) {
-        queue.current.push(step);
-      }
+    const ctx = { colourOf, addFloat, showLevelUp, showBanner, jarOf };
+    const unsubscribe = subscribe((event) => {
+      for (const step of stepsFor(event, ctx)) queue.current.push(step);
     });
+    const local = (moment: LocalMoment) => {
+      for (const step of localSteps(moment, ctx)) queue.current.push(step);
+    };
+    localListeners.add(local);
+    return () => {
+      unsubscribe();
+      localListeners.delete(local);
+    };
   }, [subscribe, queryClient, addFloat]);
 
   return (
     <>
       <AnimatePresence>
         {levelUp && (
-          <motion.div
-            key="level-up"
-            className={classes.levelUp}
-            style={{ '--c': levelUp.colour } as CSSProperties}
-            initial={{ opacity: 0, scale: 0.7 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.1 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 18 }}
-            aria-live="polite"
-          >
-            <div className={classes.levelUpAvatar}>{levelUp.avatar}</div>
-            <h2>LEVEL UP!</h2>
-            <p>
-              {levelUp.name} is level {levelUp.level}
-            </p>
-          </motion.div>
+          <LevelUpMoment key={levelUp.id} levelUp={levelUp} onClose={() => setLevelUp(null)} />
         )}
       </AnimatePresence>
       <AnimatePresence>
@@ -121,18 +135,106 @@ export function KioskCelebrations() {
   );
 }
 
-/** How long the level-up overlay shows, and holds the queue. */
-const LEVEL_UP_MS = 2600;
+/** How long the level-up moment shows (spec 005: about 4 seconds), and holds the queue. */
+const LEVEL_UP_MS = 4200;
+/** When the old level number flips over to the new one. */
+const LEVEL_FLIP_MS = 900;
 /** How long a big banner ("💥 SMASH! 💥") shows. */
 const BANNER_MS = 2400;
 /** Approvals in a batch play this far apart (spec 002). */
 const APPROVAL_GAP_MS = 500;
 
 interface LevelUp {
+  id: number;
   name: string;
   avatar: string;
   colour: string;
+  /** The level before, which flips over to `level`. */
+  from: number;
   level: number;
+  /** All-time XP. */
+  xp: number;
+  xpToNext: number;
+  /** About how many days to the next level, or null with no history yet. */
+  days: number | null;
+}
+
+/** A moment the kiosk's own clock starts, not a server event (spec 005). */
+export type LocalMoment = { type: 'bonus.gone'; instanceId: number; points: number };
+
+const localListeners = new Set<(moment: LocalMoment) => void>();
+
+/** Plays a clock-driven moment through the celebration queue. */
+export function playLocalMoment(moment: LocalMoment): void {
+  localListeners.forEach((listener) => listener(moment));
+}
+
+/**
+ * The level-up moment (spec 005): the avatar and name, "LEVEL UP!", the old number flipping
+ * over to the new one, all-time XP and the next level, and a gold pill every 5th level.
+ * The fanfare and confetti play from its step; a tap closes it.
+ */
+function LevelUpMoment({ levelUp, onClose }: { levelUp: LevelUp; onClose: () => void }) {
+  const [flipped, setFlipped] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFlipped(true);
+      sound.flip();
+    }, LEVEL_FLIP_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  const days =
+    levelUp.days === null
+      ? null
+      : levelUp.days === 1
+        ? 'about a day'
+        : `about ${levelUp.days} days`;
+  return (
+    <motion.div
+      className={classes.levelUp}
+      style={{ '--c': levelUp.colour } as CSSProperties}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      aria-live="polite"
+    >
+      <div className={classes.levelUpAvatar}>{levelUp.avatar}</div>
+      <div className={classes.levelUpName}>{levelUp.name.toUpperCase()}</div>
+      <motion.h2
+        initial={{ scale: 0.5 }}
+        animate={{ scale: 1 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 12 }}
+      >
+        LEVEL UP!
+      </motion.h2>
+      <div className={classes.levelUpNumber}>
+        <motion.span
+          key={flipped ? 'new' : 'old'}
+          initial={flipped ? { rotateX: 90 } : false}
+          animate={{ rotateX: 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
+          {flipped ? levelUp.level : levelUp.from}
+        </motion.span>
+      </div>
+      <p>
+        <b>{levelUp.xp.toLocaleString()} XP</b> all-time · level {levelUp.level + 1} in{' '}
+        <b>{levelUp.xpToNext.toLocaleString()} XP</b>
+        {days && ` (${days})`}
+      </p>
+      {isMilestoneLevel(levelUp.level) && (
+        <motion.div
+          className={classes.levelUpPill}
+          initial={{ scale: 0.4, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: LEVEL_FLIP_MS / 1000 + 0.3, type: 'spring', stiffness: 400 }}
+        >
+          ⭐ Level {levelUp.level}: a milestone!
+        </motion.div>
+      )}
+    </motion.div>
+  );
 }
 
 interface Banner {
@@ -156,7 +258,7 @@ interface Step {
 interface StepContext {
   colourOf: (childId: number) => string;
   addFloat: (text: string, rect: DOMRect) => void;
-  showLevelUp: (childId: number, level: number) => void;
+  showLevelUp: (childId: number, xp: number) => void;
   showBanner: (lines: string[], colour: string) => void;
   jarOf: (childId: number, goalId: number) => { name: string; emoji: string } | undefined;
 }
@@ -220,12 +322,8 @@ function stepsFor(event: ServerEvent, ctx: StepContext): Step[] {
           holdMs: LEVEL_UP_MS,
           play: () => {
             sound.fanfare();
-            confettiFrom(new DOMRect(innerWidth / 2 - 50, innerHeight / 2 - 50, 100, 100), [
-              ctx.colourOf(approval.childId),
-              arcade.gold,
-              '#ffffff',
-            ]);
-            ctx.showLevelUp(approval.childId, after);
+            celebrate({ colours: [ctx.colourOf(approval.childId), arcade.gold], count: 220 });
+            ctx.showLevelUp(approval.childId, approval.xpAfter);
           },
         });
       }
@@ -283,6 +381,32 @@ function stepsFor(event: ServerEvent, ctx: StepContext): Step[] {
     }
     default:
       return [];
+  }
+}
+
+/** What a clock-driven moment plays. */
+function localSteps(moment: LocalMoment, ctx: StepContext): Step[] {
+  switch (moment.type) {
+    case 'bonus.gone':
+      // The bonus ran out unclaimed (spec 005): a grey flash, "−5 bonus", a soft bloop.
+      return [
+        {
+          holdMs: 0,
+          play: () => {
+            sound.bloop();
+            const el = document.querySelector(`[data-quest-id="${moment.instanceId}"]`);
+            if (!el) return;
+            el.animate(
+              [
+                { filter: 'grayscale(1) brightness(0.6)', transform: 'scale(0.97)' },
+                { filter: 'none', transform: 'none' },
+              ],
+              { duration: 1200, easing: 'ease-out' },
+            );
+            ctx.addFloat(`−${moment.points} bonus`, el.getBoundingClientRect());
+          },
+        },
+      ];
   }
 }
 

@@ -26,6 +26,7 @@ const EXPECTED_TABLES = [
   'paydays',
   'server_kv',
   'setup_drafts',
+  'streak_days',
   'users',
 ];
 

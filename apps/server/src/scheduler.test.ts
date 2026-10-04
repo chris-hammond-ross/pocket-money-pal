@@ -7,7 +7,9 @@ import { listInstancesForDate } from './repo/instances';
 import { appendLedger } from './repo/ledger';
 import { moneyStateOf } from './repo/money';
 import { listPaydays, startPaydayNow, type PaydayResult } from './repo/payday';
+import { setKv } from './repo/kv';
 import { restartPaydaySchedule, updateSettings } from './repo/settings';
+import type { StreakUpdate } from './repo/streaks';
 import { insertParent } from './repo/users';
 import {
   ensureDay,
@@ -270,6 +272,51 @@ describe('startScheduler (fake clock)', () => {
     expect(errors).toHaveLength(2);
     expect(vi.getTimerCount()).toBe(0);
     ({ db, close } = testDb()); // for afterEach
+  });
+});
+
+describe('streaks at midnight (spec 005)', () => {
+  it('decides yesterday just after midnight and reports it', () => {
+    const child = addChild(db, 'Billy');
+    addChore(db, [child.id]);
+    const streaks: StreakUpdate[][] = [];
+    vi.setSystemTime(london('2026-09-30', '21:00'));
+    scheduler = startScheduler({ db, onStreaks: (u) => streaks.push(u) });
+    // The first run on a new database builds the (empty) history silently.
+    expect(streaks).toEqual([]);
+    db.update(choreInstances).set({ status: 'approved' }).run();
+
+    vi.advanceTimersByTime(3 * HOUR - SEC); // 23:59:59
+    expect(streaks).toEqual([]);
+    vi.advanceTimersByTime(2 * SEC);
+    expect(streaks).toEqual([
+      [
+        {
+          childId: child.id,
+          last: expect.objectContaining({ dates: ['2026-09-30'], result: 'done', after: 1 }),
+        },
+      ],
+    ]);
+  });
+
+  it('catches up at start-up on the days that ended while the PC was off', () => {
+    const child = addChild(db, 'Billy');
+    addChore(db, [child.id]);
+    setKv(db, 'streaks-built', '0');
+    ensureDay(db, '2026-09-28', 0);
+    ensureDay(db, '2026-09-29', 0);
+    db.update(choreInstances).set({ status: 'approved' }).run();
+    const streaks: StreakUpdate[][] = [];
+    vi.setSystemTime(london('2026-10-01', '07:00'));
+    scheduler = startScheduler({ db, onStreaks: (u) => streaks.push(u) });
+    expect(streaks).toEqual([
+      [
+        {
+          childId: child.id,
+          last: expect.objectContaining({ dates: ['2026-09-28', '2026-09-29'], after: 2 }),
+        },
+      ],
+    ]);
   });
 });
 

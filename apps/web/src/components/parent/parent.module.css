@@ -849,6 +849,94 @@
   }
 }
 
+/* A player card with its sick-day button beside it (ADR 0012). */
+.pcardRow {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-bottom: 10px;
+
+  & .pcard {
+    margin-bottom: 0;
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.pcardStreak {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pcardFlame {
+  width: 12px;
+  height: 15px;
+  margin-right: 4px;
+  vertical-align: -2px;
+}
+
+.sickButton {
+  flex: none;
+  width: 64px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 2px;
+  font: inherit;
+  color: var(--pmp-dim);
+  cursor: pointer;
+  background: var(--pmp-panel);
+  border: 2px dashed var(--pmp-line);
+  border-radius: 18px;
+
+  & span {
+    font-size: 24px;
+  }
+
+  & small {
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  &[data-on] {
+    border-style: solid;
+    border-color: var(--pmp-gold);
+    color: var(--pmp-gold);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+/* The kiosk volume slider, under quiet hours (spec 005). */
+.volumeRow {
+  background: var(--pmp-panel);
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 6px;
+
+  & input {
+    width: 100%;
+    accent-color: var(--pmp-gold);
+    height: 32px;
+  }
+}
+
+.volumeHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+
+  & b {
+    font-family: var(--pmp-font-pixel);
+    font-weight: 400;
+    font-size: 14px;
+    color: var(--pmp-gold);
+  }
+}
+
 .pcardAvatar {
   width: 60px;
   height: 60px;

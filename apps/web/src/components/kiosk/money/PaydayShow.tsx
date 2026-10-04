@@ -19,7 +19,7 @@ type Phase = 'title' | 'stats' | 'convert' | 'envelopes' | 'pour' | 'finale';
 
 const TITLE_MS = 1_900;
 const STAT_GAP_MS = 450;
-const STAT_LINES = 4;
+const STAT_LINES = 5;
 const CONVERT_MS = 2_000;
 const ENVELOPE_MS = 1_200;
 const FINALE_MS = 2_800;
@@ -158,6 +158,12 @@ export function PaydayShow({
                     s.stats.bestDay
                       ? `${shortDayName(s.stats.bestDay.date)} · ${s.stats.bestDay.points} pts`
                       : '–',
+                  ],
+                  [
+                    '🔥 Streak',
+                    s.streak.days === 0
+                      ? '–'
+                      : `${s.streak.days} ${s.streak.days === 1 ? 'day' : 'days'}`,
                   ],
                 ]
                   .slice(0, lines)

@@ -32,6 +32,7 @@ import {
 import { pairUrl, phoneBaseUrls, useQrSvg } from '../../lib/qr';
 import { sound } from '../../lib/sounds';
 import { ArcadeButton, CloseButton, DashedButton, PixelLabel, RateSlider, Sheet } from '../arcade';
+import { Flame, flameColours } from '../Flame';
 import { PlayerEditor } from '../PlayerEditor';
 import { problemText, useParentUi } from './context';
 import classes from './parent.module.css';
@@ -41,9 +42,10 @@ export const SECURE_ACCESS_GUIDE =
   'https://github.com/chris-hammond-ross/pocket-money-pal/blob/main/docs/installation.md#secure-access-with-tailscale';
 
 /**
- * The Players tab (spec 003): player cards and the player editor, game masters, paired
- * phones, the loot rate and bonus points; then this phone's notifications, quiet hours
- * and sounds. Over HTTPS it offers "📲 Install"; over plain HTTP, a one-time hint.
+ * The Players tab (spec 003): player cards (with their streak and a sick-day button, spec
+ * 005) and the player editor, game masters, paired phones, the loot rate and bonus points;
+ * then notifications, quiet hours and the kiosk's volume, and this phone's sounds. Over
+ * HTTPS it offers "📲 Install"; over plain HTTP, a one-time hint.
  */
 export function PlayersTab() {
   const [muted, setMuted] = useMuted();
@@ -73,6 +75,7 @@ export function PlayersTab() {
       <PixelLabel>NOTIFICATIONS</PixelLabel>
       <PushRow />
       <QuietHoursRow />
+      <KioskVolume />
 
       <PixelLabel>THIS PHONE</PixelLabel>
       <label className={classes.toggleRow}>
@@ -201,6 +204,7 @@ function Players() {
   const settings = useQuery({ queryKey: ['settings'], queryFn: api.settings });
   const currency = settings.data?.currency ?? 'GBP';
   const [editing, setEditing] = useState<Editing | null>(null);
+  const [sickFor, setSickFor] = useState<PlayerCard | null>(null);
 
   const done = () => {
     void queryClient.invalidateQueries({ queryKey: ['players'] });
@@ -236,6 +240,23 @@ function Players() {
     },
     onError: fail('Not removed'),
   });
+  const sick = useMutation({
+    mutationFn: ({ player, on }: { player: PlayerCard; on: boolean }) =>
+      api.sickToday(player.id, on),
+    onSuccess: (_card, { player, on }) => {
+      void queryClient.invalidateQueries({ queryKey: ['players'] });
+      setSickFor(null);
+      sound.pop();
+      ui.notify({
+        icon: on ? '🤒' : player.avatar,
+        title: on ? `Get well soon, ${player.name}` : `${player.name}'s quests are back`,
+        body: on
+          ? "Today's quests are skipped, so the streak is safe."
+          : 'They’re on the kiosk again.',
+      });
+    },
+    onError: fail('Not changed'),
+  });
 
   const list = players.data ?? [];
   const editingPlayer = editing?.player ?? null;
@@ -251,28 +272,58 @@ function Players() {
   return (
     <>
       {list.map((p) => (
-        <button
-          key={p.id}
-          type="button"
-          className={classes.pcard}
-          style={{ '--c': p.colour } as CSSProperties}
-          onClick={() => {
-            sound.tap();
-            setEditing({ player: p });
-          }}
-        >
-          <span className={classes.pcardAvatar}>{p.avatar}</span>
-          <span className={classes.grow}>
-            <b>{p.name}</b>
-            <small>
-              {p.age !== null && `Age ${p.age} · `}🔥 {p.streakDays} day streak · {p.quests}{' '}
-              {p.quests === 1 ? 'quest' : 'quests'}
-            </small>
-            <small>
-              <em>{p.pointsToday} pts</em> today · <em>{formatMoney(p.cents, currency)}</em> saved
-            </small>
-          </span>
-        </button>
+        <div key={p.id} className={classes.pcardRow}>
+          <button
+            type="button"
+            className={classes.pcard}
+            style={{ '--c': p.colour } as CSSProperties}
+            onClick={() => {
+              sound.tap();
+              setEditing({ player: p });
+            }}
+          >
+            <span className={classes.pcardAvatar}>{p.avatar}</span>
+            <span className={classes.grow}>
+              <b>{p.name}</b>
+              <small>
+                {p.age !== null && `Age ${p.age} · `}
+                <span
+                  className={classes.pcardStreak}
+                  style={{ color: flameColours(p.streak.tier).text }}
+                  title={`Best ever: ${p.streak.best}`}
+                >
+                  <Flame tier={p.streak.tier} className={classes.pcardFlame} />
+                  {p.streak.days} day streak
+                </span>{' '}
+                · {p.quests} {p.quests === 1 ? 'quest' : 'quests'}
+              </small>
+              <small>
+                {p.sickToday ? (
+                  '🤒 Sick day: today’s quests are skipped'
+                ) : (
+                  <>
+                    <em>{p.pointsToday} pts</em> today · <em>{formatMoney(p.cents, currency)}</em>{' '}
+                    saved
+                  </>
+                )}
+              </small>
+            </span>
+          </button>
+          <button
+            type="button"
+            className={classes.sickButton}
+            data-on={p.sickToday || undefined}
+            disabled={sick.isPending}
+            onClick={() => {
+              sound.tap();
+              if (p.sickToday) sick.mutate({ player: p, on: false });
+              else setSickFor(p);
+            }}
+          >
+            <span>🤒</span>
+            <small>{p.sickToday ? 'Undo' : 'Sick day'}</small>
+          </button>
+        </div>
       ))}
       <DashedButton
         onClick={() => {
@@ -282,6 +333,35 @@ function Players() {
       >
         ＋ New player
       </DashedButton>
+
+      {sickFor && (
+        <Sheet
+          opened
+          short
+          colour={sickFor.colour}
+          onClose={() => setSickFor(null)}
+          head={
+            <>
+              <span className={classes.sheetTitle}>🤒 Sick day for {sickFor.name}?</span>
+              <CloseButton onClick={() => setSickFor(null)} />
+            </>
+          }
+          footer={
+            <ArcadeButton
+              disabled={sick.isPending}
+              onClick={() => sick.mutate({ player: sickFor, on: true })}
+            >
+              🤒 Skip all of {sickFor.name}’s quests today
+            </ArcadeButton>
+          }
+        >
+          <p className={classes.note}>
+            Today’s quests leave the kiosk, so {sickFor.name}’s{' '}
+            {sickFor.streak.days > 0 ? `${sickFor.streak.days}-day streak` : 'streak'} is safe.
+            Anything already claimed still waits for you to check. You can undo it today.
+          </p>
+        </Sheet>
+      )}
 
       {editing && (
         <PlayerEditor
@@ -559,6 +639,53 @@ function QuietHoursRow() {
         </div>
       )}
     </>
+  );
+}
+
+/** The kiosk's sound volume (spec 005). Quiet hours mute the kiosk too. */
+function KioskVolume() {
+  const ui = useParentUi();
+  const settings = useQuery({ queryKey: ['settings'], queryFn: api.settings });
+  const [dragging, setDragging] = useState<number | null>(null);
+  const save = useMutation({
+    mutationFn: (volume: number) => api.updateSettings({ volume }),
+    onSuccess: () => sound.pop(),
+    onError: (err) =>
+      ui.notify({ icon: '⚠️', title: 'Volume not saved', body: problemText(err), tone: 'error' }),
+    onSettled: () => setDragging(null),
+  });
+  if (!settings.data) return null;
+  const saved = settings.data.volume;
+  const value = dragging ?? saved;
+  const commit = () => {
+    if (dragging !== null && dragging !== saved) save.mutate(dragging);
+    else setDragging(null);
+  };
+  return (
+    <div className={classes.volumeRow}>
+      <div className={classes.volumeHead}>
+        <span>
+          {value === 0 ? '🔇' : '🔊'} Kiosk sounds
+          <small className={classes.dimLine}>
+            {settings.data.quietHours
+              ? 'Silent in quiet hours; animations still play'
+              : 'How loud the kiosk plays its sounds'}
+          </small>
+        </span>
+        <b>{value}</b>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={value}
+        aria-label="Kiosk volume"
+        onChange={(e) => setDragging(Number(e.target.value))}
+        onPointerUp={commit}
+        onKeyUp={commit}
+      />
+    </div>
   );
 }
 

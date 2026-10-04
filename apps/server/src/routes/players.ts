@@ -21,6 +21,7 @@ import {
   listPlayerCards,
   NameTakenError,
   removeChild,
+  setSickToday,
   updateChild,
 } from '../repo/players';
 import { getSettings, updateSettings } from '../repo/settings';
@@ -128,7 +129,23 @@ export async function playerRoutes(
     }
   });
 
-  /** LOOT RATE (from now on) and quiet hours; payday's day, time and how it starts. */
+  /** "🤒 Sick day": skip all of the child's waiting quests today; DELETE puts them back. */
+  const sickRoute = (sick: boolean) => async (req: FastifyRequest, reply: FastifyReply) => {
+    const id = childId(req);
+    if (id === null) return reply.code(404).send({ error: 'not-found' });
+    try {
+      const ctx = context(req);
+      db.transaction((tx) => setSickToday(tx, id, sick, ctx));
+      app.hub.broadcast({ type: 'child.updated', childId: id });
+      return listPlayerCards(db, ctx.now).find((c) => c.id === id);
+    } catch (err) {
+      return refuse(reply, err);
+    }
+  };
+  app.post('/api/children/:id/sick-today', parentOnly, sickRoute(true));
+  app.delete('/api/children/:id/sick-today', parentOnly, sickRoute(false));
+
+  /** LOOT RATE (from now on), quiet hours and the kiosk volume; payday's day, time and how it starts. */
   app.patch('/api/settings', parentOnly, async (req, reply) => {
     const patch = phoneSettingsPatchSchema.safeParse(req.body);
     if (!patch.success) return reply.code(400).send({ error: patch.error.issues });
@@ -136,7 +153,7 @@ export async function playerRoutes(
     const settings = db.transaction((tx) => {
       const before = getSettings(tx);
       const after = updateSettings(tx, patch.data, ctx.now);
-      const changed = (['centsPerPoint', 'quietHours', 'payday'] as const).filter(
+      const changed = (['centsPerPoint', 'quietHours', 'volume', 'payday'] as const).filter(
         (k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]),
       );
       if (changed.length > 0) {

@@ -5,7 +5,7 @@
  */
 import { choreRunsOn, isPausedOn } from '@pmp/shared';
 import { and, eq, inArray, notExists, notInArray, type SQL } from 'drizzle-orm';
-import { choreAssignments, choreInstances, chores, ledger } from '../db/schema';
+import { choreAssignments, choreInstances, chores, ledger, users } from '../db/schema';
 import { NotFoundError, type DbOrTx } from './db';
 import { getSettings } from './settings';
 import { listChildren } from './users';
@@ -25,9 +25,24 @@ export function snapshotOf(chore: Chore) {
   };
 }
 
-/** What an instance that's waiting for the child is on `date`: open, or skipped today. */
-export function waitingStatus(chore: Chore, date: string): 'open' | 'skipped' {
-  return chore.skippedOn === date ? 'skipped' : 'open';
+/**
+ * What an instance that's waiting for the child is on `date`: open, or skipped because the
+ * quest is skipped today or it's the child's sick day (ADR 0012).
+ */
+export function waitingStatus(chore: Chore, date: string, sick = false): 'open' | 'skipped' {
+  return chore.skippedOn === date || sick ? 'skipped' : 'open';
+}
+
+/** Children whose sick day is `date`. */
+export function sickChildren(db: DbOrTx, date: string): Set<number> {
+  return new Set(
+    db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.sickOn, date))
+      .all()
+      .map((u) => u.id),
+  );
 }
 
 /**
@@ -71,7 +86,7 @@ function activePlayers(db: DbOrTx, choreId: number): number[] {
  *
  * - A **waiting** instance (open or skipped) of a current player takes the chore's times
  *   and loot, so the kiosk's bars and countdowns move, and is skipped exactly when the
- *   quest is skipped today (`chores.skipped_on`).
+ *   quest is skipped today (`chores.skipped_on`) or it's the child's sick day.
  * - **Claimed and approved** instances are never changed: they keep the window the child
  *   claimed in, their claim time and awarded points, and stay in the tray until a parent
  *   handles them. Once handled (sent back), the next sync applies the rules above to them.
@@ -98,18 +113,19 @@ export function syncToday(db: DbOrTx, choreId: number, today: string): void {
   );
   if (players.length === 0) return;
 
-  const status = waitingStatus(chore, today);
-  db.update(choreInstances)
-    .set({ ...snapshotOf(chore), status })
-    .where(
-      and(
-        onChore,
-        inArray(choreInstances.childId, players),
-        inArray(choreInstances.status, ['open', 'skipped']),
-      ),
-    )
-    .run();
+  const sick = sickChildren(db, today);
   for (const childId of players) {
+    const status = waitingStatus(chore, today, sick.has(childId));
+    db.update(choreInstances)
+      .set({ ...snapshotOf(chore), status })
+      .where(
+        and(
+          onChore,
+          eq(choreInstances.childId, childId),
+          inArray(choreInstances.status, ['open', 'skipped']),
+        ),
+      )
+      .run();
     db.insert(choreInstances)
       .values({ choreId: chore.id, childId, date: today, status, ...snapshotOf(chore) })
       .onConflictDoNothing()

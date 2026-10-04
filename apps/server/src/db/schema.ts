@@ -66,6 +66,8 @@ export const users = sqliteTable('users', {
   /** Left-to-right order of children's kiosk columns. */
   sortOrder: integer('sort_order').notNull().default(0),
   archived: integer('archived', { mode: 'boolean' }).notNull().default(false),
+  /** Children only: a parent made this date a sick day, so its quests are skipped (ADR 0012). */
+  sickOn: text('sick_on'),
   ...timestamps,
 });
 
@@ -281,6 +283,27 @@ export const paydays = sqliteTable('paydays', {
   startedBy: integer('started_by').references(() => users.id),
   ...timestamps,
 });
+
+export const STREAK_RESULTS = ['done', 'missed', 'neutral', 'pending'] as const;
+
+/**
+ * Each child's result for each past day that had chores (spec 005, ADR 0012). A cache of
+ * what `chore_instances` says, so a streak needn't scan every past day: rebuilding it from
+ * the instances gives the same rows. Days with no chores have no row (they're neutral).
+ */
+export const streakDays = sqliteTable(
+  'streak_days',
+  {
+    childId: integer('child_id')
+      .notNull()
+      .references(() => users.id),
+    date: text('date').notNull(),
+    result: text('result', { enum: STREAK_RESULTS }).notNull(),
+    /** When this result was decided (epoch ms). */
+    decidedAt: integer('decided_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.childId, t.date] })],
+);
 
 /** Audit trail and activity feed: every parent action and notable system action. */
 export const events = sqliteTable(

@@ -184,7 +184,8 @@ describe('GET /api/kiosk/today', () => {
     expect(billy).toMatchObject({
       xp: 8,
       pointsToday: 8,
-      streakDays: 0,
+      streak: { days: 0, best: 0, tier: 0, last: null },
+      sickToday: false,
       money: { savedCents: 0, toSortCents: 0, unconvertedPoints: 8, unconvertedCents: 40 },
       jars: [],
       envelopes: [],

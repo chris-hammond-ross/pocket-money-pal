@@ -265,6 +265,8 @@ export const STATS_WINDOW_DAYS = 14;
 export interface EarningAverages {
   pointsPerDay: number;
   pointsPerQuest: number;
+  /** Chore points (XP) per day: bonuses aren't XP (ADR 0003). For "about N days" to a level. */
+  xpPerDay: number;
 }
 
 /**
@@ -291,6 +293,7 @@ export function earningAverages(input: {
   return {
     pointsPerDay: input.earnedPoints / days,
     pointsPerQuest: input.chorePoints / input.approvedQuests,
+    xpPerDay: input.chorePoints / days,
   };
 }
 

@@ -9,6 +9,7 @@ import {
   manualPaydaySlot,
   nextPaydaySlot,
   paydayStats,
+  zonedDateOf,
   type PaydayInfo,
   type PaydayState,
   type PaydaySummary,
@@ -31,6 +32,7 @@ import {
   unopenedEnvelopes,
 } from './money';
 import { getSettings, paydayChangedAt } from './settings';
+import { streakOf } from './streaks';
 import { FALLBACK_AVATAR, FALLBACK_COLOUR, listChildren, listParents } from './users';
 
 export type Payday = typeof paydays.$inferSelect;
@@ -231,6 +233,7 @@ export function paydaySummary(db: DbOrTx, id?: number): PaydaySummary | null {
         { quests: questsBetween(db, child.id, from, payday.ranAt), earned },
         timezone,
       ),
+      streak: streakOf(db, child.id, zonedDateOf(payday.ranAt, timezone)),
       points: conversion ? -conversion.points : 0,
       cents: conversion?.cents ?? 0,
       envelopes: opened.map((e) => ({

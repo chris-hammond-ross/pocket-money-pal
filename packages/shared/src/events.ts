@@ -4,6 +4,7 @@ import {
   approvalSchema,
   claimResultSchema,
   goalMoveResultSchema,
+  streakReportSchema,
 } from './schemas';
 
 /**
@@ -55,6 +56,15 @@ export const serverEventSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.enum(['child.created', 'child.updated', 'child.removed']),
     childId: z.number().int(),
+  }),
+  /**
+   * A child's streak changed (spec 005): a day was decided at midnight, or a pending day
+   * resolved, or an undo moved it. `last` is the report to play, as in the kiosk board.
+   */
+  z.object({
+    type: z.literal('streak.updated'),
+    childId: z.number().int(),
+    last: streakReportSchema.nullable(),
   }),
   /** Bonus (or minus) points from a phone. Kiosks play a coin and "+10 ⭐" (ADR 0009). */
   z.object({ type: z.literal('child.adjusted'), adjustment: adjustmentSchema }),

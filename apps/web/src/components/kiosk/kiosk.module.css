@@ -1,11 +1,70 @@
 /* The Quest Track kiosk board (spec 001), after prototype 001-D. Sized for 1920×1080. */
 
 .screen {
+  position: relative;
   height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   user-select: none;
+  transition: background 2s;
+}
+
+/* Quiet hours (spec 005): a deeper night sky with softly twinkling stars. */
+.screen[data-quiet] {
+  background: radial-gradient(1200px 600px at 50% -10%, #1b1d48 0%, #07081a 65%);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(1.5px 1.5px at 10% 20%, #fff, transparent),
+      radial-gradient(1px 1px at 30% 70%, #fff, transparent),
+      radial-gradient(2px 2px at 55% 15%, #fff, transparent),
+      radial-gradient(1px 1px at 75% 45%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 90% 80%, #fff, transparent),
+      radial-gradient(1px 1px at 45% 90%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 20% 50%, #fff, transparent),
+      radial-gradient(1px 1px at 85% 10%, #fff, transparent);
+    background-size: 600px 400px;
+    animation: twinkle 4s infinite alternate;
+  }
+
+  & .player {
+    box-shadow:
+      0 0 30px color-mix(in srgb, var(--c) 12%, transparent),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  }
+}
+
+@keyframes twinkle {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 0.9;
+  }
+}
+
+.quietPill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #c5d4ff;
+  background: rgba(116, 143, 252, 0.14);
+  border: 2px solid #4c5fd5;
+  border-radius: 999px;
+  padding: 6px 18px;
+}
+
+.moon {
+  display: inline-block;
+  font-size: 26px;
+  animation: bob 3s ease-in-out infinite;
 }
 
 /* Header */
@@ -79,6 +138,7 @@
 
 .player {
   --c: #4c6ef5;
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -99,12 +159,13 @@
 /* Player panel */
 .hud {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   gap: 18px;
   align-items: center;
 }
 
 .avatar {
+  position: relative;
   width: 88px;
   height: 88px;
   border-radius: 50%;
@@ -177,28 +238,51 @@
   color: var(--pmp-dim);
 }
 
+/* The ⏰ bubble on the avatar while one of the child's quests rings (spec 005). */
+.alarmBubble {
+  position: absolute;
+  top: -10px;
+  right: -12px;
+  font-size: 34px;
+  line-height: 1;
+  display: none;
+  filter: drop-shadow(0 0 8px var(--pmp-gold));
+}
+
+.avatar[data-ringing] .alarmBubble {
+  display: block;
+  animation: ring 0.5s infinite;
+}
+
+@keyframes ring {
+  0%,
+  100% {
+    transform: rotate(-14deg);
+  }
+  50% {
+    transform: rotate(14deg);
+  }
+}
+
+/* The streak flame (spec 005): one size, coloured by Flame.tsx; --tc is its text colour. */
 .streak {
-  display: inline-flex;
-  gap: 4px;
-  align-items: center;
-  margin-top: 6px;
+  display: grid;
+  justify-items: center;
+  width: 104px;
+  text-align: center;
+}
+
+.streakDays {
+  font-family: var(--pmp-font-pixel);
   font-size: 18px;
-  font-weight: 600;
-  color: #ffa94d;
+  color: var(--tc);
+  margin-top: 6px;
 }
 
-.flame {
-  display: inline-block;
-  animation: flicker 1.2s infinite alternate;
-}
-
-@keyframes flicker {
-  from {
-    transform: scale(1) rotate(-4deg);
-  }
-  to {
-    transform: scale(1.15) rotate(4deg);
-  }
+.streakCaption {
+  font-size: 13px;
+  color: var(--pmp-dim);
+  white-space: nowrap;
 }
 
 /* Stage colours: set --pc from data-stage on a Next-up panel or quest card. */
@@ -351,6 +435,88 @@
   &[data-stage='late'] {
     border-color: rgba(255, 77, 109, 0.5);
   }
+
+  /* Bonus ending (spec 005): the card rings, twice as fast in the last minute. */
+  &[data-ringing] {
+    z-index: 1;
+    border-color: var(--pmp-gold);
+    animation: ringCard 1s infinite;
+
+    & .questIcon {
+      animation: ring 0.45s infinite;
+    }
+  }
+
+  &[data-ringing='fast'] {
+    animation-duration: 0.5s;
+  }
+}
+
+@keyframes ringCard {
+  50% {
+    box-shadow:
+      0 0 0 4px rgba(255, 212, 59, 0.35),
+      0 0 30px rgba(255, 212, 59, 0.6);
+  }
+}
+
+/* Busy days (spec 005): "+N MORE" and the folded claims. */
+.moreRow,
+.waitRow {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-radius: 18px;
+  padding: 10px 18px;
+  font: inherit;
+  font-size: 20px;
+  text-align: left;
+}
+
+.moreRow {
+  cursor: pointer;
+  background: #14153a;
+  border: 2px dashed #4c4fa0;
+  color: var(--pmp-text);
+
+  &:hover {
+    border-color: var(--pmp-gold);
+  }
+
+  & b {
+    font-family: var(--pmp-font-pixel);
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--pmp-gold);
+  }
+
+  & small {
+    margin-left: auto;
+    color: var(--pmp-dim);
+    font-size: 16px;
+  }
+}
+
+.waitRow {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--pmp-panel-2),
+    var(--pmp-panel-2) 12px,
+    #292a58 12px,
+    #292a58 24px
+  );
+  color: #a5b4fc;
+  font-weight: 600;
+
+  & .miniIcons {
+    margin-left: auto;
+  }
+}
+
+.miniIcons {
+  font-size: 24px;
+  letter-spacing: 4px;
 }
 
 .questIcon {
@@ -748,7 +914,7 @@ p.pairCode {
   letter-spacing: 0.08em;
 }
 
-/* Level-up overlay (spec 001), after an approval from a phone */
+/* Level-up moment (spec 005), after an approval from a phone. A tap closes it. */
 .levelUp {
   position: fixed;
   inset: 0;
@@ -756,33 +922,252 @@ p.pairCode {
   display: grid;
   place-items: center;
   align-content: center;
-  gap: 12px;
-  pointer-events: none;
+  gap: 6px;
+  cursor: pointer;
   background: radial-gradient(
     circle,
-    color-mix(in srgb, var(--c) 35%, transparent),
-    rgba(5, 5, 20, 0.7) 70%
+    color-mix(in srgb, var(--c) 30%, rgba(5, 5, 20, 0.92)),
+    rgba(5, 5, 20, 0.95) 65%
   );
+  backdrop-filter: blur(3px);
   text-align: center;
 
   & .levelUpAvatar {
-    font-size: 140px;
+    font-size: 110px;
     line-height: 1;
     filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.5));
   }
 
+  & .levelUpName {
+    font-family: var(--pmp-font-pixel);
+    font-size: 22px;
+    color: color-mix(in srgb, var(--c) 55%, white);
+    margin-top: 10px;
+  }
+
   & h2 {
-    margin: 0;
+    margin: 14px 0 0;
     font-family: var(--pmp-font-pixel);
     font-weight: 400;
-    font-size: 54px;
+    font-size: 64px;
     color: var(--pmp-gold);
-    text-shadow: 0 0 24px color-mix(in srgb, var(--pmp-gold) 60%, transparent);
+    text-shadow:
+      0 0 30px #ff922b,
+      5px 5px 0 #862e9c;
   }
 
   & p {
     margin: 0;
-    font-size: 34px;
-    font-weight: 600;
+    font-size: 26px;
+    color: var(--pmp-dim);
+
+    & b {
+      color: var(--pmp-text);
+    }
   }
+}
+
+.levelUpNumber {
+  perspective: 600px;
+  font-family: var(--pmp-font-pixel);
+  font-size: 170px;
+  line-height: 1.1;
+  color: #fff;
+  text-shadow:
+    0 0 40px var(--c),
+    8px 8px 0 color-mix(in srgb, var(--c) 50%, black);
+
+  & span {
+    display: inline-block;
+  }
+}
+
+.levelUpPill {
+  margin-top: 14px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f1024;
+  background: var(--pmp-gold);
+  border-radius: 999px;
+  padding: 6px 18px;
+}
+
+/* Morning report (spec 005): over one column, in the child's colour. */
+.report {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 30px;
+  text-align: center;
+  border-radius: 26px;
+  border: 3px solid var(--c);
+  background: rgba(8, 9, 28, 0.97);
+}
+
+.reportHi {
+  font-family: var(--pmp-font-pixel);
+  font-size: 22px;
+  color: var(--pmp-gold);
+}
+
+.reportYesterday {
+  font-size: 24px;
+  color: var(--pmp-dim);
+}
+
+.reportMissed {
+  color: var(--pmp-late);
+}
+
+.bigFlame {
+  position: relative;
+  width: 240px;
+  height: 220px;
+  display: grid;
+  place-items: center;
+
+  & .bigFlameSvg {
+    width: 130px;
+    height: 162px;
+    transition:
+      transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.6),
+      opacity 0.8s;
+  }
+
+  &[data-moment='grow'] .bigFlameSvg {
+    animation:
+      growPop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.6),
+      flicker 1s 0.7s infinite alternate;
+  }
+
+  &[data-moment='recolour'] .bigFlameSvg {
+    animation:
+      recolour 1.4s ease-out,
+      flicker 1s 1.4s infinite alternate;
+  }
+
+  &[data-moment='out'] .bigFlameSvg {
+    transform: scale(0.55) translateY(60px);
+    opacity: 0.5;
+    animation: none;
+
+    & svg {
+      filter: grayscale(1) brightness(0.5);
+    }
+  }
+
+  &[data-moment='out'] .smoke {
+    animation: smoke 2s 0.4s ease-out forwards;
+  }
+
+  &[data-moment='out'] .smoke2 {
+    animation-delay: 0.8s;
+    margin-left: -40px;
+  }
+}
+
+@keyframes flicker {
+  from {
+    transform: scale(1) rotate(-3deg);
+  }
+  to {
+    transform: scale(1.08) rotate(3deg);
+  }
+}
+
+@keyframes growPop {
+  40% {
+    transform: scale(1.25);
+  }
+}
+
+@keyframes recolour {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(0.6) rotate(-8deg);
+    filter: brightness(3);
+  }
+  70% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.smoke {
+  position: absolute;
+  left: 50%;
+  bottom: 60px;
+  font-size: 50px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes smoke {
+  0% {
+    opacity: 0.9;
+    transform: translate(-50%, 0) scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -160px) scale(1.8);
+  }
+}
+
+.reportCount {
+  font-family: var(--pmp-font-pixel);
+  font-size: 60px;
+  color: var(--tc);
+  transition: color 0.8s;
+
+  &[data-zero] {
+    color: var(--pmp-dim);
+  }
+
+  & small {
+    display: block;
+    font-family: var(--mantine-font-family);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--pmp-dim);
+    margin-top: 8px;
+  }
+}
+
+.reportMessage {
+  font-size: 24px;
+  max-width: 640px;
+  line-height: 1.35;
+  min-height: 66px;
+}
+
+.reportPill {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f1024;
+  border-radius: 999px;
+  padding: 6px 18px;
+  background: var(--tc);
+  box-shadow: 0 0 24px var(--tc);
+}
+
+.reportGo {
+  font: inherit;
+  font-size: 24px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #0f1024;
+  background: var(--pmp-gold);
+  border: none;
+  border-radius: 999px;
+  padding: 12px 34px;
+  margin-top: 6px;
+  box-shadow: 0 5px 0 var(--pmp-gold-shadow, #b8941f);
 }

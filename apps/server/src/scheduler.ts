@@ -1,12 +1,13 @@
 /**
- * The scheduler: creates each day's chore instances in the family time zone, and runs
- * payday. It runs at startup, just after each midnight and at each payday slot. Running it
+ * The scheduler: creates each day's chore instances in the family time zone, decides the
+ * days that ended for streaks (spec 005), and runs payday. It runs at startup, just after each midnight and at each payday slot. Running it
  * any number of times is safe: the unique (chore, child, date) index makes the day
  * idempotent, and a payday slot can only be covered once (ADR 0010).
  *
  * Only the current day is created. Days the PC was off are not backfilled; they have no
  * chores, which keeps them neutral for streaks (ADR 0004). Paused dates get none either.
- * A payday missed while the PC was off runs once at startup (the catch-up).
+ * A payday missed while the PC was off runs once at startup (the catch-up), and so does
+ * deciding the streak days that ended while it was off.
  */
 import { addDays, choreRunsOn, isPausedOn, startOfZonedDay, zonedDateOf } from '@pmp/shared';
 import type { Db } from './db/client';
@@ -16,8 +17,9 @@ import type { DbOrTx } from './repo/db';
 import { recordEvent } from './repo/events';
 import { getKv, setKv } from './repo/kv';
 import { checkPayday, paydayInfo, type PaydayResult } from './repo/payday';
-import { snapshotOf, waitingStatus } from './repo/today';
+import { sickChildren, snapshotOf, waitingStatus } from './repo/today';
 import { getSettings } from './repo/settings';
+import { decideStreaks, type StreakUpdate } from './repo/streaks';
 
 export interface EnsureDayResult {
   date: string;
@@ -38,6 +40,7 @@ export function ensureDayIn(db: DbOrTx, date: string, now: number): EnsureDayRes
   if (isPausedOn(settings.pause, date)) return { date, created: 0, paused: true };
 
   let created = 0;
+  const sick = sickChildren(db, date);
   for (const { chore, childId } of listActiveAssignments(db)) {
     if (!choreRunsOn({ days: chore.days, oneOffDate: chore.oneOffDate }, date)) continue;
     const result = db
@@ -46,7 +49,7 @@ export function ensureDayIn(db: DbOrTx, date: string, now: number): EnsureDayRes
         choreId: chore.id,
         childId,
         date,
-        status: waitingStatus(chore, date),
+        status: waitingStatus(chore, date, sick.has(childId)),
         ...snapshotOf(chore),
       })
       .onConflictDoNothing()
@@ -67,6 +70,8 @@ export interface SchedulerOptions {
   now?: () => number;
   /** Called when the family's date changes (including the first run at startup). */
   onNewDay?: (result: EnsureDayResult) => void;
+  /** Days ended and changed some children's streaks (at a new day, or the catch-up). */
+  onStreaks?: (updates: StreakUpdate[]) => void;
   /** A payday ran by itself (automatic mode, or the catch-up). */
   onPayday?: (result: PaydayResult) => void;
   /** A payday slot passed in "When I press start" mode. Called once per slot. */
@@ -104,6 +109,7 @@ export function startScheduler({
   db,
   now = Date.now,
   onNewDay,
+  onStreaks,
   onPayday,
   onPaydayWaiting,
   onError,
@@ -119,6 +125,8 @@ export function startScheduler({
     if (date !== lastDate) {
       lastDate = date;
       onNewDay?.(result);
+      const streaks = db.transaction((tx) => decideStreaks(tx, date, t));
+      if (streaks.length > 0) onStreaks?.(streaks);
     }
     return result;
   };

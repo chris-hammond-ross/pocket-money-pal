@@ -64,16 +64,21 @@ function Marker({ at, passed, children }: { at: number; passed: boolean; childre
   );
 }
 
-/** Tap to claim (spec 001): the card is a button, and plays its click straight away. */
+/**
+ * Tap to claim (spec 001): the card is a button, and plays its click straight away. In its
+ * bonus's last 5 minutes it rings (spec 005), twice as fast in the last minute.
+ */
 export function OpenQuestCard({
   quest,
   now,
   dayStart,
+  ringing = null,
   onClaim,
 }: {
   quest: KioskQuest;
   now: number;
   dayStart: number;
+  ringing?: 'slow' | 'fast' | null;
   onClaim: (quest: KioskQuest) => void;
 }) {
   const stage = choreStage(quest.window, now);
@@ -86,6 +91,7 @@ export function OpenQuestCard({
       className={classes.quest}
       data-stage={stage}
       data-quest-id={quest.id}
+      data-ringing={ringing ?? undefined}
       role="button"
       tabIndex={0}
       onClick={claim}
@@ -112,7 +118,7 @@ export function OpenQuestCard({
       </div>
       <div className={classes.reward}>
         +{maxPointsNow(quest.loot, quest.window, now)}
-        <small>up to</small>
+        <small>{ringing && '⏰ '}up to</small>
       </div>
     </div>
   );

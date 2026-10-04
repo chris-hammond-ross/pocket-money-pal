@@ -77,7 +77,7 @@ CLAUDE.md       Project conventions and the prototyping workflow, for the LLM
 - **goals** (the jars, as built by spec 004): child, name, emoji, target in cents, shop URL and its picture, order, who made it, price checked, smashed, bought and soft delete. A jar's money is its `goal_allocation` and `spend` ledger rows. Also **envelopes** (gifts waiting on the kiosk) and **paydays** (one per payday slot)
 - **surprise_tasks**: title, reward, who can claim it (a named child or first to claim), expiry, and trigger source (parent, schedule or HA)
 - **devices / api_tokens**: paired parent phones and HA tokens (stored hashed)
-- **events** (audit and activity feed): drives the "what happened today" view and later badges
+- **events** (audit and activity feed): drives the "what happened today" view, including streak milestones
 
 ### Accounts and security
 
@@ -141,7 +141,7 @@ The prototyping rules go in `CLAUDE.md`: 3 genuinely different approaches, one f
 
 **Goals**: each goal is a **jar** the child fills. Children make jars on the kiosk (a parent checks the price); parents can make and edit them on the phone, with a shop link and its picture. Big jars fill towards milestones, and stats ("~2 paydays", "about 11 quests to £25") come from the child's recent averages. A full jar is smashed to ask for it ([spec 004](features/004-goals-and-payday.md)).
 
-**Game layer**: party popper on early completion, sounds for claim, approve, goal progress and level-up, a daily streak counter, badges (first unprompted chore, 7-day streak, first goal reached), and possibly weekly XP levels.
+**Game layer**: party popper on early completion, sounds for claim, approve, goal progress and level-up, a daily streak shown as a flame that changes colour at each week mark, lifetime levels, and alerts as a bonus runs out ([spec 005](features/005-celebrations-and-alerts.md)). Badges were dropped in round 005: the flame colours do their job.
 
 **Surprise tasks and bounties**: a parent triggers one from their phone, or it appears at a random time within a window. It pops up on the kiosk with an alarm-style animation, has an expiry countdown, and is either first-to-claim or assigned to one child.
 
@@ -160,7 +160,7 @@ The session-by-session build plan, with a prompt for each session, is in [roadma
 | **2. Core loop (MVP)**    | Family setup, chores and daily instances, child claims, points ledger, live kiosk (approvals come with the phone in Phase 3)                                                                                                 | Chore claim interaction                                             |
 | **3. Parent phone**       | Home network access, QR pairing, approval queue, chore management on the phone                                                                                                                                               | Phone approval screen                                               |
 | **4. Money and goals**    | Conversion and payday, savings, extra income, goals with images and links, stats and estimated date                                                                                                                          | **Payday model**; goal card and progress                            |
-| **5. Game layer**         | Bonus and penalty tiers, alerts and timers, sounds, confetti, streaks, badges                                                                                                                                                | Celebration and alert styles                                        |
+| **5. Game layer**         | Bonus and penalty tiers, alerts and timers, sounds, confetti, streaks (no badges)                                                                                                                                            | Celebration and alert styles                                        |
 | **6. Surprise tasks**     | Bounties triggered from the phone, random scheduling                                                                                                                                                                         | Surprise pop-up                                                     |
 | **7. Home Assistant**     | API tokens, webhooks out, example HA automations                                                                                                                                                                             | none                                                                |
 | **8. Open source polish** | Setup wizard, installer and auto-update, backup, docs, locale                                                                                                                                                                | Setup wizard                                                        |

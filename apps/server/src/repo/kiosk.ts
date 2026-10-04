@@ -16,9 +16,10 @@ import { and, eq, ne } from 'drizzle-orm';
 import { choreInstances, chores } from '../db/schema';
 import type { DbOrTx } from './db';
 import { lifetimeXp, pointsToday } from './ledger';
-import { childMoneyView } from './money';
+import { averagesFor, childMoneyView } from './money';
 import { paydayInfo } from './payday';
 import { getSettings } from './settings';
+import { latestReport, streakOf } from './streaks';
 import { FALLBACK_AVATAR, FALLBACK_COLOUR, listChildren, listParents } from './users';
 
 /**
@@ -95,8 +96,10 @@ export function kioskToday(db: DbOrTx, now: number, opts: { devClock: boolean })
       colour: child.colour ?? FALLBACK_COLOUR,
       xp: childXp,
       level: levelProgress(childXp),
+      xpPerDay: averagesFor(db, child.id, now)?.xpPerDay ?? null,
       pointsToday: today.get(child.id) ?? 0,
-      streakDays: 0,
+      streak: { ...streakOf(db, child.id, date), last: latestReport(db, child.id, now) },
+      sickToday: child.sickOn === date,
       ...childMoneyView(db, child.id, now),
       nextUpId: quests[0]?.status === 'open' ? quests[0].id : null,
       quests,

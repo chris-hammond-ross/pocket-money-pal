@@ -15,5 +15,6 @@ export * from './players';
 export * from './savings';
 export * from './schemas';
 export * from './setup';
+export * from './streaks';
 export * from './time';
 export * from './version';

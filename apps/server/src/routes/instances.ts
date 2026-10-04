@@ -19,6 +19,7 @@ import {
   sendBackInstance,
   undoApprovalBy,
 } from '../repo/instances';
+import { refreshStreaksFor, type StreakUpdate } from '../repo/streaks';
 
 export interface InstanceRouteOptions {
   db: Db;
@@ -88,6 +89,13 @@ export async function instanceRoutes(
     for (const approval of approvals) app.hub.broadcast({ type: 'instance.approved', approval });
   };
 
+  /** A chore from a past day changed: its day's streak result may have too (spec 005). */
+  const streaksChanged = (updates: StreakUpdate[]) => {
+    for (const { childId, last } of updates) {
+      app.hub.broadcast({ type: 'streak.updated', childId, last });
+    }
+  };
+
   /** The phone's to-check tray. */
   app.get('/api/instances/claimed', parentOnly, async () => listClaimed(db));
 
@@ -101,12 +109,15 @@ export async function instanceRoutes(
     const { parent } = authOf(req);
     const at = now();
     try {
-      const approvals = db.transaction((tx) =>
-        body.data.items.map(({ id, ...chips }) =>
+      const { approvals, streaks } = db.transaction((tx) => {
+        const approvals = body.data.items.map(({ id, ...chips }) =>
           approveClaim(tx, { instanceId: id, chips, parentId: parent.id, now: at }),
-        ),
-      );
+        );
+        const ids = approvals.map((a) => a.instanceId);
+        return { approvals, streaks: refreshStreaksFor(tx, ids, at) };
+      });
       celebrate(approvals);
+      streaksChanged(streaks);
       return { approvals };
     } catch (err) {
       return refuse(reply, err);
@@ -119,19 +130,22 @@ export async function instanceRoutes(
     const body = sendBackRequestSchema.safeParse(req.body);
     if (!body.success) return reply.code(400).send({ error: body.error.issues });
     try {
-      const instance = db.transaction((tx) =>
-        sendBackInstance(tx, {
+      const at = now();
+      const { instance, streaks } = db.transaction((tx) => {
+        const instance = sendBackInstance(tx, {
           instanceId: id,
           reason: body.data.reason,
           parentId: authOf(req).parent.id,
-          now: now(),
-        }),
-      );
+          now: at,
+        });
+        return { instance, streaks: refreshStreaksFor(tx, [id], at) };
+      });
       app.hub.broadcast({
         type: 'instance.sent_back',
         instanceId: instance.id,
         childId: instance.childId,
       });
+      streaksChanged(streaks);
       return reply.code(204).send();
     } catch (err) {
       return refuse(reply, err);
@@ -158,14 +172,21 @@ export async function instanceRoutes(
     const id = instanceId(req);
     if (id === null) return reply.code(404).send({ error: 'not-found' });
     try {
-      const instance = db.transaction((tx) =>
-        undoApprovalBy(tx, { instanceId: id, parentId: authOf(req).parent.id, now: now() }),
-      );
+      const at = now();
+      const { instance, streaks } = db.transaction((tx) => {
+        const instance = undoApprovalBy(tx, {
+          instanceId: id,
+          parentId: authOf(req).parent.id,
+          now: at,
+        });
+        return { instance, streaks: refreshStreaksFor(tx, [id], at) };
+      });
       app.hub.broadcast({
         type: 'instance.undone',
         instanceId: instance.id,
         childId: instance.childId,
       });
+      streaksChanged(streaks);
       return reply.code(204).send();
     } catch (err) {
       return refuse(reply, err);

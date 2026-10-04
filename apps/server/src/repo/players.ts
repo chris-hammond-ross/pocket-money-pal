@@ -2,7 +2,14 @@
  * The phone's Players tab (spec 003, ADR 0009): player cards, adding, editing and removing
  * a child, game masters, and bonus points.
  */
-import type { Adjustment, ChildInput, ChildPatch, GameMasterList, PlayerCard } from '@pmp/shared';
+import {
+  zonedDateOf,
+  type Adjustment,
+  type ChildInput,
+  type ChildPatch,
+  type GameMasterList,
+  type PlayerCard,
+} from '@pmp/shared';
 import { and, eq, inArray, isNull, max } from 'drizzle-orm';
 import { choreAssignments, chores, users } from '../db/schema';
 import type { EditContext } from './chores';
@@ -11,6 +18,7 @@ import { listDevices } from './devices';
 import { recordEvent } from './events';
 import { appendLedger, balances, pointsToday } from './ledger';
 import { getSettings } from './settings';
+import { streakOf } from './streaks';
 import { syncToday } from './today';
 import {
   FALLBACK_AVATAR,
@@ -54,6 +62,7 @@ function choresOf(db: DbOrTx, childId: number): number[] {
 export function listPlayerCards(db: DbOrTx, now: number): PlayerCard[] {
   const { timezone } = getSettings(db);
   const today = pointsToday(db, now, timezone);
+  const date = zonedDateOf(now, timezone);
   const money = balances(db);
   return listChildren(db).map((c) => ({
     id: c.id,
@@ -61,7 +70,8 @@ export function listPlayerCards(db: DbOrTx, now: number): PlayerCard[] {
     age: c.age,
     avatar: c.avatar ?? FALLBACK_AVATAR,
     colour: c.colour ?? FALLBACK_COLOUR,
-    streakDays: 0,
+    streak: streakOf(db, c.id, date),
+    sickToday: c.sickOn === date,
     quests: choresOf(db, c.id).length,
     pointsToday: today.get(c.id) ?? 0,
     cents: money.get(c.id)?.cents ?? 0,
@@ -157,6 +167,28 @@ export function removeChild(db: DbOrTx, id: number, ctx: EditContext): number[] 
     data: { name: child.name, quests: choreIds.length, questsLeftEmpty: emptied },
   });
   return emptied;
+}
+
+/**
+ * "🤒 Sick day" (ADR 0012): every waiting quest the child has today is skipped, so the day
+ * doesn't break their streak; claimed and approved ones stay. With `sick: false` it's the
+ * undo, and they come back (except quests skipped for everyone today).
+ */
+export function setSickToday(db: DbOrTx, childId: number, sick: boolean, ctx: EditContext): void {
+  const child = getActiveChild(db, childId);
+  if ((child.sickOn === ctx.today) === sick) return;
+  db.update(users)
+    .set({ sickOn: sick ? ctx.today : null, updatedAt: new Date(ctx.now).toISOString() })
+    .where(eq(users.id, childId))
+    .run();
+  for (const choreId of choresOf(db, childId)) syncToday(db, choreId, ctx.today);
+  recordEvent(db, {
+    type: sick ? 'child.sick_day' : 'child.sick_day_undone',
+    at: ctx.now,
+    actorId: ctx.parentId,
+    childId,
+    data: { date: ctx.today },
+  });
 }
 
 /**

@@ -78,6 +78,8 @@ describe('parent-only', () => {
       { method: 'PATCH', url: '/api/children/1', payload: {} },
       { method: 'DELETE', url: '/api/children/1' },
       { method: 'POST', url: '/api/children/1/adjust', payload: { points: 5 } },
+      { method: 'POST', url: '/api/children/1/sick-today' },
+      { method: 'DELETE', url: '/api/children/1/sick-today' },
       { method: 'PATCH', url: '/api/settings', payload: { centsPerPoint: 7 } },
     ];
     for (const call of calls) {
@@ -106,7 +108,7 @@ describe('GET /api/children and /api/parents', () => {
     const res = await asPhone({ method: 'GET', url: '/api/children' });
     expect(res.statusCode).toBe(200);
     const cards = playerListSchema.parse(res.json());
-    expect(cards.map((c) => [c.name, c.quests, c.pointsToday, c.cents, c.streakDays])).toEqual([
+    expect(cards.map((c) => [c.name, c.quests, c.pointsToday, c.cents, c.streak.days])).toEqual([
       ['Billy', 2, 13, 140, 0],
       ['Alice', 2, 0, 0, 0],
     ]);
@@ -439,6 +441,17 @@ describe('PATCH /api/settings', () => {
     expect(getSettings(db).quietHours).toBeNull();
   });
 
+  it('sets the kiosk volume and tells every screen', async () => {
+    seed();
+    const res = await asPhone({ method: 'PATCH', url: '/api/settings', payload: { volume: 35 } });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ volume: 35 });
+    expect(getSettings(db).volume).toBe(35);
+    expect(sent).toContainEqual({ type: 'settings.updated' });
+    const audit = db.select().from(events).where(eq(events.type, 'settings.updated')).all();
+    expect(audit.at(-1)?.data).toEqual({ volume: { from: 80, to: 35 } });
+  });
+
   it('refuses other settings, a zero rate and odd quiet hours', async () => {
     seed();
     for (const payload of [
@@ -448,10 +461,63 @@ describe('PATCH /api/settings', () => {
       { centsPerPoint: 2.5 },
       { quietHours: { from: '21:10', until: '06:30' } },
       { quietHours: { from: '07:00', until: '07:00' } },
+      { volume: 101 },
+      { volume: -1 },
+      { volume: 50.5 },
     ]) {
       const res = await asPhone({ method: 'PATCH', url: '/api/settings', payload });
       expect(res.statusCode, JSON.stringify(payload)).toBe(400);
     }
     expect(getSettings(db)).toMatchObject({ centsPerPoint: 5, timezone: TZ });
+  });
+});
+
+describe('POST and DELETE /api/children/:id/sick-today', () => {
+  it("skips the child's waiting quests today, shows it everywhere, and undoes", async () => {
+    const f = seed();
+    const res = await asPhone({ method: 'POST', url: `/api/children/${f.billy.id}/sick-today` });
+    expect(res.statusCode).toBe(200);
+    expect(playerListSchema.element.parse(res.json())).toMatchObject({
+      id: f.billy.id,
+      sickToday: true,
+    });
+    expect(instanceOf(f.bed.id, f.billy.id)?.status).toBe('skipped');
+    expect(instanceOf(f.tidy.id, f.billy.id)?.status).toBe('skipped');
+    expect(instanceOf(f.tidy.id, f.alice.id)?.status).toBe('open');
+    expect(sent).toContainEqual({ type: 'child.updated', childId: f.billy.id });
+    const board = kioskToday(db, now, { devClock: false });
+    expect(board.children.find((c) => c.id === f.billy.id)).toMatchObject({
+      sickToday: true,
+      quests: [],
+    });
+
+    const undo = await asPhone({
+      method: 'DELETE',
+      url: `/api/children/${f.billy.id}/sick-today`,
+    });
+    expect(undo.json()).toMatchObject({ sickToday: false });
+    expect(instanceOf(f.bed.id, f.billy.id)?.status).toBe('open');
+  });
+
+  it('is a sick day only today', async () => {
+    const f = seed();
+    await asPhone({ method: 'POST', url: `/api/children/${f.billy.id}/sick-today` });
+    now = at('09:00', '2026-10-01');
+    const cards = playerListSchema.parse(
+      (await asPhone({ method: 'GET', url: '/api/children' })).json(),
+    );
+    expect(cards.find((c) => c.id === f.billy.id)?.sickToday).toBe(false);
+  });
+
+  it('answers 404 for an unknown or removed child', async () => {
+    const f = seed();
+    await asPhone({ method: 'DELETE', url: `/api/children/${f.alice.id}` });
+    for (const url of [
+      '/api/children/999/sick-today',
+      `/api/children/${f.alice.id}/sick-today`,
+      '/api/children/x/sick-today',
+    ]) {
+      expect((await asPhone({ method: 'POST', url })).statusCode, url).toBe(404);
+    }
   });
 });

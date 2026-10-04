@@ -305,7 +305,7 @@ describe('earningAverages', () => {
         firstEarnedAt: now - 60 * DAY,
         now,
       }),
-    ).toEqual({ pointsPerDay: 10, pointsPerQuest: 10 });
+    ).toEqual({ pointsPerDay: 10, pointsPerQuest: 10, xpPerDay: 120 / 14 });
   });
 
   it('averages over fewer days for a child who started recently', () => {
@@ -317,7 +317,7 @@ describe('earningAverages', () => {
         firstEarnedAt: now - 2.5 * DAY,
         now,
       }),
-    ).toEqual({ pointsPerDay: 10, pointsPerQuest: 7.5 });
+    ).toEqual({ pointsPerDay: 10, pointsPerQuest: 7.5, xpPerDay: 10 });
   });
 
   it('counts at least one day', () => {
@@ -329,12 +329,12 @@ describe('earningAverages', () => {
         firstEarnedAt: now - 1000,
         now,
       }),
-    ).toEqual({ pointsPerDay: 8, pointsPerQuest: 8 });
+    ).toEqual({ pointsPerDay: 8, pointsPerQuest: 8, xpPerDay: 8 });
   });
 });
 
 describe('jarStats', () => {
-  const averages = { pointsPerDay: 16, pointsPerQuest: 9 };
+  const averages = { pointsPerDay: 16, pointsPerQuest: 9, xpPerDay: 14 };
 
   it('counts paydays for a normal jar', () => {
     // £12.99 still needed; 16 points a day × 7 × 5p = £5.60 a week → 3 paydays.
@@ -368,7 +368,7 @@ describe('jarStats', () => {
       jarStats({
         inCents: 0,
         targetCents: 2499,
-        averages: { pointsPerDay: -2, pointsPerQuest: 5 },
+        averages: { pointsPerDay: -2, pointsPerQuest: 5, xpPerDay: 0 },
         centsPerPoint: 5,
       }),
     ).toBeNull();

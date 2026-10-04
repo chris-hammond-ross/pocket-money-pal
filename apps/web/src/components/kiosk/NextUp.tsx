@@ -17,17 +17,30 @@ const LABELS: Record<ChoreStage, string> = {
 
 /**
  * The "Next up" countdown (spec 001): the column's most pressing open quest, or a trophy
- * when there's nothing left to do.
+ * when there's nothing left to do. On a sick day (ADR 0012) it says so.
  */
 export function NextUp({
   quest,
   hadQuests,
+  sick,
   now,
 }: {
   quest: KioskQuest | undefined;
   hadQuests: boolean;
+  sick: boolean;
   now: number;
 }) {
+  if (!quest && sick) {
+    return (
+      <div className={classes.next} data-stage="done">
+        <div className={classes.nextIcon}>🤒</div>
+        <div>
+          <div className={classes.nextLabel}>SICK DAY</div>
+          <div className={classes.nextTitle}>Rest up and get well soon!</div>
+        </div>
+      </div>
+    );
+  }
   if (!quest) {
     return (
       <div className={classes.next} data-stage="done">
