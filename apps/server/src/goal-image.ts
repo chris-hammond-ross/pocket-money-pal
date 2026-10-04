@@ -6,7 +6,7 @@
  */
 import { randomBytes } from 'node:crypto';
 import { lookup } from 'node:dns/promises';
-import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, unlink, writeFile } from 'node:fs/promises';
 import { isIP } from 'node:net';
 import { join } from 'node:path';
 
@@ -277,5 +277,12 @@ export class GoalImages {
   async remove(name: string | null): Promise<void> {
     const file = name ? this.fileOf(name) : null;
     if (file) await unlink(file.path).catch(() => undefined);
+  }
+
+  /** Removes every jar picture (a factory reset, ADR 0014). Best effort. */
+  async removeAll(): Promise<void> {
+    if (!this.dir) return;
+    const names = await readdir(this.dir).catch(() => [] as string[]);
+    await Promise.all(names.map((name) => this.remove(name)));
   }
 }

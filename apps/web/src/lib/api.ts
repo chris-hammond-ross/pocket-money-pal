@@ -10,6 +10,7 @@ import {
   deviceListSchema,
   deviceMeSchema,
   devClockSchema,
+  factoryResetResultSchema,
   familySettingsSchema,
   gameMasterListSchema,
   goalMoveResultSchema,
@@ -143,6 +144,9 @@ export const api = {
   // Pairing (ADR 0008)
   devices: async () => deviceListSchema.parse(await request('/api/devices')),
   revokeDevice: (id: number) => request(`/api/devices/${id}`, { method: 'DELETE' }),
+  /** Wipes the family back to a fresh install (ADR 0014): `confirm` is the typed word. */
+  factoryReset: async (confirm: string) =>
+    factoryResetResultSchema.parse(await request('/api/factory-reset', json('POST', { confirm }))),
   /** A pairing code for another phone, or with `move` for this phone's HTTPS address. */
   invite: async (move = false) =>
     pairingInviteSchema.parse(await request('/api/devices/invites', json('POST', { move }))),

@@ -433,6 +433,19 @@ export const setupResultSchema = z.object({
 });
 export type SetupResult = z.infer<typeof setupResultSchema>;
 
+/** The word a parent types to confirm a factory reset (ADR 0014). */
+export const FACTORY_RESET_WORD = 'RESET';
+
+/** `POST /api/factory-reset`: the typed word travels too, so no stray call can wipe the family. */
+export const factoryResetRequestSchema = z.object({ confirm: z.literal(FACTORY_RESET_WORD) });
+export type FactoryResetRequest = z.infer<typeof factoryResetRequestSchema>;
+
+export const factoryResetResultSchema = z.object({
+  /** The new setup token, so the phone that reset can carry on into setup (ADR 0005). */
+  setupToken: z.string(),
+});
+export type FactoryResetResult = z.infer<typeof factoryResetResultSchema>;
+
 /** `GET /api/devices/me`: the parent this device is paired to. */
 export const deviceMeSchema = z.object({
   deviceId: idSchema,

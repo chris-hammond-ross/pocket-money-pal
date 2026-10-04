@@ -19,6 +19,7 @@ import { kioskRoutes } from './routes/kiosk';
 import { moneyRoutes } from './routes/money';
 import { playerRoutes } from './routes/players';
 import { pushRoutes } from './routes/push';
+import { resetRoutes } from './routes/reset';
 import { setupRoutes } from './routes/setup';
 import { surpriseRoutes } from './routes/surprises';
 import { SecureUrl } from './secure-url';
@@ -112,7 +113,8 @@ export async function buildApp({
   await app.register(instanceRoutes, { db, now });
   await app.register(choreRoutes, { db, now });
   await app.register(playerRoutes, { db, now, onScheduleChanged });
-  await app.register(moneyRoutes, { db, now, images: new GoalImages(imagesDir, imageFetcher) });
+  const images = new GoalImages(imagesDir, imageFetcher);
+  await app.register(moneyRoutes, { db, now, images });
   await app.register(surpriseRoutes, { db, now, onScheduleChanged });
   await app.register(pushRoutes, {
     db,
@@ -121,6 +123,7 @@ export async function buildApp({
     vapidPublicKey: vapid.publicKey,
     secureUrl: secure,
   });
+  await app.register(resetRoutes, { db, now, images, onScheduleChanged });
   if (devClock) await app.register(devRoutes, { db, clock: devClock });
 
   // Phase 0 plumbing check: any client can ping every connected screen.

@@ -5,6 +5,7 @@ import {
   DEFAULT_CURRENCY,
   DEFAULT_CHILD_AGE,
   DEFAULT_QUIET_HOURS,
+  FACTORY_RESET_WORD,
   formatMoney,
   formatPairingCode,
   formatPointsChange,
@@ -18,6 +19,7 @@ import {
 } from '@pmp/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, type CSSProperties } from 'react';
+import { useNavigate } from 'react-router';
 import { api } from '../../lib/api';
 import { clockTime, formatMinutesAgo } from '../../lib/format';
 import { useMuted } from '../../lib/parent-prefs';
@@ -33,6 +35,7 @@ import {
   type PushState,
 } from '../../lib/pwa';
 import { pairUrl, phoneBaseUrls, useQrSvg } from '../../lib/qr';
+import { rememberSetupToken } from '../../lib/setup-token';
 import { sound } from '../../lib/sounds';
 import { ArcadeButton, CloseButton, DashedButton, PixelLabel, RateSlider, Sheet } from '../arcade';
 import { Flame, flameColours } from '../Flame';
@@ -47,8 +50,8 @@ export const SECURE_ACCESS_GUIDE =
 /**
  * The Players tab (spec 003): player cards (with their streak and a sick-day button, spec
  * 005) and the player editor, game masters, paired phones, the loot rate and bonus points;
- * then notifications, quiet hours and the kiosk's volume, and this phone's sounds. Over
- * HTTPS it offers "📲 Install"; over plain HTTP, a one-time hint.
+ * then notifications, quiet hours and the kiosk's volume, this phone's sounds, and the
+ * factory reset. Over HTTPS it offers "📲 Install"; over plain HTTP, a one-time hint.
  */
 export function PlayersTab() {
   const [muted, setMuted] = useMuted();
@@ -94,6 +97,9 @@ export function PlayersTab() {
         />
       </label>
       <SwitchToSecure />
+
+      <PixelLabel>DANGER ZONE</PixelLabel>
+      <FactoryReset />
 
       {inviting && <InviteSheet onClose={() => setInviting(false)} />}
     </>
@@ -863,5 +869,98 @@ function InviteSheet({ onClose }: { onClose: () => void }) {
         </>
       )}
     </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Factory reset (ADR 0014)
+
+/**
+ * "💣 Factory reset": wipes everything back to a fresh install, behind a sheet where the
+ * parent types RESET. This phone then carries on into setup with the new setup token.
+ */
+function FactoryReset() {
+  const ui = useParentUi();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState('');
+  const reset = useMutation({
+    mutationFn: () => api.factoryReset(typed.trim().toUpperCase()),
+    onSuccess: ({ setupToken }) => {
+      rememberSetupToken(setupToken);
+      sound.sad();
+      // Nothing cached is true any more; setup starts from an empty draft.
+      queryClient.clear();
+      void navigate('/setup', { replace: true });
+    },
+    onError: (err) => {
+      sound.sad();
+      ui.notify({ icon: '⚠️', title: 'Not reset', body: problemText(err), tone: 'error' });
+    },
+  });
+  const close = () => {
+    setOpen(false);
+    setTyped('');
+  };
+  const confirmed = typed.trim().toUpperCase() === FACTORY_RESET_WORD;
+
+  return (
+    <>
+      <ArcadeButton
+        tone="red"
+        size="small"
+        onClick={() => {
+          sound.tap();
+          setOpen(true);
+        }}
+      >
+        💣 Factory reset
+      </ArcadeButton>
+      <p className={classes.note}>Start over from scratch, as if the app was just installed.</p>
+
+      {open && (
+        <Sheet
+          opened
+          short
+          onClose={close}
+          head={
+            <>
+              <span className={classes.sheetTitle}>💣 Factory reset?</span>
+              <CloseButton onClick={close} />
+            </>
+          }
+          footer={
+            <ArcadeButton
+              tone="red"
+              disabled={!confirmed || reset.isPending}
+              onClick={() => reset.mutate()}
+            >
+              💣 Erase everything
+            </ArcadeButton>
+          }
+        >
+          <p className={classes.note}>
+            This erases <b>every</b> player, game master, quest, point, jar, payday and surprise,
+            and unpairs every phone, this one too. It can’t be undone.
+          </p>
+          <p className={classes.note}>
+            The kiosk goes back to its title screen, and this phone goes straight into setup.
+          </p>
+          <p className={classes.note}>Type {FACTORY_RESET_WORD} to confirm:</p>
+          <input
+            className={classes.codeInput}
+            placeholder={FACTORY_RESET_WORD}
+            value={typed}
+            maxLength={12}
+            autoCapitalize="characters"
+            autoComplete="off"
+            spellCheck={false}
+            aria-label={`Type ${FACTORY_RESET_WORD} to confirm`}
+            onChange={(e) => setTyped(e.target.value)}
+          />
+        </Sheet>
+      )}
+    </>
   );
 }

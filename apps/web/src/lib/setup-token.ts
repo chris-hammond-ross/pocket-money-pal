@@ -22,14 +22,19 @@ export function captureSetupToken(): void {
   const url = new URL(location.href);
   const token = url.searchParams.get('token');
   if (!token) return;
+  rememberSetupToken(token);
+  url.searchParams.delete('token');
+  history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+}
+
+/** Keeps a setup token for this tab: from the QR code, or handed over by a factory reset. */
+export function rememberSetupToken(token: string): void {
   try {
     sessionStorage.setItem(KEY, token);
   } catch {
     // No storage (some private modes): `memory` still holds it for this page.
   }
   memory = token;
-  url.searchParams.delete('token');
-  history.replaceState(history.state, '', url.pathname + url.search + url.hash);
 }
 
 export function setupTokenHeaders(): Record<string, string> {
