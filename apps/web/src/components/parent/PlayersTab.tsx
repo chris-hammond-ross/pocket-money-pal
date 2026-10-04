@@ -1,6 +1,8 @@
 import { Switch } from '@mantine/core';
 import {
   BONUS_STEPS,
+  CURRENCIES,
+  DEFAULT_CURRENCY,
   DEFAULT_CHILD_AGE,
   DEFAULT_QUIET_HOURS,
   formatMoney,
@@ -9,6 +11,7 @@ import {
   nextPlayerLook,
   PAIRING_CODE_MINUTES,
   type ChildInput,
+  type CurrencyCode,
   type DeviceList,
   type PlayerCard,
   type QuietHours,
@@ -67,6 +70,7 @@ export function PlayersTab() {
       </ArcadeButton>
 
       <PixelLabel>LOOT RATE</PixelLabel>
+      <CurrencyRow />
       <LootRate />
 
       <PixelLabel>BONUS POINTS</PixelLabel>
@@ -198,7 +202,7 @@ function Players() {
   const queryClient = useQueryClient();
   const players = usePlayers();
   const settings = useQuery({ queryKey: ['settings'], queryFn: api.settings });
-  const currency = settings.data?.currency ?? 'GBP';
+  const currency = settings.data?.currency ?? DEFAULT_CURRENCY;
   const [editing, setEditing] = useState<Editing | null>(null);
   const [sickFor, setSickFor] = useState<PlayerCard | null>(null);
 
@@ -399,6 +403,39 @@ function GameMasters() {
 
 // ---------------------------------------------------------------------------
 // Loot rate and bonus points
+
+/** The family's money symbol, $ £ or €: every screen switches to it at once. */
+function CurrencyRow() {
+  const ui = useParentUi();
+  const settings = useQuery({ queryKey: ['settings'], queryFn: api.settings });
+  const save = useMutation({
+    mutationFn: (currency: CurrencyCode) => api.updateSettings({ currency }),
+    onSuccess: () => sound.pop(),
+    onError: (err) =>
+      ui.notify({ icon: '⚠️', title: 'Currency not saved', body: problemText(err), tone: 'error' }),
+  });
+  if (!settings.data) return null;
+  const current = save.isPending ? save.variables : settings.data.currency;
+  return (
+    <div className={classes.row}>
+      <span>💱 Currency</span>
+      <div className={classes.currencyChips}>
+        {CURRENCIES.map(({ code, symbol }) => (
+          <button
+            key={code}
+            type="button"
+            data-on={current === code || undefined}
+            disabled={save.isPending}
+            aria-label={code}
+            onClick={() => current !== code && save.mutate(code)}
+          >
+            {symbol}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /** "1 point = 5p": saved when the slider is let go, and only applies from then on. */
 function LootRate() {

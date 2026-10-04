@@ -3,7 +3,8 @@ import {
   JAR_EMOJI_LIST,
   JAR_NAME_MAX,
   NEW_JAR_DEFAULT_CENTS,
-  NEW_JAR_QUICK_PRICES,
+  NEW_JAR_DEFAULT_STEP_CENTS,
+  NEW_JAR_PRICE_STEPS,
   stepPrice,
   type KioskChild,
 } from '@pmp/shared';
@@ -35,6 +36,7 @@ export function NewJarScreen({
   const [emoji, setEmoji] = useState('🎁');
   const [name, setName] = useState('');
   const [price, setPrice] = useState(NEW_JAR_DEFAULT_CENTS);
+  const [step, setStep] = useState<number>(NEW_JAR_DEFAULT_STEP_CENTS);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   useIdleClose(onClose, 120_000);
@@ -132,7 +134,7 @@ export function NewJarScreen({
               className={classes.priceButton}
               onClick={() => {
                 sound.tap();
-                setPrice((p) => stepPrice(p, -1));
+                setPrice((p) => stepPrice(p, -1, step));
               }}
               aria-label="Cheaper"
             >
@@ -144,7 +146,7 @@ export function NewJarScreen({
               className={classes.priceButton}
               onClick={() => {
                 sound.tap();
-                setPrice((p) => stepPrice(p, 1));
+                setPrice((p) => stepPrice(p, 1, step));
               }}
               aria-label="Dearer"
             >
@@ -152,17 +154,18 @@ export function NewJarScreen({
             </button>
           </div>
           <div className={classes.chips}>
-            {NEW_JAR_QUICK_PRICES.map((p) => (
+            {NEW_JAR_PRICE_STEPS.map((s) => (
               <button
-                key={p}
+                key={s}
                 type="button"
-                data-on={price === p || undefined}
+                data-on={step === s || undefined}
+                aria-label={`Change by ${short(s)}`}
                 onClick={() => {
                   sound.pop();
-                  setPrice(p);
+                  setStep(s);
                 }}
               >
-                {short(p)}
+                {short(s)}
               </button>
             ))}
           </div>

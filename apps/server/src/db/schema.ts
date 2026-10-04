@@ -28,7 +28,7 @@ const timestamps = {
 export const familySettings = sqliteTable('family_settings', {
   id: integer('id').primaryKey(),
   familyName: text('family_name').notNull().default('Our Family'),
-  currency: text('currency').notNull().default('GBP'),
+  currency: text('currency').notNull().default('USD'),
   /** Integer cents earned per point. */
   centsPerPoint: integer('cents_per_point').notNull().default(5),
   timezone: text('timezone').notNull().default('Europe/London'),

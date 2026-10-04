@@ -324,7 +324,7 @@ describe('smashing, buying and putting back', () => {
     expect(pushed).toEqual([
       {
         title: '🔨 Billy smashed the Basketball jar',
-        body: '£24.99 ready · needs buying',
+        body: '$24.99 ready · needs buying',
         tag: 'smash',
         url: '/parent?tab=payday',
       },

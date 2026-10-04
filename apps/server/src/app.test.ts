@@ -36,7 +36,7 @@ describe('server app', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({
       familyName: 'Our Family',
-      currency: 'GBP',
+      currency: 'USD',
       centsPerPoint: 5,
       timezone: 'Europe/London',
       volume: 80,

@@ -452,6 +452,22 @@ describe('PATCH /api/settings', () => {
     expect(audit.at(-1)?.data).toEqual({ volume: { from: 80, to: 35 } });
   });
 
+  it('changes the currency and has every screen refetch', async () => {
+    seed();
+    const res = await asPhone({
+      method: 'PATCH',
+      url: '/api/settings',
+      payload: { currency: 'EUR' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ currency: 'EUR' });
+    expect(getSettings(db).currency).toBe('EUR');
+    expect(sent).toContainEqual({ type: 'settings.updated' });
+    expect(sent).toContainEqual({ type: 'data.changed' });
+    const audit = db.select().from(events).where(eq(events.type, 'settings.updated')).all();
+    expect(audit.at(-1)?.data).toEqual({ currency: { from: 'USD', to: 'EUR' } });
+  });
+
   it('refuses other settings, a zero rate and odd quiet hours', async () => {
     seed();
     for (const payload of [
@@ -464,6 +480,8 @@ describe('PATCH /api/settings', () => {
       { volume: 101 },
       { volume: -1 },
       { volume: 50.5 },
+      { currency: 'JPY' },
+      { currency: '$' },
     ]) {
       const res = await asPhone({ method: 'PATCH', url: '/api/settings', payload });
       expect(res.statusCode, JSON.stringify(payload)).toBe(400);

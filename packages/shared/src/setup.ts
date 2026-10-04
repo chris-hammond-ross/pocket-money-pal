@@ -3,6 +3,7 @@
  * handing out library quests, and checking the grown-ups before moving on.
  */
 import type { ChoreLibraryItem } from './library';
+import { formatMoney } from './money';
 import type { SetupChore, SetupDraft } from './schemas';
 
 /** Avatars offered in the player editor's carousel. */
@@ -119,5 +120,5 @@ export function formatRate(cents: number, currency: string, locale?: string): st
     if (currency === 'GBP') return `${cents}p`;
     if (['USD', 'EUR', 'CAD', 'AUD', 'NZD'].includes(currency)) return `${cents}¢`;
   }
-  return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(cents / 100);
+  return formatMoney(cents, currency, locale);
 }

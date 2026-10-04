@@ -11,6 +11,7 @@ import {
   toggleQuestForPlayer,
   zonedDateOf,
   DEFAULT_CHILD_AGE,
+  DEFAULT_CURRENCY,
   WEEKDAYS,
   type ChoreLibraryItem,
   type SetupChild,
@@ -65,7 +66,7 @@ export function SetupPage() {
     <SetupFlow
       initial={draft.data ?? EMPTY_DRAFT}
       library={library.data}
-      currency={settings.data?.currency ?? 'GBP'}
+      currency={settings.data?.currency ?? DEFAULT_CURRENCY}
       onFinishing={() => setFinishing(true)}
       onFailed={() => setFinishing(false)}
       onFinished={(result) =>

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { LIBRARY_SECTIONS } from './library';
+import { CURRENCY_CODES } from './money';
 import { normalisePairingCode } from './pairing';
 import { NOTE_MAX } from './payday';
 import { JAR_EMOJI_LIST, JAR_MAX_CENTS, JAR_MIN_CENTS, JAR_NAME_MAX } from './savings';
@@ -74,12 +75,14 @@ export const paydayTimeSchema = z
   .regex(/^([01]\d|2[0-3]):00$/, 'Payday is on the hour, as HH:00');
 
 /**
- * `PATCH /api/settings` from a phone: the loot rate (from now on), quiet hours and the kiosk
+ * `PATCH /api/settings` from a phone: the loot rate (from now on), the currency, quiet hours and the kiosk
  * volume on the Players tab, and payday's day, time and how it starts on the Payday tab.
  */
 export const phoneSettingsPatchSchema = z
   .object({
     centsPerPoint: centsPerPointSchema,
+    /** The family's money symbol: $, £ or € (stored as its code). */
+    currency: z.enum(CURRENCY_CODES),
     /** The kiosk's sound volume (spec 005). */
     volume: volumeSchema,
     quietHours: z.lazy(() => quietHoursSchema).nullable(),

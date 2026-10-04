@@ -19,9 +19,26 @@ export function centsToPoints(cents: number, centsPerPoint: number): number {
   return Math.ceil(cents / centsPerPoint);
 }
 
+/**
+ * The currencies a family can pick, shown by symbol only. Stored as the ISO code so the
+ * formatters below can use `Intl`; `narrowSymbol` keeps it a plain "$" (never "US$").
+ */
+export const CURRENCIES = [
+  { code: 'USD', symbol: '$' },
+  { code: 'GBP', symbol: '£' },
+  { code: 'EUR', symbol: '€' },
+] as const;
+export type CurrencyCode = (typeof CURRENCIES)[number]['code'];
+export const CURRENCY_CODES = CURRENCIES.map((c) => c.code) as [CurrencyCode, ...CurrencyCode[]];
+export const DEFAULT_CURRENCY: CurrencyCode = 'USD';
+
 export function formatMoney(cents: number, currency: string, locale?: string): string {
   assertInteger(cents, 'cents');
-  return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(cents / 100);
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    currencyDisplay: 'narrowSymbol',
+  }).format(cents / 100);
 }
 
 /** Like `formatMoney`, but whole amounts drop the pence: "£25", "£24.99". */
@@ -30,6 +47,7 @@ export function formatMoneyShort(cents: number, currency: string, locale?: strin
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
+    currencyDisplay: 'narrowSymbol',
     ...(cents % 100 === 0 && { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
   }).format(cents / 100);
 }

@@ -256,15 +256,13 @@ describe('moving coins', () => {
     expect(quickAmounts(100)).toEqual([]);
   });
 
-  it('steps a new jar price £1 to £20, then £5, then £10 from £100, within £1–£1,000', () => {
-    expect(stepPrice(1000, 1)).toBe(1100);
-    expect(stepPrice(2000, 1)).toBe(2500);
-    expect(stepPrice(2500, -1)).toBe(2000);
-    expect(stepPrice(2000, -1)).toBe(1900);
-    expect(stepPrice(10_000, 1)).toBe(11_000);
-    expect(stepPrice(10_000, -1)).toBe(9500);
-    expect(stepPrice(100, -1)).toBe(100);
-    expect(stepPrice(100_000, 1)).toBe(100_000);
+  it('steps a new jar price by the chosen step, within £1–£1,000', () => {
+    expect(stepPrice(1000, 1, 100)).toBe(1100);
+    expect(stepPrice(1000, 1, 2500)).toBe(3500);
+    expect(stepPrice(3500, -1, 500)).toBe(3000);
+    expect(stepPrice(1000, -1, 2500)).toBe(100);
+    expect(stepPrice(100, -1, 100)).toBe(100);
+    expect(stepPrice(95_000, 1, 10_000)).toBe(100_000);
   });
 });
 

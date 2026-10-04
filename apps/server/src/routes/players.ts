@@ -145,7 +145,7 @@ export async function playerRoutes(
   app.post('/api/children/:id/sick-today', parentOnly, sickRoute(true));
   app.delete('/api/children/:id/sick-today', parentOnly, sickRoute(false));
 
-  /** LOOT RATE (from now on), quiet hours and the kiosk volume; payday's day, time and how it starts. */
+  /** LOOT RATE (from now on), the currency, quiet hours and the kiosk volume; payday's day, time and how it starts. */
   app.patch('/api/settings', parentOnly, async (req, reply) => {
     const patch = phoneSettingsPatchSchema.safeParse(req.body);
     if (!patch.success) return reply.code(400).send({ error: patch.error.issues });
@@ -153,9 +153,9 @@ export async function playerRoutes(
     const settings = db.transaction((tx) => {
       const before = getSettings(tx);
       const after = updateSettings(tx, patch.data, ctx.now);
-      const changed = (['centsPerPoint', 'quietHours', 'volume', 'payday'] as const).filter(
-        (k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]),
-      );
+      const changed = (
+        ['centsPerPoint', 'currency', 'quietHours', 'volume', 'payday'] as const
+      ).filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]));
       if (changed.length > 0) {
         recordEvent(tx, {
           type: 'settings.updated',
@@ -164,11 +164,13 @@ export async function playerRoutes(
           data: Object.fromEntries(changed.map((k) => [k, { from: before[k], to: after[k] }])),
         });
       }
-      return after;
+      return { after, currencyChanged: before.currency !== after.currency };
     });
     app.hub.broadcast({ type: 'settings.updated' });
+    // Every screen shows money in the currency (the kiosk board, jars, payday): refetch it all.
+    if (settings.currencyChanged) app.hub.broadcast({ type: 'data.changed' });
     const { paydayDay, paydayTime, paydayAuto } = patch.data;
     if ([paydayDay, paydayTime, paydayAuto].some((v) => v !== undefined)) onScheduleChanged?.();
-    return settings;
+    return settings.after;
   });
 }

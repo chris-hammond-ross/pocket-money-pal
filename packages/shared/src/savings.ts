@@ -236,25 +236,14 @@ export function quickAmounts(maxCents: number): number[] {
   return [100, 500, 1000].filter((a) => a < maxCents);
 }
 
-/** The new-jar price's − / +: £1 steps up to £20, then £5, then £10 from £100. */
-export function stepPrice(cents: number, direction: 1 | -1): number {
-  const step =
-    direction > 0
-      ? cents >= 10_000
-        ? 1000
-        : cents >= 2000
-          ? 500
-          : 100
-      : cents > 10_000
-        ? 1000
-        : cents > 2000
-          ? 500
-          : 100;
-  return Math.min(JAR_MAX_CENTS, Math.max(JAR_MIN_CENTS, cents + direction * step));
+/** The new-jar price's − / +: moves by the chosen step, within £1–£1,000. */
+export function stepPrice(cents: number, direction: 1 | -1, stepCents: number): number {
+  return Math.min(JAR_MAX_CENTS, Math.max(JAR_MIN_CENTS, cents + direction * stepCents));
 }
 
-/** The new-jar screen's quick prices. */
-export const NEW_JAR_QUICK_PRICES = [500, 1000, 2500, 5000, 10_000] as const;
+/** The new-jar screen's step buttons: pick how much − / + moves the price by. */
+export const NEW_JAR_PRICE_STEPS = [100, 500, 2500, 5000, 10_000] as const;
+export const NEW_JAR_DEFAULT_STEP_CENTS = 100;
 export const NEW_JAR_DEFAULT_CENTS = 1000;
 
 // ---------------------------------------------------------------------------

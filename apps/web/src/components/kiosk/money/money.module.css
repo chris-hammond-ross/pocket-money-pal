@@ -137,7 +137,8 @@
 }
 
 .newJarTile {
-  justify-self: center;
+  grid-column: -2;
+  justify-self: end;
   align-self: center;
   display: grid;
   place-items: center;
