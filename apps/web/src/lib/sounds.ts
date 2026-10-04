@@ -110,7 +110,7 @@ export const sound: Record<Exclude<SoundName, 'clink'>, () => void> = {
 
 /** Spec 005's tick-tock: one a second while a bonus is ending, the tock a little lower. */
 export function tickTock(second: number): void {
-  play('tick', second % 2 === 0 ? {} : { rate: 0.72 });
+  play('tick', second % 2 === 0 ? {} : { rate: 2 / 3 });
 }
 
 /** Spec 004's money sounds that need more than a plain play. */
