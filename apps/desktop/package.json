@@ -5,7 +5,7 @@
   "private": true,
   "description": "Pocket Money Pal kiosk app",
   "author": "Chris Hammond-Ross",
-  "license": "MIT",
+  "license": "ISC",
   "main": "dist/main.cjs",
   "scripts": {
     "build": "node scripts/build.mjs",

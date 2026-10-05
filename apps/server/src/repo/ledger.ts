@@ -47,13 +47,16 @@ export interface Balance {
   cents: number;
 }
 
-/** Each child's all-time point and money balance. Children with no rows are absent. */
+/**
+ * Each child's all-time point and money balance. Children with no rows are absent. Money moved
+ * into a jar (`goal_allocation`) is still saved, so it doesn't count again (spec 004).
+ */
 export function balances(db: DbOrTx): Map<number, Balance> {
   const rows = db
     .select({
       childId: ledger.childId,
       points: sql<number>`coalesce(sum(${ledger.points}), 0)`,
-      cents: sql<number>`coalesce(sum(${ledger.cents}), 0)`,
+      cents: sql<number>`coalesce(sum(case when ${ledger.kind} = 'goal_allocation' then 0 else ${ledger.cents} end), 0)`,
     })
     .from(ledger)
     .groupBy(ledger.childId)

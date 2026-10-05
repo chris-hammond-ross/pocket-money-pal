@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Chores, pocket money, savings goals and a sprinkle of game mechanics for kids.",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "engines": {
     "node": ">=22"

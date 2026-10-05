@@ -15,6 +15,7 @@ import type { Db } from '../db/client';
 import { choreAssignments, choreInstances, events, ledger, users } from '../db/schema';
 import { listChores } from '../repo/chores';
 import { listInstancesForDate } from '../repo/instances';
+import { createGoal, moveGoal } from '../repo/money';
 import { kioskToday } from '../repo/kiosk';
 import { getSettings } from '../repo/settings';
 import { insertParent } from '../repo/users';
@@ -113,6 +114,22 @@ describe('GET /api/children and /api/parents', () => {
       ['Alice', 2, 0, 0, 0],
     ]);
     expect(cards[0]).toMatchObject({ age: 9, avatar: '🦖', colour: '#228be6' });
+  });
+
+  it("counts money in a jar once: it's still saved", async () => {
+    const f = seed();
+    db.insert(ledger)
+      .values({ childId: f.billy.id, kind: 'conversion', points: 0, cents: 500, at: at('09:00') })
+      .run();
+    const jar = createGoal(
+      db,
+      { childId: f.billy.id, name: 'Lego set', emoji: '🧱', targetCents: 4000 },
+      { kind: 'child' },
+      at('10:00'),
+    );
+    moveGoal(db, jar.id, 300, at('10:05'));
+    const res = await asPhone({ method: 'GET', url: '/api/children' });
+    expect(playerListSchema.parse(res.json())[0]).toMatchObject({ name: 'Billy', cents: 500 });
   });
 
   it('lists the game masters with their phone counts', async () => {

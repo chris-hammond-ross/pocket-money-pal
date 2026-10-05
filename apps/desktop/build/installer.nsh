@@ -4,7 +4,7 @@
 ; - Adds a Windows firewall rule so parents' phones can reach the server, asking Windows for
 ;   admin rights once (UAC) just for that, and removes it on uninstall. The rule covers every
 ;   network profile but only devices on the local subnet: on PCs with VirtualBox, Hyper-V or VPN
-;   adapters, Windows can judge the home network as Public (docs/installation.md).
+;   adapters, Windows can judge the home network as Public (installation.md).
 ; - Updates (`--updated`) skip both, so an unattended kiosk never sees a prompt.
 
 !define PMP_RULE "Pocket Money Pal"
@@ -26,7 +26,7 @@
     ${If} ${Errors}
       DetailPrint "The firewall rule wasn't added."
       IfSilent +2
-        MessageBox MB_OK|MB_ICONEXCLAMATION "The firewall rule wasn't added, so parents' phones may not be able to connect.$\r$\n$\r$\nTo add it later, run the installer again, or see $\"Connect a phone$\" in the installation guide."
+        MessageBox MB_OK|MB_ICONEXCLAMATION "The firewall rule wasn't added, so parents' phones may not be able to connect.$\r$\n$\r$\nTo add it later, run the installer again, or see $\"Connect parents' phones$\" in the installation guide."
     ${EndIf}
   ${EndIf}
 !macroend

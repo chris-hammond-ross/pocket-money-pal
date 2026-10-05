@@ -45,7 +45,7 @@ import classes from './parent.module.css';
 
 /** Where the plain-HTTP hint sends a parent: the install guide's Tailscale section. */
 export const SECURE_ACCESS_GUIDE =
-  'https://github.com/chris-hammond-ross/pocket-money-pal/blob/main/docs/installation.md#secure-access-with-tailscale';
+  'https://github.com/chris-hammond-ross/pocket-money-pal/blob/main/installation.md#secure-access-with-tailscale';
 
 /**
  * The Players tab (spec 003): player cards (with their streak and a sick-day button, spec

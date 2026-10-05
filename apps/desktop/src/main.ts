@@ -13,6 +13,7 @@ import {
   type UtilityProcess,
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
+import { displayLabel, pickDisplay } from './displays';
 
 const PORT = Number(process.env.PMP_PORT ?? 4789);
 /** Set to use an already-running server (e.g. `npm run dev`) instead of the bundled one. */
@@ -53,6 +54,8 @@ async function start(): Promise<void> {
   baseUrl = EXTERNAL_URL ?? (await startServer());
   createTray();
   initLoginItem();
+  screen.on('display-added', updateTrayMenu);
+  screen.on('display-removed', updateTrayMenu);
   await openWindow();
   powerSaveBlocker.start('prevent-display-sleep');
   startUpdater();
@@ -122,12 +125,15 @@ async function openWindow(): Promise<void> {
   await window.loadURL(`${baseUrl}/kiosk`);
 }
 
-/** Opens on PMP_DISPLAY (index), else the first non-primary display, else the primary. */
+function kioskDisplay(): Electron.Display {
+  return pickDisplay(screen.getAllDisplays(), screen.getPrimaryDisplay(), {
+    envIndex: process.env.PMP_DISPLAY,
+    savedId: readPrefs().kioskDisplayId,
+  });
+}
+
 function createKioskWindow(): BrowserWindow {
-  const displays = screen.getAllDisplays();
-  const primary = screen.getPrimaryDisplay();
-  const requested = process.env.PMP_DISPLAY ? displays[Number(process.env.PMP_DISPLAY)] : undefined;
-  const target = requested ?? displays.find((d) => d.id !== primary.id) ?? primary;
+  const target = kioskDisplay();
 
   const win = new BrowserWindow({
     ...target.bounds,
@@ -144,7 +150,7 @@ function createKioskWindow(): BrowserWindow {
 }
 
 // ---------------------------------------------------------------------------
-// Tray: Open, Restart, Quit. Closing the window leaves the server running for the phones.
+// Tray: Open, Restart, Kiosk screen, Quit. Closing the window leaves the server running for the phones.
 
 function iconPath(): string {
   return join(__dirname, '../assets/icon.png');
@@ -173,6 +179,7 @@ function updateTrayMenu(): void {
       { label: 'Open', click: () => void openWindow() },
       { label: 'Restart', click: restart },
       { type: 'separator' },
+      screenMenu(),
       {
         label: 'Start when Windows starts',
         type: 'checkbox',
@@ -186,6 +193,34 @@ function updateTrayMenu(): void {
   );
 }
 
+/** Tray > Kiosk screen: one choice per connected screen, remembered for next time. */
+function screenMenu(): Electron.MenuItemConstructorOptions {
+  const displays = screen.getAllDisplays();
+  const primary = screen.getPrimaryDisplay();
+  const current = kioskDisplay();
+  return {
+    label: 'Kiosk screen',
+    enabled: !process.env.PMP_DISPLAY,
+    submenu: displays.map((display, index) => ({
+      label: displayLabel(display, index, display.id === primary.id),
+      type: 'radio' as const,
+      checked: display.id === current.id,
+      click: () => void moveKiosk(display.id),
+    })),
+  };
+}
+
+async function moveKiosk(displayId: number): Promise<void> {
+  writePrefs({ kioskDisplayId: displayId });
+  log(`kiosk screen: ${displayId}`);
+  updateTrayMenu();
+  if (window) {
+    window.destroy();
+    window = null;
+  }
+  await openWindow();
+}
+
 function restart(): void {
   log('restarting from the tray');
   app.relaunch();
@@ -197,6 +232,8 @@ function restart(): void {
 
 interface Prefs {
   loginItemInitialised?: boolean;
+  /** Electron's id of the screen picked in the tray. */
+  kioskDisplayId?: number;
 }
 
 function prefsFile(): string {
@@ -211,12 +248,15 @@ function readPrefs(): Prefs {
   }
 }
 
+function writePrefs(changes: Prefs): void {
+  writeFileSync(prefsFile(), JSON.stringify({ ...readPrefs(), ...changes }, null, 2));
+}
+
 function initLoginItem(): void {
   if (!app.isPackaged) return;
-  const prefs = readPrefs();
-  if (prefs.loginItemInitialised) return;
+  if (readPrefs().loginItemInitialised) return;
   setStartAtLogin(true);
-  writeFileSync(prefsFile(), JSON.stringify({ ...prefs, loginItemInitialised: true }, null, 2));
+  writePrefs({ loginItemInitialised: true });
 }
 
 function setStartAtLogin(on: boolean): void {
