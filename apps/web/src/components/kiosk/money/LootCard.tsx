@@ -55,7 +55,12 @@ export function LootCard({
         onClick={onOpen}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen()}
       >
-        <div className={classes.paydayBox} data-soon={soon || undefined} data-payday-box={child.id}>
+        <div
+          className={classes.paydayBox}
+          data-soon={soon || undefined}
+          data-to-sort={child.money.toSortCents > 0 || undefined}
+          data-payday-box={child.id}
+        >
           <div className={classes.paydayLabel}>PAYDAY {countdown === null ? '' : 'IN'}</div>
           {countdown === null ? (
             <div className={classes.paydayWaiting}>Ask a grown-up!</div>

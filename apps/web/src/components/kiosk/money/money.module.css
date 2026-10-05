@@ -39,12 +39,17 @@
   align-content: center;
   justify-items: center;
   gap: 3px;
-  padding: 4px 6px 14px;
+  padding: 8px 6px;
   line-height: 1.25;
   border-radius: 14px;
   background: #0b0c1d;
   text-align: center;
   transition: box-shadow 0.3s;
+
+  /* Room at the bottom for the "to sort" chip, only while it shows. */
+  &[data-to-sort] {
+    padding: 4px 6px 14px;
+  }
 
   &[data-soon] {
     box-shadow:
@@ -78,6 +83,7 @@
 .paydayWhen {
   font-size: 15px;
   color: var(--pmp-dim);
+  margin-top: -4px;
 }
 
 .toSortChip {

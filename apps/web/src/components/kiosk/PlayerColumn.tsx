@@ -105,12 +105,19 @@ export function PlayerColumn({
           </div>
         </div>
         <div className={classes.stats}>
-          <div className={classes.points} data-child-points={child.id}>
-            {child.pointsToday}
+          <div className={classes.stat}>
+            <div className={classes.statValue}>
+              <span className={classes.statIcon} aria-hidden>
+                ⭐
+              </span>
+              <b className={classes.points} data-child-points={child.id}>
+                {child.pointsToday}
+              </b>
+            </div>
+            <div className={classes.statLabel}>points today</div>
           </div>
-          <div className={classes.statLabel}>points today</div>
+          <StreakFlame days={child.streak.days} best={child.streak.best} />
         </div>
-        <StreakFlame days={child.streak.days} best={child.streak.best} />
       </div>
 
       <NextUp
@@ -229,13 +236,15 @@ function StreakFlame({ days, best }: { days: number; best: number }) {
   const tier = flameTier(days);
   return (
     <div
-      className={classes.streak}
+      className={classes.stat}
       style={{ '--tc': flameColours(tier).text } as CSSProperties}
       title={`Best ever: ${best} ${best === 1 ? 'day' : 'days'}`}
     >
-      <Flame tier={tier} />
-      <div className={classes.streakDays}>{days}</div>
-      <div className={classes.streakCaption}>{days ? 'day streak' : 'start one today!'}</div>
+      <div className={classes.statValue}>
+        <Flame tier={tier} className={classes.statFlame} />
+        <b className={classes.streakDays}>{days}</b>
+      </div>
+      <div className={classes.statLabel}>{days ? 'day streak' : 'start one today!'}</div>
     </div>
   );
 }

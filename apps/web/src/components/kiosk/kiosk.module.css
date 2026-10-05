@@ -83,6 +83,15 @@
   letter-spacing: 0.04em;
   color: var(--pmp-gold);
   text-shadow: 0 0 18px rgba(255, 212, 59, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 0 10px rgba(255, 212, 59, 0.45));
 }
 
 .headerRight {
@@ -159,7 +168,7 @@
 /* Player panel */
 .hud {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 18px;
   align-items: center;
 }
@@ -221,21 +230,66 @@
   }
 }
 
+/* Points today and the streak: one panel, two matching columns. */
 .stats {
-  text-align: right;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: color-mix(in srgb, var(--c) 10%, rgba(0, 0, 0, 0.25));
+  border: 1px solid color-mix(in srgb, var(--c) 30%, transparent);
+  border-radius: 18px;
+  padding: 10px 4px;
 }
 
-.points {
-  font-size: 40px;
+.stat {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 4px;
+  min-width: 120px;
+  padding: 0 14px;
+
+  & + & {
+    border-left: 1px solid color-mix(in srgb, var(--c) 25%, transparent);
+  }
+}
+
+.statValue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+}
+
+.statIcon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.statValue .statFlame {
+  width: 28px;
+  height: 35px;
+}
+
+.points,
+.streakDays {
+  font-size: 38px;
   font-weight: 700;
-  color: var(--pmp-gold);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
+.points {
+  color: var(--pmp-gold);
+}
+
+.streakDays {
+  color: var(--tc);
+}
+
 .statLabel {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--pmp-dim);
+  white-space: nowrap;
 }
 
 /* The ⏰ bubble on the avatar while one of the child's quests rings (spec 005). */
@@ -262,27 +316,6 @@
   50% {
     transform: rotate(14deg);
   }
-}
-
-/* The streak flame (spec 005): one size, coloured by Flame.tsx; --tc is its text colour. */
-.streak {
-  display: grid;
-  justify-items: center;
-  width: 104px;
-  text-align: center;
-}
-
-.streakDays {
-  font-family: var(--pmp-font-pixel);
-  font-size: 18px;
-  color: var(--tc);
-  margin-top: 6px;
-}
-
-.streakCaption {
-  font-size: 13px;
-  color: var(--pmp-dim);
-  white-space: nowrap;
 }
 
 /* Stage colours: set --pc from data-stage on a Next-up panel or quest card. */

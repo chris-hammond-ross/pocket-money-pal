@@ -69,7 +69,10 @@ export function KioskBoard({ board }: { board: Board }) {
   return (
     <div className={classes.screen} data-quiet={quiet || undefined}>
       <header className={classes.header}>
-        <h1 className={classes.title}>★ POCKET MONEY PAL ★</h1>
+        <h1 className={classes.title}>
+          <img src="/pig.svg" alt="" className={classes.logo} />
+          POCKET MONEY PAL
+        </h1>
         <div className={classes.headerRight}>
           {quiet && (
             <span className={classes.quietPill}>
