@@ -16,7 +16,7 @@ import {
   type SetupChore,
 } from '@pmp/shared';
 import { useState, type CSSProperties, type ReactNode } from 'react';
-import { DAY_SHORT } from '../lib/format';
+import { DAY_SHORT, formatDate } from '../lib/format';
 import { sound } from '../lib/sounds';
 import { ArcadeButton, CloseButton, PixelLabel, Sheet } from './arcade';
 import classes from './QuestEditor.module.css';
@@ -50,6 +50,7 @@ export function QuestEditor({
   currency,
   colour,
   today,
+  todayDate,
   saving = false,
   error,
   onSave,
@@ -66,6 +67,8 @@ export function QuestEditor({
   colour?: string;
   /** The phone's TODAY section (spec 003), for a chore that runs today. */
   today?: ReactNode;
+  /** Today's date, to say which day a one-off for a later day is on. */
+  todayDate?: string;
   saving?: boolean;
   /** Why the last save failed, if it did. */
   error?: string | null;
@@ -227,7 +230,12 @@ export function QuestEditor({
 
       {c.oneOffDate !== null ? (
         <PixelLabel>
-          <span className={classes.oneOff}>ONE-OFF · TODAY ONLY</span>
+          <span className={classes.oneOff}>
+            ONE-OFF ·{' '}
+            {!todayDate || c.oneOffDate === todayDate
+              ? 'TODAY ONLY'
+              : `${formatDate(c.oneOffDate).toUpperCase()} ONLY`}
+          </span>
         </PixelLabel>
       ) : (
         <>

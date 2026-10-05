@@ -1,11 +1,20 @@
-import { schedulePauseSchema, zonedDateOf, type SchedulePause } from '@pmp/shared';
+import {
+  currentPause,
+  OUTBOX_HEADERS,
+  queuedPause,
+  schedulePauseSchema,
+  zonedDateOf,
+  type SchedulePause,
+} from '@pmp/shared';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { authOf, requireParent } from '../auth/devices';
 import type { Db } from '../db/client';
 import type { EditContext } from '../repo/chores';
 import { ValidationError } from '../repo/db';
+import { replacedChange } from '../repo/events';
 import { setPause } from '../repo/pause';
 import { getSettings } from '../repo/settings';
+import { queuedSince, sayReplaced } from '../replay';
 import { broadcastSurprises } from './surprises';
 
 export interface PauseRouteOptions {
@@ -29,8 +38,21 @@ export async function pauseRoutes(
       today: zonedDateOf(at, getSettings(db).timezone),
       parentId: authOf(req).parent.id,
     };
+    // Queued while the PC was off (spec 007): a holiday that should already have started
+    // starts today instead, and one that's over is no use now.
+    const since = queuedSince(req);
+    if (since !== null && pause !== null) {
+      const late = queuedPause(pause, currentPause(getSettings(db).pause, ctx.today), ctx.today);
+      if ('error' in late) return reply.code(409).send({ error: late.error });
+      if (late.moved) reply.header(OUTBOX_HEADERS.moved, late.pause.from);
+      pause = late.pause;
+    }
     try {
-      const { moves } = db.transaction((tx) => setPause(tx, pause, ctx));
+      const { moves, replaced } = db.transaction((tx) => {
+        const replaced = since === null ? null : replacedChange(tx, 'pause', since, ctx.parentId);
+        return { ...setPause(tx, pause, ctx), replaced };
+      });
+      sayReplaced(reply, replaced);
       app.hub.broadcast({ type: 'settings.updated' });
       app.hub.broadcast({ type: 'day.changed', date: ctx.today });
       broadcastSurprises(app.hub, moves);

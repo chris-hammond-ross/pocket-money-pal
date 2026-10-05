@@ -455,3 +455,23 @@ export const serverKv = sqliteTable('server_kv', {
   value: text('value').notNull(),
   ...timestamps,
 });
+
+/**
+ * Answers to changes a phone queued while the PC was off (ADR 0017), by their
+ * `Idempotency-Key`: a repeat gets the first answer instead of being applied again. Kept
+ * for 30 days.
+ */
+export const replayedRequests = sqliteTable(
+  'replayed_requests',
+  {
+    key: text('key').primaryKey(),
+    status: integer('status').notNull(),
+    /** The answer's body as sent (JSON text), or null for an empty one. */
+    body: text('body'),
+    /** `X-PMP-Replaced` and `X-PMP-Moved`, when the answer had them. */
+    replaced: text('replaced'),
+    moved: text('moved'),
+    at: integer('at').notNull(),
+  },
+  (t) => [index('replayed_requests_at').on(t.at)],
+);

@@ -9,13 +9,15 @@ import {
   pauseUntilFor,
   type SchedulePause,
 } from '@pmp/shared';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../../lib/api';
+import { sendOrQueue, usePlanSettings } from '../../lib/outbox';
 import { formatDate } from '../../lib/format';
 import { sound } from '../../lib/sounds';
 import { ArcadeButton, CloseButton, PixelLabel, Sheet } from '../arcade';
 import { problemText, useParentUi } from './context';
+import { pauseName } from './Outbox';
 import classes from './holiday.module.css';
 import parentClasses from './parent.module.css';
 
@@ -35,10 +37,19 @@ function useSetPause(onDone: (pause: SchedulePause | null) => void) {
   const ui = useParentUi();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: api.setPause,
-    onSuccess: (settings, pause) => {
-      queryClient.setQueryData(['settings'], settings);
+    // With the PC off, it waits on this phone (spec 007) and shows as if saved.
+    mutationFn: (pause: SchedulePause | null) =>
+      sendOrQueue({ kind: 'pause', pause }, pauseName(pause), (init) => api.setPause(pause, init)),
+    onSuccess: (sent, pause) => {
+      if (!sent.queued) queryClient.setQueryData(['settings'], sent.result);
       onDone(pause);
+      if (sent.queued) {
+        ui.notify({
+          icon: '⏳',
+          title: 'Saved on this phone',
+          body: 'The holiday goes to the family PC as soon as this phone can reach it.',
+        });
+      }
     },
     onError: (err) => {
       sound.sad();
@@ -54,7 +65,7 @@ function useSetPause(onDone: (pause: SchedulePause | null) => void) {
  */
 export function HolidayPause({ today }: { today: string }) {
   const ui = useParentUi();
-  const settings = useQuery({ queryKey: ['settings'], queryFn: api.settings });
+  const settings = usePlanSettings();
   const [sheet, setSheet] = useState<'pause' | 'resume' | null>(null);
   const callOff = useSetPause(() => {
     sound.tap();

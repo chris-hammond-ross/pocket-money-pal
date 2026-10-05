@@ -13,12 +13,15 @@ import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router';
 import { UpdateBanner } from './components/UpdateBanner';
 import { LiveEventsProvider } from './lib/live-events';
+import { keepParentData } from './lib/offline';
 import { captureInstallPrompt } from './lib/pwa';
 import { watchForUpdates } from './lib/updates';
 import { router } from './router';
 import { cssVariablesResolver, theme } from './theme';
 
 const queryClient = new QueryClient();
+// The parent app opens with its last data while the family PC is off (spec 007).
+keepParentData(queryClient);
 // Chrome offers its install prompt early; keep it for the Players tab's "📲 Install".
 captureInstallPrompt();
 // Every screen follows the server's build: reloads quietly, or offers it (ADR 0011).

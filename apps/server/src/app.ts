@@ -23,6 +23,7 @@ import { pushRoutes } from './routes/push';
 import { resetRoutes } from './routes/reset';
 import { setupRoutes } from './routes/setup';
 import { surpriseRoutes } from './routes/surprises';
+import { installReplay } from './replay';
 import { SecureUrl } from './secure-url';
 import { WsHub } from './ws';
 
@@ -105,6 +106,8 @@ export async function buildApp({
 
   await app.register(fastifyCookie);
   await app.register(fastifyWebsocket);
+  // Before the routes, so it covers every write (spec 007).
+  installReplay(app, { db, now });
   app.get(WS_PATH, { websocket: true }, (socket) => hub.add(socket));
 
   app.get('/api/health', async (): Promise<Health> => ({

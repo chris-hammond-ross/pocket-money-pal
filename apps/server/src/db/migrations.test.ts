@@ -24,6 +24,7 @@ const EXPECTED_TABLES = [
   'ledger',
   'pairing_codes',
   'paydays',
+  'replayed_requests',
   'server_kv',
   'setup_drafts',
   'streak_days',

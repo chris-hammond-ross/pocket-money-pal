@@ -1,5 +1,7 @@
 import { serverEventSchema, WS_PATH, type ServerEvent } from '@pmp/shared';
 import { useQueryClient } from '@tanstack/react-query';
+import { noteReachable, noteUnreachable } from './offline';
+import { requestFlush } from './outbox';
 import { reportServerVersion } from './updates';
 import {
   createContext,
@@ -68,8 +70,11 @@ export function LiveEventsProvider({ children }: { children: ReactNode }) {
       socket.onopen = () => {
         attempt = 0;
         setStatus('open');
-        // We may have missed events while disconnected.
+        noteReachable(null);
+        // We may have missed events while disconnected. Changes queued while the PC was
+        // off can go now (spec 007).
         void queryClient.invalidateQueries();
+        requestFlush();
       };
 
       socket.onmessage = (message) => {
@@ -106,6 +111,7 @@ export function LiveEventsProvider({ children }: { children: ReactNode }) {
 
       socket.onclose = () => {
         setStatus('closed');
+        noteUnreachable();
         if (disposed) return;
         const delay = Math.min(1000 * 2 ** attempt++, 15_000);
         retryTimer = setTimeout(connect, delay);

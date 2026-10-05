@@ -9,13 +9,15 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../../lib/api';
+import { useFamilyPc } from '../../lib/offline';
+import { sendOrQueue, tempChoreId, usePlanChores, usePlanDay } from '../../lib/outbox';
 import { clockTimeAt } from '../../lib/format';
 import { sound } from '../../lib/sounds';
 import { arcade } from '../../theme';
 import { ArcadeButton, PixelLabel } from '../arcade';
 import { QuestEditor } from '../QuestEditor';
 import { useChoreActions } from './actions';
-import { problemText, useDay } from './context';
+import { problemText, useParentUi } from './context';
 import classes from './parent.module.css';
 import { SendBackSheet } from './SendBackSheet';
 
@@ -67,8 +69,12 @@ export function PhoneQuestEditor({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
-  const today = useDay('today');
-  const chores = useQuery({ queryKey: ['chores'], queryFn: api.chores });
+  const ui = useParentUi();
+  // With the PC off, saving and deleting wait on this phone (spec 007); the quests and the
+  // day include what's waiting, so a quest made offline can be edited again.
+  const pc = useFamilyPc();
+  const today = usePlanDay('today');
+  const chores = usePlanChores();
   const settings = useQuery({ queryKey: ['settings'], queryFn: api.settings });
   const actions = useChoreActions();
   const [sendingBack, setSendingBack] = useState<DayInstance | null>(null);
@@ -77,22 +83,47 @@ export function PhoneQuestEditor({
   const [initial] = useState<SetupChore | null>(() => ('draft' in target ? target.draft : null));
   const draft = initial ?? (saved ? toDraft(saved) : null);
 
+  const waiting = () =>
+    ui.notify({
+      icon: '⏳',
+      title: 'Saved on this phone',
+      body: 'It goes to the family PC as soon as this phone can reach it.',
+    });
   const save = useMutation({
     mutationFn: async (next: SetupChore) => {
       const { libraryId, ...input } = toInput(next);
-      if (saved) return api.updateChore(saved.id, input);
-      return api.createChore({ ...input, libraryId });
+      const name = `${next.icon} ${next.title}`;
+      if (saved) {
+        return sendOrQueue(
+          { kind: 'chore.update', choreId: saved.id, patch: input },
+          name,
+          (init) => api.updateChore(saved.id, input, init),
+        );
+      }
+      const create = { ...input, libraryId };
+      return sendOrQueue(
+        { kind: 'chore.create', choreId: await tempChoreId(), input: create },
+        name,
+        (init) => api.createChore(create, init),
+      );
     },
-    onSuccess: () => {
+    onSuccess: (sent) => {
+      if (sent.queued) waiting();
       void queryClient.invalidateQueries({ queryKey: ['chores'] });
       void queryClient.invalidateQueries({ queryKey: ['day'] });
       onClose();
     },
   });
   const remove = useMutation({
-    mutationFn: (id: number) => api.deleteChore(id),
-    onSuccess: () => {
+    mutationFn: (chore: Chore) =>
+      sendOrQueue(
+        { kind: 'chore.delete', choreId: chore.id },
+        `${chore.icon} ${chore.title}`,
+        (init) => api.deleteChore(chore.id, init),
+      ),
+    onSuccess: (sent) => {
       sound.sad();
+      if (sent.queued) waiting();
       onClose();
     },
   });
@@ -125,7 +156,8 @@ export function PhoneQuestEditor({
     actions.undo.isPending ||
     actions.sendBack.isPending;
 
-  const todaySection = saved && runsToday && todayQuest && (
+  // Approving and skipping are about now: they need the PC.
+  const todaySection = pc === 'on' && saved && runsToday && todayQuest && (
     <>
       <PixelLabel>TODAY{todayQuest.skipped ? ' · SKIPPED' : ''}</PixelLabel>
       {todayQuest.instances
@@ -209,12 +241,13 @@ export function PhoneQuestEditor({
         currency={settings.data.currency}
         colour={stage ? STAGE_COLOUR[stage] : undefined}
         today={todaySection}
+        todayDate={plan.today}
         saving={save.isPending}
         error={
           save.error ? problemText(save.error) : remove.error ? problemText(remove.error) : null
         }
         onSave={(next) => save.mutate(next)}
-        onDelete={saved ? () => remove.mutate(saved.id) : undefined}
+        onDelete={saved ? () => remove.mutate(saved) : undefined}
         onClose={onClose}
       />
       <SendBackSheet

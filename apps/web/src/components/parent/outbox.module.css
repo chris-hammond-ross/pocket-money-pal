@@ -1,0 +1,53 @@
+/* The offline queue (spec 007): the bar above the tabs and the "needs the PC" card. */
+.bar {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 0 12px 6px;
+  padding: 8px 12px;
+  border: 2px solid color-mix(in srgb, var(--pmp-dim) 40%, transparent);
+  border-radius: 12px;
+  background: var(--pmp-panel);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--pmp-text);
+  text-align: left;
+  cursor: pointer;
+
+  &[data-tone='sending'] {
+    border-color: color-mix(in srgb, var(--pmp-gold) 55%, transparent);
+  }
+
+  &[data-tone='look'] {
+    border-color: color-mix(in srgb, var(--pmp-late) 55%, transparent);
+  }
+}
+
+.needsPc {
+  text-align: center;
+  color: var(--pmp-dim);
+  padding: 40px 16px;
+
+  & b {
+    display: block;
+    color: var(--pmp-text);
+    font-size: 17px;
+    margin-bottom: 6px;
+  }
+}
+
+.needsPcIcon {
+  font-size: 44px;
+  margin-bottom: 8px;
+}
+
+/* A quest with a change waiting to be sent: after its name, or before it where names are cut off. */
+.pending {
+  margin-left: 4px;
+  font-size: 0.85em;
+}
+
+.pendingFirst {
+  margin-right: 4px;
+  font-size: 0.85em;
+}

@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { ArcadeButton } from '../components/arcade';
 import type { Banner } from '../components/parent/context';
 import { PairScreen } from '../components/parent/PairScreen';
 import { ParentShell } from '../components/parent/ParentShell';
 import { api } from '../lib/api';
+import { forgetParentData } from '../lib/offline';
+import { clearOutbox } from '../lib/outbox';
 
 /**
  * `/parent`: the parents' phone (spec 003). It redirects to /setup while setup is needed,
@@ -38,8 +40,17 @@ export function ParentPage() {
     refetchInterval: retryWhileUnreachable,
   });
 
+  // Unpaired (or revoked): nothing kept or queued on this phone is any use now.
+  const unpaired = me.data === null;
+  useEffect(() => {
+    if (!unpaired) return;
+    forgetParentData();
+    void clearOutbox();
+  }, [unpaired]);
+
   if (status.data?.needed) return <Navigate to="/setup" replace />;
-  if (me.isError && !me.isSuccess) {
+  // With the PC off, a phone that can queue changes opens on its last data (spec 007).
+  if (me.data === undefined && me.isError) {
     return (
       <Unreachable
         onRetry={() => {
@@ -49,7 +60,7 @@ export function ParentPage() {
       />
     );
   }
-  if (!me.isSuccess) return null;
+  if (me.data === undefined) return null;
   if (me.data === null) {
     return <PairScreen onPaired={(paired) => setWelcome(pairedBanner(paired.parent.name))} />;
   }

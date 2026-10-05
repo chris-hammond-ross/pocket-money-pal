@@ -3,6 +3,7 @@ import {
   choreWindow,
   claimPoints,
   isPausedOn,
+  plannedQuests,
   sendBackReasonSchema,
   zonedDateOf,
   type DayInstance,
@@ -29,9 +30,7 @@ export function dayPlan(db: DbOrTx, date: string, now: number): DayPlan {
 
   let quests: DayQuest[];
   if (date !== today) {
-    quests = chores
-      .filter((c) => choreRunsOn(c, date))
-      .map((chore) => ({ chore, skipped: false, instances: [] }));
+    quests = plannedQuests(chores, date);
   } else {
     const instances = db.select().from(choreInstances).where(eq(choreInstances.date, date)).all();
     const skippedToday = new Set(

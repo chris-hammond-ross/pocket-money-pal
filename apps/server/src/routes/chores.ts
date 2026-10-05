@@ -4,6 +4,7 @@ import {
   chorePatchSchema,
   idSchema,
   isoDateSchema,
+  oneOffPassed,
   zonedDateOf,
 } from '@pmp/shared';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
@@ -19,7 +20,9 @@ import {
 } from '../repo/chores';
 import { NotFoundError, ValidationError } from '../repo/db';
 import { dayPlan } from '../repo/day';
+import { replacedChange } from '../repo/events';
 import { getSettings } from '../repo/settings';
+import { queuedSince, sayReplaced } from '../replay';
 
 export interface ChoreRouteOptions {
   db: Db;
@@ -75,6 +78,10 @@ export async function choreRoutes(
     if (!ref.success) return reply.code(400).send({ error: ref.error.issues });
     try {
       const ctx = context(req);
+      // Queued while the PC was off (spec 007): a one-off for a day gone by is no use now.
+      if (queuedSince(req) !== null && oneOffPassed(input.data.oneOffDate, ctx.today)) {
+        return reply.code(409).send({ error: 'date-passed' });
+      }
       const chore = db.transaction((tx) =>
         createChore(tx, { ...input.data, libraryId: ref.data.libraryId }, ctx),
       );
@@ -92,7 +99,16 @@ export async function choreRoutes(
     if (!patch.success) return reply.code(400).send({ error: patch.error.issues });
     try {
       const ctx = context(req);
-      const chore = db.transaction((tx) => updateChore(tx, id, patch.data, ctx));
+      const since = queuedSince(req);
+      if (since !== null && oneOffPassed(patch.data.oneOffDate, ctx.today)) {
+        return reply.code(409).send({ error: 'date-passed' });
+      }
+      const [chore, replaced] = db.transaction((tx) => {
+        const replaced =
+          since === null ? null : replacedChange(tx, { choreId: id }, since, ctx.parentId);
+        return [updateChore(tx, id, patch.data, ctx), replaced] as const;
+      });
+      sayReplaced(reply, replaced);
       app.hub.broadcast({ type: 'chore.updated', choreId: chore.id });
       return chore;
     } catch (err) {
@@ -105,7 +121,14 @@ export async function choreRoutes(
     if (id === null) return reply.code(404).send({ error: 'not-found' });
     try {
       const ctx = context(req);
-      db.transaction((tx) => deleteChore(tx, id, ctx));
+      const since = queuedSince(req);
+      const replaced = db.transaction((tx) => {
+        const replaced =
+          since === null ? null : replacedChange(tx, { choreId: id }, since, ctx.parentId);
+        deleteChore(tx, id, ctx);
+        return replaced;
+      });
+      sayReplaced(reply, replaced);
       app.hub.broadcast({ type: 'chore.deleted', choreId: id });
       return reply.code(204).send();
     } catch (err) {

@@ -3,12 +3,16 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api';
+import { browserTimeZone } from '../../lib/format';
+import { useFamilyPc } from '../../lib/offline';
+import { useRefetchAfterSend } from '../../lib/outbox';
 import { useLiveEvents } from '../../lib/live-events';
 import { useMuted } from '../../lib/parent-prefs';
 import { askedPush, enablePush, pushState, registerServiceWorker, resyncPush } from '../../lib/pwa';
 import { preloadSounds, sound } from '../../lib/sounds';
 import { ArcadeButton, Sheet } from '../arcade';
 import { NewQuestPicker } from './NewQuestPicker';
+import { NeedsPc, OfflineBar, OutboxSheet, useOutboxSending } from './Outbox';
 import { DayTab } from './DayTab';
 import {
   ParentUiContext,
@@ -68,15 +72,24 @@ export function ParentShell({ welcome }: { welcome: Banner | null }) {
   );
   const [flash, setFlash] = useState<number | null>(null);
   const [editing, setEditing] = useState<(EditorTarget & { id: number }) | null>(null);
-  const [picking, setPicking] = useState<{ offerOneOff: boolean; childId?: number } | null>(null);
+  const [picking, setPicking] = useState<{ oneOffOn: string | null; childId?: number } | null>(
+    null,
+  );
   // Surprise quests (spec 006): the panel, a row's sheet, and the row that just changed.
   const [panel, setPanel] = useState<{ id: number; scheduled: SurpriseRun | null } | null>(null);
   const [surpriseSheet, setSurpriseSheet] = useState<number | null>(null);
   const [flashRun, setFlashRun] = useState<number | null>(null);
   const today = useDay('today');
   const nextId = useRef(1);
+  // The offline queue (spec 007): the PC may be off, with changes waiting on this phone.
+  const pc = useFamilyPc();
+  const [outboxOpen, setOutboxOpen] = useState(false);
+  const timezone = today.data?.timezone ?? browserTimeZone();
 
   const notify = useCallback((b: Banner) => setBanner({ ...b, id: nextId.current++ }), []);
+  const openOutbox = useCallback(() => setOutboxOpen(true), []);
+  useOutboxSending(notify, timezone, openOutbox);
+  useRefetchAfterSend();
   useEffect(() => {
     if (!banner) return;
     const timer = setTimeout(() => setBanner(null), BANNER_MS);
@@ -252,11 +265,13 @@ export function ParentShell({ welcome }: { welcome: Banner | null }) {
             </button>
           ))}
         </nav>
+        <OfflineBar onOpen={openOutbox} />
         <main className={classes.main} data-tray={items.length > 0 || undefined}>
           {tab === 'day' && <DayTab flashChoreId={flash} flashRunId={flashRun} />}
           {tab === 'week' && <WeekTab />}
-          {tab === 'players' && <PlayersTab />}
-          {tab === 'payday' && <PaydayTab />}
+          {tab === 'players' &&
+            (pc === 'off' ? <NeedsPc what="The Players tab" /> : <PlayersTab />)}
+          {tab === 'payday' && (pc === 'off' ? <NeedsPc what="Payday" /> : <PaydayTab />)}
         </main>
         <Tray
           items={items}
@@ -296,7 +311,7 @@ export function ParentShell({ welcome }: { welcome: Banner | null }) {
       {picking && (
         <NewQuestPicker
           opened
-          offerOneOff={picking.offerOneOff}
+          oneOffOn={picking.oneOffOn}
           childId={picking.childId}
           onPick={pickDraft}
           onClose={() => setPicking(null)}
@@ -316,6 +331,7 @@ export function ParentShell({ welcome }: { welcome: Banner | null }) {
           onClose={() => setSurpriseSheet(null)}
         />
       )}
+      {outboxOpen && <OutboxSheet timezone={timezone} onClose={() => setOutboxOpen(false)} />}
       <PushOptIn />
     </ParentUiContext.Provider>
   );

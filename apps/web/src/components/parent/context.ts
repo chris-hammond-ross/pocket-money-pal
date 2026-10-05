@@ -2,6 +2,7 @@ import type { SurpriseRun } from '@pmp/shared';
 import { useQuery } from '@tanstack/react-query';
 import { createContext, useContext } from 'react';
 import { api, ApiError } from '../../lib/api';
+import { canQueue } from '../../lib/offline';
 
 export interface Banner {
   icon: string;
@@ -15,8 +16,8 @@ export interface Banner {
 export interface ParentUi {
   notify: (banner: Banner) => void;
   openQuest: (choreId: number) => void;
-  /** Opens the new-quest picker; the one-off tile shows when today is selected. */
-  newQuest: (options: { offerOneOff: boolean; childId?: number }) => void;
+  /** Opens the new-quest picker, with a one-off tile for `oneOffOn` (today or later). */
+  newQuest: (options: { oneOffOn: string | null; childId?: number }) => void;
   openTray: () => void;
   /** The surprise panel (spec 006): a new one, or a scheduled one to change. */
   newSurprise: (scheduled?: SurpriseRun) => void;
@@ -71,6 +72,9 @@ export function problemText(err: unknown): string {
     if (err.status === 401) return 'This phone isn’t paired any more.';
     if (err.status === 409) return 'Someone else got there first. The list has been refreshed.';
     if (err.status === 400) return 'That doesn’t look right. Check it and try again.';
+    if (err.status === 0 && canQueue()) {
+      return 'This needs the family PC to be on. Quests and holidays can be planned offline.';
+    }
   }
   return 'Can’t reach the family PC. Check you’re on the home Wi-Fi.';
 }

@@ -1,10 +1,10 @@
-import { choreFromLibrary, WEEKDAYS, type SetupChore } from '@pmp/shared';
+import { choreFromLibrary, weekdayOf, WEEKDAYS, type SetupChore } from '@pmp/shared';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
-import { newKey } from '../../lib/format';
+import { DAY_SHORT, newKey } from '../../lib/format';
+import { usePlanDay } from '../../lib/outbox';
 import { sound } from '../../lib/sounds';
 import { CloseButton, Sheet } from '../arcade';
-import { useDay } from './context';
 import classes from './parent.module.css';
 
 /** "✏️ Make my own": sensible times and loot, ready to adjust. */
@@ -35,20 +35,20 @@ function blankQuest(childKeys: string[], oneOffDate: string | null): SetupChore 
  */
 export function NewQuestPicker({
   opened,
-  offerOneOff,
+  oneOffOn,
   childId,
   onPick,
   onClose,
 }: {
   opened: boolean;
-  offerOneOff: boolean;
+  oneOffOn: string | null;
   childId: number | undefined;
   onPick: (draft: SetupChore) => void;
   onClose: () => void;
 }) {
   const library = useQuery({ queryKey: ['chore-library'], queryFn: api.choreLibrary });
   const chores = useQuery({ queryKey: ['chores'], queryFn: api.chores });
-  const today = useDay('today');
+  const today = usePlanDay('today');
   const plan = today.data;
   const used = new Set((chores.data ?? []).map((c) => c.libraryId).filter(Boolean));
   const childKeys = childId ? [String(childId)] : (plan?.children ?? []).map((c) => String(c.id));
@@ -82,15 +82,17 @@ export function NewQuestPicker({
             <div className={classes.tileIcon}>✏️</div>
             <b>Make my own</b>
           </button>
-          {offerOneOff && plan && (
+          {oneOffOn && plan && (
             <button
               type="button"
               className={classes.tile}
               data-add
-              onClick={() => pick(blankQuest(childKeys, plan.today))}
+              onClick={() => pick(blankQuest(childKeys, oneOffOn))}
             >
               <div className={classes.tileIcon}>⚡</div>
-              <b>One-off today</b>
+              <b>
+                One-off {oneOffOn === plan.today ? 'today' : `on ${DAY_SHORT[weekdayOf(oneOffOn)]}`}
+              </b>
             </button>
           )}
         </div>

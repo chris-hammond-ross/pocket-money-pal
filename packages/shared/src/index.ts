@@ -8,6 +8,7 @@ export * from './levels';
 export * from './library';
 export * from './money';
 export * from './notify';
+export * from './outbox';
 export * from './pairing';
 export * from './pause';
 export * from './payday';

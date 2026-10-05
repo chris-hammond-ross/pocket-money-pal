@@ -8,12 +8,14 @@ import {
   type Chore,
   type Weekday,
 } from '@pmp/shared';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { sendOrQueue, usePendingChores, usePlanChores, usePlanDay } from '../../lib/outbox';
 import { DAY_SHORT } from '../../lib/format';
 import { sound } from '../../lib/sounds';
-import { problemText, useDay, useParentUi } from './context';
+import { problemText, useParentUi } from './context';
 import { HolidayPause } from './HolidayPause';
+import outbox from './outbox.module.css';
 import classes from './parent.module.css';
 
 /**
@@ -25,12 +27,18 @@ import classes from './parent.module.css';
 export function WeekTab() {
   const ui = useParentUi();
   const queryClient = useQueryClient();
-  const chores = useQuery({ queryKey: ['chores'], queryFn: api.chores });
-  const today = useDay('today');
+  // With the PC off, the toggles wait on this phone (spec 007) and show as if saved.
+  const chores = usePlanChores();
+  const today = usePlanDay('today');
+  const pending = usePendingChores();
 
   const toggle = useMutation({
     mutationFn: ({ chore, days }: { chore: Chore; days: Weekday[] }) =>
-      api.updateChore(chore.id, { days }),
+      sendOrQueue(
+        { kind: 'chore.update', choreId: chore.id, patch: { days } },
+        `${chore.icon} ${chore.title}`,
+        (init) => api.updateChore(chore.id, { days }, init),
+      ),
     // Show the change straight away; the server's event refetches the truth.
     onMutate: ({ chore, days }) => {
       queryClient.setQueryData<Chore[]>(['chores'], (list) =>
@@ -87,6 +95,11 @@ export function WeekTab() {
             {recurring.map((chore) => (
               <tr key={chore.id}>
                 <td className={classes.name} onClick={() => ui.openQuest(chore.id)}>
+                  {pending.has(chore.id) && (
+                    <span className={outbox.pendingFirst} title="Waiting to be sent">
+                      ⏳
+                    </span>
+                  )}
                   {chore.icon} {chore.title}
                   {chore.childIds.length === 0 && <small> ⏸ no players</small>}
                 </td>

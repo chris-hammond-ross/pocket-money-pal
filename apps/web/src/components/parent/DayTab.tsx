@@ -1,11 +1,14 @@
 import { parseTimeOfDay, pointsRange, weekDates, weekdayOf, zonedTimeOf } from '@pmp/shared';
 import { useState, type CSSProperties } from 'react';
 import { DAY_SHORT } from '../../lib/format';
+import { useFamilyPc } from '../../lib/offline';
+import { usePendingChores, usePlanDay } from '../../lib/outbox';
 import { useServerNow } from '../../lib/server-clock';
 import { sound } from '../../lib/sounds';
 import { DashedButton, DayAxis, PlayerBadge, WindowBar, type ClaimDot } from '../arcade';
-import { useDay, useParentUi } from './context';
+import { useParentUi } from './context';
 import holiday from './holiday.module.css';
+import outbox from './outbox.module.css';
 import classes from './parent.module.css';
 import { SurpriseButton, SurprisesToday } from './Surprises';
 
@@ -13,7 +16,9 @@ import { SurpriseButton, SurprisesToday } from './Surprises';
  * The Day tab (spec 003): the week's day strip, a player filter, and a row per quest on
  * the shared 6am–9pm axis. Today also shows each child's status, a live now-line and the
  * claim dots; other days show the current plan. Today also has its surprises (spec 006):
- * their rows above the quests, and the "⚡ Surprise quest" button at the bottom.
+ * their rows above the quests, and the "⚡ Surprise quest" button at the bottom. With the
+ * family PC off, it's drawn on the phone with the queued changes in, and the surprises
+ * (which are about now) are hidden (spec 007).
  */
 export function DayTab({
   flashChoreId,
@@ -25,9 +30,11 @@ export function DayTab({
   const ui = useParentUi();
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState<number | 'all'>('all');
-  const today = useDay('today');
+  const pc = useFamilyPc();
+  const pending = usePendingChores();
+  const today = usePlanDay('today');
   const date = selected ?? today.data?.today ?? 'today';
-  const day = useDay(date === today.data?.today ? 'today' : date);
+  const day = usePlanDay(date === today.data?.today ? 'today' : date);
   const now = useServerNow(day.data?.clockOffsetMs ?? 0);
 
   const plan = day.data;
@@ -85,7 +92,7 @@ export function DayTab({
         </div>
       )}
       <DayAxis />
-      {isToday && (
+      {isToday && pc === 'on' && (
         <SurprisesToday
           kids={plan.children}
           timezone={plan.timezone}
@@ -121,7 +128,14 @@ export function DayTab({
           >
             <div className={classes.questHead}>
               <span className={classes.icon}>{chore.icon}</span>
-              <b>{chore.title}</b>
+              <b>
+                {chore.title}
+                {pending.has(chore.id) && (
+                  <span className={outbox.pending} title="Waiting to be sent">
+                    ⏳
+                  </span>
+                )}
+              </b>
               <span className={classes.who}>
                 {players.map((id) => {
                   const child = childById.get(id);
@@ -155,12 +169,17 @@ export function DayTab({
       )}
       <DashedButton
         onClick={() =>
-          ui.newQuest({ offerOneOff: isToday, childId: filter === 'all' ? undefined : filter })
+          ui.newQuest({
+            // A one-off for the day on show, so tomorrow's can be planned tonight (spec 007).
+            oneOffOn: plan.date >= plan.today ? plan.date : null,
+            childId: filter === 'all' ? undefined : filter,
+          })
         }
       >
-        ＋ New quest{isToday ? ' · or a one-off for today' : ''}
+        ＋ New quest
+        {isToday ? ' · or a one-off for today' : plan.date > plan.today ? ' · or a one-off' : ''}
       </DashedButton>
-      {isToday && !plan.paused && <SurpriseButton />}
+      {isToday && !plan.paused && pc === 'on' && <SurpriseButton />}
     </>
   );
 }

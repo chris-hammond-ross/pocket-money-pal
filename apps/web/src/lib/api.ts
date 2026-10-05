@@ -57,6 +57,7 @@ import {
   type SurpriseTaskInput,
   type SurpriseTaskPatch,
 } from '@pmp/shared';
+import { noteReachable, noteUnreachable } from './offline';
 import { setupTokenHeaders } from './setup-token';
 
 /** A failed API call, keeping the status and the server's `error` code. */
@@ -71,11 +72,23 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * A request to the PC. Not reaching it at all (it's off, or the phone is off the home
+ * network) is an `ApiError` with status 0 and code `offline`, and is noted for the offline
+ * queue (spec 007); any answer at all means it's on.
+ */
 async function request(path: string, init?: RequestInit): Promise<unknown> {
-  const res = await fetch(path, {
-    ...init,
-    headers: { ...(init?.body && { 'content-type': 'application/json' }), ...init?.headers },
-  });
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      ...init,
+      headers: { ...(init?.body && { 'content-type': 'application/json' }), ...init?.headers },
+    });
+  } catch {
+    noteUnreachable();
+    throw new ApiError(0, 'offline', `${init?.method ?? 'GET'} ${path}: can't reach the PC`);
+  }
+  noteReachable(res.headers.get('date'));
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
     const code = typeof body?.error === 'string' ? body.error : null;
@@ -89,6 +102,15 @@ const json = (method: string, body: unknown, headers?: HeadersInit): RequestInit
   body: JSON.stringify(body),
   headers,
 });
+
+/**
+ * Extra request options for a change that can wait in the offline queue (spec 007): its
+ * `Idempotency-Key`, and a timeout so an unreachable PC is noticed quickly.
+ */
+export interface QueueableInit {
+  headers?: Record<string, string>;
+  signal?: AbortSignal;
+}
 
 /** The kiosk board, plus how far this browser's clock is from the server's. */
 export type KioskBoard = KioskToday & { clockOffsetMs: number };
@@ -181,11 +203,19 @@ export const api = {
   /** A day on the phone's Day tab; `'today'` for today in the family time zone. */
   day: async (date: string) => dayPlanSchema.parse(await request(`/api/day/${date}`)),
   chores: async () => choreListSchema.parse(await request('/api/chores')),
-  createChore: async (chore: ChoreInput & { libraryId: string | null }) =>
-    choreSchema.parse(await request('/api/chores', json('POST', chore))),
-  updateChore: async (id: number, patch: ChorePatch) =>
-    choreSchema.parse(await request(`/api/chores/${id}`, json('PATCH', patch))),
-  deleteChore: (id: number) => request(`/api/chores/${id}`, { method: 'DELETE' }),
+  createChore: async (chore: ChoreInput & { libraryId: string | null }, init?: QueueableInit) =>
+    choreSchema.parse(
+      await request('/api/chores', { ...json('POST', chore, init?.headers), signal: init?.signal }),
+    ),
+  updateChore: async (id: number, patch: ChorePatch, init?: QueueableInit) =>
+    choreSchema.parse(
+      await request(`/api/chores/${id}`, {
+        ...json('PATCH', patch, init?.headers),
+        signal: init?.signal,
+      }),
+    ),
+  deleteChore: (id: number, init?: QueueableInit) =>
+    request(`/api/chores/${id}`, { method: 'DELETE', ...init }),
   skipToday: (id: number, skip: boolean) =>
     request(`/api/chores/${id}/skip-today`, { method: skip ? 'POST' : 'DELETE' }),
 
@@ -207,9 +237,12 @@ export const api = {
   updateSettings: async (patch: PhoneSettingsPatch) =>
     familySettingsSchema.parse(await request('/api/settings', json('PATCH', patch))),
   /** The holiday pause (ADR 0016): set or change it, or null to resume right now. */
-  setPause: async (pause: SchedulePause | null) =>
+  setPause: async (pause: SchedulePause | null, init?: QueueableInit) =>
     familySettingsSchema.parse(
-      await request('/api/pause', pause === null ? { method: 'DELETE' } : json('PUT', pause)),
+      await request('/api/pause', {
+        ...(pause === null ? { method: 'DELETE' } : json('PUT', pause)),
+        ...init,
+      }),
     ),
 
   // Money and jars (spec 004)
