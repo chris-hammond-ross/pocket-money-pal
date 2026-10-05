@@ -1,9 +1,12 @@
 import {
+  DAY_PERIODS,
   editorHourLabels,
   editorSpan,
   markerToDrag,
   moveMarker,
   parseTimeOfDay,
+  periodOf,
+  shiftWindow,
   spanPercent,
   type ChoreTimes,
   type MarkerKey,
@@ -16,7 +19,7 @@ import classes from './QuestEditor.module.css';
 const MARKERS: { key: MarkerKey; icon: string; colour: string; label: string; below: boolean }[] = [
   { key: 'bonusBefore', icon: '⚡', colour: 'var(--pmp-bonus)', label: 'Bonus ends', below: false },
   { key: 'dueBy', icon: '🏁', colour: 'var(--pmp-due)', label: 'Due', below: true },
-  { key: 'lateAfter', icon: '💀', colour: 'var(--pmp-late)', label: 'Late after', below: false },
+  { key: 'lateAfter', icon: '🥀', colour: 'var(--pmp-late)', label: 'Late after', below: false },
 ];
 
 function hourLabel(hour: number): string {
@@ -26,7 +29,7 @@ function hourLabel(hour: number): string {
 /**
  * The quest editor's window bar (spec 003): three markers dragged along a bar zoomed to
  * this chore. The zoom is fixed when the sheet opens, so the bar never moves under a
- * thumb. Markers snap to 15 minutes, can't pass each other, grow while dragged, and tick
+ * thumb, until a time-of-day chip moves the whole window and re-zooms it. Markers snap to 15 minutes, can't pass each other, grow while dragged, and tick
  * on every snap. The rules are `moveMarker` and `editorSpan` in @pmp/shared.
  */
 export function WindowEditor({
@@ -36,7 +39,8 @@ export function WindowEditor({
   times: ChoreTimes;
   onChange: (times: ChoreTimes) => void;
 }) {
-  const [span] = useState(() => editorSpan(times));
+  const [span, setSpan] = useState(() => editorSpan(times));
+  const period = periodOf(times);
   const rail = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState<MarkerKey | null>(null);
   // The times and marker during a drag, for pointer moves that arrive before the next render.
@@ -67,6 +71,24 @@ export function WindowEditor({
 
   return (
     <>
+      <div className={classes.periods}>
+        {DAY_PERIODS.map((p) => (
+          <button
+            key={p.key}
+            type="button"
+            data-on={p.key === period.key || undefined}
+            onClick={() => {
+              const next = shiftWindow(times, p.dueBy);
+              setSpan(editorSpan(next));
+              onChange(next);
+              sound.tap();
+            }}
+          >
+            <span>{p.icon}</span>
+            {p.label}
+          </button>
+        ))}
+      </div>
       <div className={classes.editor}>
         <div ref={rail} className={classes.rail}>
           <div style={{ left: 0, width: `${b}%`, background: 'var(--pmp-bonus)' }} />

@@ -489,7 +489,7 @@ function BonusPoints() {
       if (points > 0) sound.coin();
       else sound.sad();
       ui.notify({
-        icon: points > 0 ? '⭐' : '💀',
+        icon: points > 0 ? '⭐' : '🥀',
         title: `${name} ${formatPointsChange(points)} points`,
       });
     },

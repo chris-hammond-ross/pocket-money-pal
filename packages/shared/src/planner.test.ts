@@ -5,6 +5,8 @@ import {
   editorSpan,
   markerToDrag,
   moveMarker,
+  periodOf,
+  shiftWindow,
   spanPercent,
   weekDates,
   weeklyBasePoints,
@@ -125,5 +127,31 @@ describe('markerToDrag', () => {
     const all = times('09:00', '09:00', '09:00');
     expect(markerToDrag(all, 'lateAfter', 8 * 60)).toBe('bonusBefore');
     expect(markerToDrag(all, 'bonusBefore', 10 * 60)).toBe('lateAfter');
+  });
+});
+
+describe('shiftWindow', () => {
+  it('moves the whole window so the due marker lands on the time, keeping the gaps', () => {
+    expect(shiftWindow(times('17:00', '18:00', '19:00'), 8 * 60)).toEqual(
+      times('07:00', '08:00', '09:00'),
+    );
+  });
+
+  it('stops short of 5am and 11pm', () => {
+    expect(shiftWindow(times('06:00', '08:00', '10:00'), 6 * 60)).toEqual(
+      times('05:00', '07:00', '09:00'),
+    );
+    expect(shiftWindow(times('17:00', '18:00', '21:00'), 22 * 60)).toEqual(
+      times('19:00', '20:00', '23:00'),
+    );
+  });
+});
+
+describe('periodOf', () => {
+  it('picks the part of the day the due marker falls in', () => {
+    expect(periodOf(times('07:00', '08:00', '09:00')).key).toBe('morning');
+    expect(periodOf(times('12:00', '12:30', '13:00')).key).toBe('midday');
+    expect(periodOf(times('15:00', '16:00', '17:00')).key).toBe('afternoon');
+    expect(periodOf(times('17:00', '18:00', '19:00')).key).toBe('evening');
   });
 });

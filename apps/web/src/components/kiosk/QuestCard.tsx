@@ -24,7 +24,7 @@ export function statusLine(quest: KioskQuest, stage: ChoreStage, now: number): s
     case 'overdue':
       return `⚠️ Overdue! ${left} before points drop`;
     case 'late':
-      return `💀 Late: −${quest.loot.latePenalty} points`;
+      return `🥀 Late: −${quest.loot.latePenalty} points`;
   }
 }
 

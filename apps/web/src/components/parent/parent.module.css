@@ -538,6 +538,13 @@
   gap: 8px;
 }
 
+.addTiles {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .tile {
   background: var(--pmp-panel);
   border: 2px solid transparent;

@@ -72,26 +72,28 @@ export function NewQuestPicker({
       }
     >
       <div className={classes.tiles}>
-        <button
-          type="button"
-          className={classes.tile}
-          data-add
-          onClick={() => pick(blankQuest(childKeys, null))}
-        >
-          <div className={classes.tileIcon}>✏️</div>
-          <b>Make my own</b>
-        </button>
-        {offerOneOff && plan && (
+        <div className={classes.addTiles}>
           <button
             type="button"
             className={classes.tile}
             data-add
-            onClick={() => pick(blankQuest(childKeys, plan.today))}
+            onClick={() => pick(blankQuest(childKeys, null))}
           >
-            <div className={classes.tileIcon}>⚡</div>
-            <b>One-off today</b>
+            <div className={classes.tileIcon}>✏️</div>
+            <b>Make my own</b>
           </button>
-        )}
+          {offerOneOff && plan && (
+            <button
+              type="button"
+              className={classes.tile}
+              data-add
+              onClick={() => pick(blankQuest(childKeys, plan.today))}
+            >
+              <div className={classes.tileIcon}>⚡</div>
+              <b>One-off today</b>
+            </button>
+          )}
+        </div>
         {(library.data ?? [])
           .filter((item) => !used.has(item.id))
           .map((item) => (

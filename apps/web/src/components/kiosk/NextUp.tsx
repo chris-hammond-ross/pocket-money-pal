@@ -12,7 +12,7 @@ const LABELS: Record<ChoreStage, string> = {
   bonus: '⚡ NEXT UP · BONUS ENDS SOON',
   due: '🏁 NEXT UP · DUE SOON',
   overdue: '⚠️ OVERDUE!',
-  late: '💀 LATE',
+  late: '🥀 LATE',
 };
 
 /**

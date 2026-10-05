@@ -29,6 +29,9 @@ const EDITOR_LATEST = 23 * 60;
 const EDITOR_MIN_SPAN = 5 * 60;
 const EDITOR_MARGIN = 90;
 
+export type MarkerKey = keyof ChoreTimes;
+const MARKER_ORDER: MarkerKey[] = ['bonusBefore', 'dueBy', 'lateAfter'];
+
 /** Markers snap to this many minutes. */
 export const MARKER_STEP_MINUTES = 15;
 
@@ -48,6 +51,36 @@ export function editorSpan(times: ChoreTimes): MinuteSpan {
   return { start, end };
 }
 
+/** The quest editor's time-of-day chips: tapping one moves the whole window to that part of the day. */
+export const DAY_PERIODS = [
+  { key: 'morning', icon: '🌅', label: 'Morning', dueBy: 8 * 60, until: 11 * 60 },
+  { key: 'midday', icon: '☀️', label: 'Midday', dueBy: 12 * 60 + 30, until: 14 * 60 },
+  { key: 'afternoon', icon: '🌇', label: 'Afternoon', dueBy: 16 * 60, until: 17 * 60 + 30 },
+  { key: 'evening', icon: '🌙', label: 'Evening', dueBy: 19 * 60, until: 24 * 60 },
+] as const;
+
+export type DayPeriod = (typeof DAY_PERIODS)[number];
+
+/** The part of the day a window's 🏁 falls in. */
+export function periodOf(times: ChoreTimes): DayPeriod {
+  const due = parseTimeOfDay(times.dueBy);
+  return DAY_PERIODS.find((p) => due < p.until) ?? DAY_PERIODS[DAY_PERIODS.length - 1]!;
+}
+
+/**
+ * Slides the whole window so 🏁 lands on `dueBy`, keeping the gaps between the markers. It
+ * stops short rather than leave 5am–11pm.
+ */
+export function shiftWindow(times: ChoreTimes, dueBy: number): ChoreTimes {
+  const [bonus, due, late] = MARKER_ORDER.map((k) => parseTimeOfDay(times[k]));
+  const offset = Math.max(EDITOR_EARLIEST - bonus!, Math.min(EDITOR_LATEST - late!, dueBy - due!));
+  return {
+    bonusBefore: formatTimeOfDay(bonus! + offset),
+    dueBy: formatTimeOfDay(due! + offset),
+    lateAfter: formatTimeOfDay(late! + offset),
+  };
+}
+
 /** The hours to label under the editor bar: every hour, or every other past 8 hours. */
 export function editorHourLabels(span: MinuteSpan): number[] {
   const hours: number[] = [];
@@ -57,9 +90,6 @@ export function editorHourLabels(span: MinuteSpan): number[] {
   }
   return hours;
 }
-
-export type MarkerKey = keyof ChoreTimes;
-const MARKER_ORDER: MarkerKey[] = ['bonusBefore', 'dueBy', 'lateAfter'];
 
 /**
  * Moves one marker to `minutes`: snapped to 15 minutes, kept on the bar, and never past its
@@ -109,7 +139,7 @@ export function weeklyBasePoints(chores: readonly PlannableChore[], childId: num
 /**
  * Which marker a drag should move. Markers may sit on the same time; then the one under
  * the finger may be pinned by its neighbour in the direction of the drag, so the drag
- * passes to that neighbour (dragging left from a shared 🏁/💀 moves 🏁, right moves 💀).
+ * passes to that neighbour (dragging left from a shared 🏁/🥀 moves 🏁, right moves 🥀).
  */
 export function markerToDrag(times: ChoreTimes, key: MarkerKey, minutes: number): MarkerKey {
   let i = MARKER_ORDER.indexOf(key);

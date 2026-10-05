@@ -38,7 +38,7 @@ const LOOT = [
   { key: 'basePoints', label: '✔ Done', step: 5 },
   { key: 'earlyBonus', label: '⚡ Early bird', step: 1 },
   { key: 'unpromptedBonus', label: '🦸 Not asked', step: 1 },
-  { key: 'latePenalty', label: '💀 Late', step: 1 },
+  { key: 'latePenalty', label: '🥀 Late', step: 1 },
 ] as const;
 
 export function QuestEditor({

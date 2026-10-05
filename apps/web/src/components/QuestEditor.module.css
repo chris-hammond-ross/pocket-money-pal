@@ -184,6 +184,36 @@
 }
 
 /* The zoomed window bar with its three draggable markers (spec 003) */
+.periods {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+
+  & button {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    background: var(--pmp-panel);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    padding: 6px 2px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--pmp-dim);
+    cursor: pointer;
+
+    & span {
+      font-size: 20px;
+    }
+
+    &[data-on] {
+      border-color: var(--pmp-gold);
+      color: var(--pmp-text);
+    }
+  }
+}
+
 .editor {
   position: relative;
   height: 60px;
