@@ -150,6 +150,7 @@ describe('kiosk schemas', () => {
       },
       children: [],
       surprise: null,
+      pause: null,
     };
     expect(kioskTodaySchema.parse(board)).toEqual(board);
   });

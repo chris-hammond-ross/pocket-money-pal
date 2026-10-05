@@ -13,12 +13,14 @@ import { api } from '../../lib/api';
 import { DAY_SHORT } from '../../lib/format';
 import { sound } from '../../lib/sounds';
 import { problemText, useDay, useParentUi } from './context';
+import { HolidayPause } from './HolidayPause';
 import classes from './parent.module.css';
 
 /**
  * The Week tab (spec 003): a row per recurring quest and a column per day. Tapping a cell
  * switches that day on or off and saves at once; tapping a name opens the editor. Below:
- * base points per day, and each child's week on time in points and money.
+ * base points per day, each child's week on time in points and money, and the holiday
+ * pause (ADR 0016).
  */
 export function WeekTab() {
   const ui = useParentUi();
@@ -145,6 +147,8 @@ export function WeekTab() {
           );
         })}
       </div>
+
+      <HolidayPause today={plan.today} />
     </>
   );
 }

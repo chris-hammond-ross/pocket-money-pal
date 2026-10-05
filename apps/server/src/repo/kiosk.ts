@@ -2,6 +2,7 @@ import {
   choreStage,
   choreWindow,
   claimPoints,
+  currentPause,
   levelProgress,
   maxPointsNow,
   nextUpQuest,
@@ -29,7 +30,7 @@ import { FALLBACK_AVATAR, FALLBACK_COLOUR, listChildren, listParents } from './u
  * `@pmp/shared` rules. The kiosk ticks on from `serverNow` with the same rules.
  */
 export function kioskToday(db: DbOrTx, now: number, opts: { devClock: boolean }): KioskToday {
-  const { timezone, currency, centsPerPoint } = getSettings(db);
+  const { timezone, currency, centsPerPoint, pause } = getSettings(db);
   const date = zonedDateOf(now, timezone);
   const rows = db
     .select({
@@ -123,5 +124,6 @@ export function kioskToday(db: DbOrTx, now: number, opts: { devClock: boolean })
     payday: paydayInfo(db, now),
     children,
     surprise: kioskSurprise(db, now),
+    pause: currentPause(pause, date),
   };
 }

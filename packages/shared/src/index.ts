@@ -9,6 +9,7 @@ export * from './library';
 export * from './money';
 export * from './notify';
 export * from './pairing';
+export * from './pause';
 export * from './payday';
 export * from './planner';
 export * from './players';

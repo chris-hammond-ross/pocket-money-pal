@@ -29,6 +29,7 @@ import {
   type SurpriseTaskInput,
   type SurpriseTaskPatch,
   type SurpriseWho,
+  isPausedOn,
 } from '@pmp/shared';
 import { and, asc, eq, gt, inArray, isNotNull, isNull, lt, ne } from 'drizzle-orm';
 import { choreInstances, chores, surpriseRuns, surpriseTasks } from '../db/schema';
@@ -408,6 +409,8 @@ interface RunFields {
  */
 function resolveSend(db: DbOrTx, input: SurpriseSend, ctx: EditContext): RunFields {
   const settings = getSettings(db);
+  // Nobody's home on a holiday (ADR 0016): the phone hides the button too.
+  if (isPausedOn(settings.pause, ctx.today)) throw new ConflictError('Quests are paused today');
   let fields: Omit<RunFields, 'appearAt'>;
   if (input.taskId !== undefined) {
     const task = getActiveTask(db, input.taskId);
@@ -542,6 +545,42 @@ export function cancelSurprise(db: DbOrTx, id: number, ctx: EditContext): Surpri
     data: { runId: id, title: run.title, was: run.status },
   });
   return [moved(db, 'surprise.cancelled', id, ctx.now), ...advanceSurprises(db, ctx.now)];
+}
+
+/**
+ * A holiday pause that covers today (ADR 0016): every surprise still to come today is
+ * taken back at once. A grabbed one is a normal quest by then and stays.
+ */
+export function cancelSurprisesForPause(db: DbOrTx, ctx: EditContext): SurpriseMove[] {
+  const rows = db
+    .select()
+    .from(surpriseRuns)
+    .where(
+      and(
+        eq(surpriseRuns.date, ctx.today),
+        inArray(surpriseRuns.status, ['scheduled', 'queued', 'live']),
+      ),
+    )
+    .orderBy(asc(surpriseRuns.id))
+    .all();
+  for (const run of rows) {
+    db.update(surpriseRuns)
+      .set({
+        status: 'cancelled',
+        cancelledBy: ctx.parentId,
+        endedAt: ctx.now,
+        updatedAt: new Date(ctx.now).toISOString(),
+      })
+      .where(eq(surpriseRuns.id, run.id))
+      .run();
+    recordEvent(db, {
+      type: 'surprise.cancelled',
+      at: ctx.now,
+      actorId: ctx.parentId,
+      data: { runId: run.id, title: run.title, was: run.status, pause: true },
+    });
+  }
+  return rows.map((run) => moved(db, 'surprise.cancelled', run.id, ctx.now));
 }
 
 // ---------------------------------------------------------------------------

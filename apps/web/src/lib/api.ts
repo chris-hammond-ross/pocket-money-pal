@@ -47,6 +47,7 @@ import {
   type GoalPatch,
   type KioskToday,
   type PhoneSettingsPatch,
+  type SchedulePause,
   type PingRequest,
   type SendBackReason,
   type SetupDraft,
@@ -205,6 +206,11 @@ export const api = {
     adjustmentSchema.parse(await request(`/api/children/${id}/adjust`, json('POST', { points }))),
   updateSettings: async (patch: PhoneSettingsPatch) =>
     familySettingsSchema.parse(await request('/api/settings', json('PATCH', patch))),
+  /** The holiday pause (ADR 0016): set or change it, or null to resume right now. */
+  setPause: async (pause: SchedulePause | null) =>
+    familySettingsSchema.parse(
+      await request('/api/pause', pause === null ? { method: 'DELETE' } : json('PUT', pause)),
+    ),
 
   // Money and jars (spec 004)
   money: async () => moneyOverviewSchema.parse(await request('/api/money')),

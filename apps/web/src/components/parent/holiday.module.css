@@ -1,0 +1,183 @@
+/* The holiday pause on the phone (ADR 0016): the Week tab's HOLIDAY section and its sheets. */
+
+.section {
+  --holiday: #3bc9db;
+  margin-top: 22px;
+}
+
+/* "🌴 Pause quests": sea blue, with a soft glow (the surprise button's cousin). */
+.pauseButton {
+  width: 100%;
+  min-height: 50px;
+  padding: 14px;
+  border: 2px solid var(--holiday);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--holiday) 14%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--holiday) 35%, transparent);
+  color: #c5f6fa;
+  font: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+/* The pause going on (or still to come), with Change and Resume. */
+.card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 2px solid var(--holiday);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--holiday) 12%, var(--pmp-panel));
+
+  &[data-state='upcoming'] {
+    border-style: dashed;
+  }
+
+  & small {
+    display: block;
+    color: var(--pmp-dim);
+    font-size: 14px;
+    margin-top: 2px;
+  }
+}
+
+.cardIcon {
+  font-size: 30px;
+  animation: sway 3s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+.cardActions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+
+  & button {
+    flex: 1;
+    min-height: 44px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--pmp-panel-2);
+    color: var(--pmp-text);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+
+    &[data-tone='go'] {
+      background: var(--pmp-bonus);
+      color: #06281a;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+    }
+  }
+}
+
+/* The sheet */
+.step {
+  margin: 14px 0 8px;
+  font-family: var(--pmp-font-pixel);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: var(--pmp-dim);
+
+  &:first-child {
+    margin-top: 2px;
+  }
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  & button {
+    min-height: 44px;
+    padding: 8px 14px;
+    border: 2px solid transparent;
+    border-radius: 99px;
+    background: var(--pmp-panel-2);
+    color: var(--pmp-text);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+
+    &[data-on] {
+      border-color: var(--holiday, #3bc9db);
+      background: color-mix(in srgb, #3bc9db 20%, var(--pmp-panel-2));
+    }
+  }
+}
+
+.dateRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-weight: 600;
+
+  & input {
+    flex: 1;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 2px solid #3bc9db;
+    border-radius: 12px;
+    background: var(--pmp-panel-2);
+    color: var(--pmp-text);
+    font: inherit;
+    color-scheme: dark;
+  }
+}
+
+.summary {
+  margin: 14px 0 6px;
+  font-weight: 600;
+}
+
+.facts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--pmp-dim);
+  font-size: 14px;
+
+  & li + li {
+    margin-top: 4px;
+  }
+}
+
+/* The Day tab on a paused date */
+.dayBanner {
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, #3bc9db 16%, var(--pmp-panel));
+  border: 1px solid color-mix(in srgb, #3bc9db 50%, transparent);
+  color: #c5f6fa;
+  font-weight: 600;
+}
+
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardIcon {
+    animation: none;
+  }
+}

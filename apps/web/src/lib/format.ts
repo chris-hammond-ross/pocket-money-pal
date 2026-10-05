@@ -42,6 +42,16 @@ export const DAY_SHORT: Record<Weekday, string> = {
   sun: 'Sun',
 };
 
+/** A calendar date ("YYYY-MM-DD") for people: "Sat 18 Oct", or "Saturday 18 October". */
+export function formatDate(date: string, style: 'short' | 'long' = 'short'): string {
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: style,
+    day: 'numeric',
+    month: style,
+    timeZone: 'UTC',
+  }).format(Date.parse(`${date}T12:00:00Z`));
+}
+
 /** This browser's IANA time zone, e.g. "Europe/London". */
 export function browserTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;

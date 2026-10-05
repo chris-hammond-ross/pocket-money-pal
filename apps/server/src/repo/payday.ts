@@ -6,6 +6,7 @@
 import {
   conversionFor,
   duePaydaySlot,
+  isPaydaySlotPaused,
   manualPaydaySlot,
   nextPaydaySlot,
   paydayStats,
@@ -31,7 +32,7 @@ import {
   openEnvelope,
   unopenedEnvelopes,
 } from './money';
-import { getSettings, paydayChangedAt } from './settings';
+import { getSettings, paydayChangedAt, restartPaydaySchedule } from './settings';
 import { streakOf } from './streaks';
 import { FALLBACK_AVATAR, FALLBACK_COLOUR, listChildren, listParents } from './users';
 
@@ -50,7 +51,14 @@ function paydayState(db: DbOrTx, now: number): PaydayState {
     timeZone: settings.timezone,
     lastSlot: latestPayday(db)?.at ?? null,
     since: paydayChangedAt(db),
+    pause: settings.pause,
   };
+}
+
+/** The slot waiting for a payday, unless the holiday pause holds it (ADR 0016). */
+function waitingSlot(state: PaydayState): number | null {
+  const slot = duePaydaySlot(state);
+  return slot !== null && !isPaydaySlotPaused(slot, state.timeZone, state.pause) ? slot : null;
 }
 
 /** Payday as every screen needs it: settings, the next slot, and whether one is waiting. */
@@ -61,7 +69,7 @@ export function paydayInfo(db: DbOrTx, now: number): PaydayInfo {
   return {
     ...payday,
     nextAt: nextPaydaySlot(state),
-    waitingSlot: payday.auto ? null : duePaydaySlot(state),
+    waitingSlot: payday.auto ? null : waitingSlot(state),
     latestId: latest?.id ?? null,
     latestRanAt: latest?.ranAt ?? null,
   };
@@ -135,8 +143,17 @@ export interface PaydayCheck {
  */
 export function checkPayday(db: DbOrTx, now: number): PaydayCheck {
   if (listChildren(db).length === 0) return { ran: null, waiting: null };
-  const slot = duePaydaySlot(paydayState(db, now));
+  const state = paydayState(db, now);
+  const slot = duePaydaySlot(state);
   if (slot === null) return { ran: null, waiting: null };
+  if (isPaydaySlotPaused(slot, state.timeZone, state.pause)) {
+    // A holiday payday (ADR 0016): covered without running, the way a schedule change
+    // covers passed slots, so ending or changing the pause later can't start it. The
+    // points carry over to the first payday after.
+    restartPaydaySchedule(db, now);
+    recordEvent(db, { type: 'payday.skipped', at: now, data: { slot } });
+    return { ran: null, waiting: null };
+  }
   if (!getSettings(db).payday.auto) return { ran: null, waiting: slot };
   return { ran: runPayday(db, { slot, startedBy: null, now }), waiting: null };
 }

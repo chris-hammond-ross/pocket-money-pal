@@ -5,6 +5,7 @@ import { useServerNow } from '../../lib/server-clock';
 import { sound } from '../../lib/sounds';
 import { DashedButton, DayAxis, PlayerBadge, WindowBar, type ClaimDot } from '../arcade';
 import { useDay, useParentUi } from './context';
+import holiday from './holiday.module.css';
 import classes from './parent.module.css';
 import { SurpriseButton, SurprisesToday } from './Surprises';
 
@@ -78,6 +79,11 @@ export function DayTab({
         <small>{isToday ? 'today' : 'planned'}</small>
       </div>
 
+      {plan.paused && (
+        <div className={holiday.dayBanner}>
+          🌴 Holiday pause: no quests {isToday ? 'today' : 'on this day'}
+        </div>
+      )}
       <DayAxis />
       {isToday && (
         <SurprisesToday
@@ -109,7 +115,7 @@ export function DayTab({
             key={chore.id}
             type="button"
             className={classes.quest}
-            data-skipped={(isToday && skipped) || unplayed || undefined}
+            data-skipped={(isToday && skipped) || unplayed || plan.paused || undefined}
             data-flash={flashChoreId === chore.id || undefined}
             onClick={() => ui.openQuest(chore.id)}
           >
@@ -154,7 +160,7 @@ export function DayTab({
       >
         ＋ New quest{isToday ? ' · or a one-off for today' : ''}
       </DashedButton>
-      {isToday && <SurpriseButton />}
+      {isToday && !plan.paused && <SurpriseButton />}
     </>
   );
 }

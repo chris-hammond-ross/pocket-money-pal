@@ -5,6 +5,7 @@ import {
   formatClock12,
   formatPaydayCountdown,
   formatPaydayWhen,
+  isPaydaySlotPaused,
   isPaydaySoon,
   manualPaydaySlot,
   nextPaydaySlot,
@@ -195,5 +196,27 @@ describe('envelopeSender', () => {
     expect(envelopeSender('🦷 Tooth fairy', 'Mum')).toBe('the Tooth Fairy');
     expect(envelopeSender('🎂 Birthday money', 'Dad')).toBe('Dad');
     expect(envelopeSender('Helped wash the car', 'Mum')).toBe('Mum');
+  });
+});
+
+describe('payday and the holiday pause (ADR 0016)', () => {
+  it('knows a slot on a paused date', () => {
+    const pause = { from: '2026-10-03', until: '2026-10-05' };
+    expect(isPaydaySlotPaused(NEXT_SUN, TZ, pause)).toBe(true);
+    expect(isPaydaySlotPaused(LAST_SUN, TZ, pause)).toBe(false);
+    expect(isPaydaySlotPaused(NEXT_SUN, TZ, null)).toBe(false);
+  });
+
+  it('counts down to the first payday after a pause with an end', () => {
+    const pause = { from: '2026-10-03', until: '2026-10-12' };
+    expect(nextPaydaySlot(state({ pause }))).toBe(at('2026-10-18', '18:00'));
+    // A pause on other days changes nothing.
+    expect(nextPaydaySlot(state({ pause: { from: '2026-10-05', until: '2026-10-09' } }))).toBe(
+      NEXT_SUN,
+    );
+  });
+
+  it('counts down to the usual slot with an open-ended pause (nothing to count past)', () => {
+    expect(nextPaydaySlot(state({ pause: { from: '2026-10-03', until: null } }))).toBe(NEXT_SUN);
   });
 });

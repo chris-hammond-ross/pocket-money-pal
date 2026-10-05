@@ -597,6 +597,8 @@ export const dayPlanSchema = z.object({
   ),
   /** Sorted by due time. */
   quests: z.array(dayQuestSchema),
+  /** The holiday pause covers this date (ADR 0016): none of these quests will happen. */
+  paused: z.boolean(),
 });
 export type DayPlan = z.infer<typeof dayPlanSchema>;
 
@@ -1174,6 +1176,11 @@ export const kioskTodaySchema = z.object({
   children: z.array(kioskChildSchema),
   /** The surprise up on the kiosk now (spec 006), or null. */
   surprise: kioskSurpriseSchema.nullable(),
+  /**
+   * The holiday pause going on or still to come (ADR 0016), or null. While it covers
+   * `date`, the board is behind the holiday screen.
+   */
+  pause: z.object({ from: isoDateSchema, until: isoDateSchema.nullable() }).nullable(),
 });
 export type KioskToday = z.infer<typeof kioskTodaySchema>;
 

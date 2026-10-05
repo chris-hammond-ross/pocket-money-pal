@@ -425,4 +425,70 @@ describe('payday', () => {
     vi.advanceTimersByTime(HOUR + SEC);
     expect(paid.map((p) => p.slot)).toEqual([london('2026-10-01', '17:00')]);
   });
+
+  describe('holiday pause (ADR 0016)', () => {
+    it('skips a payday on a paused date, and the points carry over to the next one', () => {
+      const billy = family(london('2026-09-28', '09:00'));
+      updateSettings(db, { pause: { from: '2026-10-03', until: '2026-10-06' } });
+      start(london('2026-10-04', '17:50'));
+      vi.advanceTimersByTime(HOUR);
+      expect(paid).toEqual([]);
+      expect(moneyStateOf(db, billy.id).money.unconvertedPoints).toBe(40);
+      const skipped = db.select().from(events).where(eq(events.type, 'payday.skipped')).all();
+      expect(skipped.map((e) => e.data)).toEqual([{ slot: SUN('2026-10-04') }]);
+
+      // Ending the pause (or replacing it) never brings the skipped slot back.
+      updateSettings(db, { pause: null });
+      scheduler!.runNow();
+      expect(paid).toEqual([]);
+      vi.advanceTimersByTime(7 * 24 * HOUR);
+      expect(paid.map((p) => p.slot)).toEqual([SUN('2026-10-11')]);
+      expect(paid[0]!.children).toEqual([
+        { childId: billy.id, points: 40, cents: 200, envelopes: 0 },
+      ]);
+    });
+
+    it('skips a payday missed while the PC was off for the holiday', () => {
+      family(london('2026-09-28', '09:00'));
+      updateSettings(db, { pause: { from: '2026-10-02', until: '2026-10-07' } });
+      start(london('2026-10-08', '08:00'));
+      expect(paid).toEqual([]);
+      expect(listPaydays(db)).toEqual([]);
+    });
+
+    it('is not offered to press while paused', () => {
+      family(london('2026-09-28', '09:00'));
+      updateSettings(db, { paydayAuto: false, pause: { from: '2026-10-04', until: null } });
+      start(london('2026-10-04', '17:59'));
+      vi.advanceTimersByTime(HOUR);
+      expect(waiting).toEqual([]);
+    });
+  });
+});
+
+describe('streaks across a holiday pause (ADR 0016)', () => {
+  it('keeps the streak: paused days have no chores, so they are neutral', () => {
+    const child = addChild(db, 'Billy');
+    addChore(db, [child.id]);
+    setKv(db, 'streaks-built', '0');
+    ensureDay(db, '2026-09-27', 0);
+    ensureDay(db, '2026-09-28', 0);
+    db.update(choreInstances).set({ status: 'approved' }).run();
+    updateSettings(db, { pause: { from: '2026-09-29', until: '2026-10-02' } });
+    const streaks: StreakUpdate[][] = [];
+    vi.setSystemTime(london('2026-09-29', '07:00'));
+    scheduler = startScheduler({ db, onStreaks: (u) => streaks.push(u) });
+    expect(streaks.at(-1)?.[0]?.last).toMatchObject({ after: 2 });
+
+    // Four paused days go by: no chores, no reports.
+    vi.advanceTimersByTime(4 * 24 * HOUR);
+    expect(count('2026-10-01')).toBe(0);
+    expect(streaks).toHaveLength(1);
+    expect(count('2026-10-03')).toBe(1);
+
+    // Back on Saturday: done, and the streak goes on from 2 to 3.
+    db.update(choreInstances).set({ status: 'approved' }).run();
+    vi.advanceTimersByTime(24 * HOUR);
+    expect(streaks.at(-1)?.[0]?.last).toMatchObject({ before: 2, after: 3 });
+  });
 });

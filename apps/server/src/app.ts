@@ -17,6 +17,7 @@ import { deviceRoutes } from './routes/devices';
 import { instanceRoutes } from './routes/instances';
 import { kioskRoutes } from './routes/kiosk';
 import { moneyRoutes } from './routes/money';
+import { pauseRoutes } from './routes/pause';
 import { playerRoutes } from './routes/players';
 import { pushRoutes } from './routes/push';
 import { resetRoutes } from './routes/reset';
@@ -124,6 +125,7 @@ export async function buildApp({
   const images = new GoalImages(imagesDir, imageFetcher);
   await app.register(moneyRoutes, { db, now, images });
   await app.register(surpriseRoutes, { db, now, onScheduleChanged });
+  await app.register(pauseRoutes, { db, now, onScheduleChanged });
   await app.register(pushRoutes, {
     db,
     now,

@@ -1,4 +1,4 @@
-import { PAYDAY_SHOW_FRESH_MS, type Envelope, type PaydaySummary } from '@pmp/shared';
+import { isPausedOn, PAYDAY_SHOW_FRESH_MS, type Envelope, type PaydaySummary } from '@pmp/shared';
 import { AnimatePresence } from 'framer-motion';
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { api, type KioskBoard as Board } from '../../lib/api';
@@ -8,6 +8,7 @@ import { useServerNow } from '../../lib/server-clock';
 import { sound } from '../../lib/sounds';
 import { BANNER_MS, KioskCelebrations } from './Celebrations';
 import { ClaimSheet } from './ClaimSheet';
+import { HolidayScreen, HolidaySoonPill } from './HolidayScreen';
 import { EnvelopeCard } from './money/EnvelopeCard';
 import { NewJarScreen } from './money/NewJarScreen';
 import { PaydayShow } from './money/PaydayShow';
@@ -27,7 +28,8 @@ type MoneyView =
 /**
  * The Quest Track board (spec 001): a header with the clock, and one column per child,
  * each ending in its loot card (spec 004). The savings screen, new jar, envelopes and the
- * payday show open over it. In quiet hours it's a silent night sky (spec 005).
+ * payday show open over it. In quiet hours it's a silent night sky (spec 005). On a
+ * holiday-paused day the holiday screen takes the columns' place (ADR 0016).
  */
 export function KioskBoard({ board }: { board: Board }) {
   const now = useServerNow(board.clockOffsetMs);
@@ -43,6 +45,7 @@ export function KioskBoard({ board }: { board: Board }) {
   useBonusAlerts(board, now, ringing);
   const reports = useMorningReports(board.children, quiet);
   const viewChild = view && board.children.find((c) => c.id === view.childId);
+  const holiday = board.pause && isPausedOn(board.pause, board.date) ? board.pause : null;
   const moneyCtx = {
     currency: board.currency,
     timezone: board.timezone,
@@ -74,6 +77,7 @@ export function KioskBoard({ board }: { board: Board }) {
               {until && ` · sounds back at ${clockTime(until)}`}
             </span>
           )}
+          {board.pause && !holiday && <HolidaySoonPill pause={board.pause} today={board.date} />}
           {status === 'closed' && <span className={classes.offlinePill}>Reconnecting…</span>}
           {board.devClock && (
             <button
@@ -91,38 +95,47 @@ export function KioskBoard({ board }: { board: Board }) {
           </div>
         </div>
       </header>
-      <main
-        className={classes.board}
-        style={{ '--cols': Math.max(1, board.children.length) } as CSSProperties}
-      >
-        {board.children.map((child) => (
-          <PlayerColumn
-            key={child.id}
-            child={child}
-            now={now}
-            dayStart={board.dayStart}
-            timezone={board.timezone}
-            payday={board.payday}
-            currency={board.currency}
-            ringing={ringing}
-            report={reports.playing[child.id]}
-            onReportClose={() => {
-              const report = reports.playing[child.id];
-              if (report) reports.close(report.id);
-            }}
-            onClaim={(quest) => setClaiming(quest.id)}
-            onSavings={() => {
-              sound.tap();
-              setView({ kind: 'savings', childId: child.id });
-            }}
-            onNewJar={() => {
-              sound.tap();
-              setView({ kind: 'new-jar', childId: child.id, back: 'board' });
-            }}
-            onEnvelope={(envelope) => setView({ kind: 'envelope', childId: child.id, envelope })}
-          />
-        ))}
-      </main>
+      {holiday ? (
+        <HolidayScreen
+          pause={holiday}
+          today={board.date}
+          players={board.children}
+          onSavings={(childId) => setView({ kind: 'savings', childId })}
+        />
+      ) : (
+        <main
+          className={classes.board}
+          style={{ '--cols': Math.max(1, board.children.length) } as CSSProperties}
+        >
+          {board.children.map((child) => (
+            <PlayerColumn
+              key={child.id}
+              child={child}
+              now={now}
+              dayStart={board.dayStart}
+              timezone={board.timezone}
+              payday={board.payday}
+              currency={board.currency}
+              ringing={ringing}
+              report={reports.playing[child.id]}
+              onReportClose={() => {
+                const report = reports.playing[child.id];
+                if (report) reports.close(report.id);
+              }}
+              onClaim={(quest) => setClaiming(quest.id)}
+              onSavings={() => {
+                sound.tap();
+                setView({ kind: 'savings', childId: child.id });
+              }}
+              onNewJar={() => {
+                sound.tap();
+                setView({ kind: 'new-jar', childId: child.id, back: 'board' });
+              }}
+              onEnvelope={(envelope) => setView({ kind: 'envelope', childId: child.id, envelope })}
+            />
+          ))}
+        </main>
+      )}
       <AnimatePresence>
         {claim && (
           <ClaimSheet

@@ -50,6 +50,10 @@ export const ACTIVITY_TYPES = [
   'surprise_task.created',
   'surprise_task.updated',
   'surprise_task.deleted',
+  // Holiday pause (ADR 0016)
+  'schedule.paused',
+  'schedule.resumed',
+  'payday.skipped',
   // System
   'day.scheduled',
 ] as const;

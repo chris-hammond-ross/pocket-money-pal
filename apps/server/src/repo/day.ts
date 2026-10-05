@@ -2,6 +2,7 @@ import {
   choreRunsOn,
   choreWindow,
   claimPoints,
+  isPausedOn,
   sendBackReasonSchema,
   zonedDateOf,
   type DayInstance,
@@ -99,5 +100,6 @@ export function dayPlan(db: DbOrTx, date: string, now: number): DayPlan {
       colour: c.colour ?? FALLBACK_COLOUR,
     })),
     quests,
+    paused: isPausedOn(settings.pause, date),
   };
 }

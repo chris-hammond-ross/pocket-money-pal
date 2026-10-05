@@ -3,6 +3,7 @@
  * reads, the week's stats for the show, and the gift and spending note chips.
  * Pure functions: the time is always passed in.
  */
+import { isPausedOn, type SchedulePause } from './chores';
 import {
   addDays,
   parseTimeOfDay,
@@ -75,6 +76,20 @@ export interface PaydayState {
   lastSlot: number | null;
   /** When the day or time last changed: earlier slots never start a payday. */
   since: number | null;
+  /** The holiday pause (ADR 0016): slots on paused dates are skipped. */
+  pause?: SchedulePause | null;
+}
+
+/**
+ * Whether a slot falls on a holiday-paused date (ADR 0016). Such a slot never runs: the
+ * scheduler covers it without a payday, and the points carry over to the next one.
+ */
+export function isPaydaySlotPaused(
+  slot: number,
+  timeZone: string,
+  pause: SchedulePause | null | undefined,
+): boolean {
+  return isPausedOn(pause ?? null, zonedDateOf(slot, timeZone));
 }
 
 /**
@@ -100,13 +115,21 @@ export function manualPaydaySlot(state: PaydayState): number | null {
   return state.lastSlot !== null && state.lastSlot >= next ? null : next;
 }
 
-/** The next payday the board counts down to: the first slot no payday has covered yet. */
+/**
+ * The next payday the board counts down to: the first slot no payday has covered yet,
+ * after any holiday pause with an end date (ADR 0016).
+ */
 export function nextPaydaySlot(state: PaydayState): number {
-  return paydaySlotAfter(
+  let slot = paydaySlotAfter(
     Math.max(state.now, state.lastSlot ?? -Infinity),
     state.schedule,
     state.timeZone,
   );
+  // Ends: a pause with an end date is finite. One without has no "after" to count to.
+  while (state.pause?.until && isPaydaySlotPaused(slot, state.timeZone, state.pause)) {
+    slot = paydaySlotAfter(slot, state.schedule, state.timeZone);
+  }
+  return slot;
 }
 
 /** The loot card's countdown: "3d 1h", "1h 20m", or "20m" (minutes round up). */
