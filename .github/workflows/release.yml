@@ -25,6 +25,13 @@ jobs:
         run: npm pkg set version="${GITHUB_REF_NAME#v}" --workspaces --include-workspace-root
       - run: npm run typecheck
       - run: npm test
+      # Made here, once: left to electron-builder, its parallel uploads each made their own
+      # release for the tag, and the updater read the one without latest.yml (v0.2.0, v0.2.1).
+      - name: Create the release
+        shell: bash
+        run: gh release create "$GITHUB_REF_NAME" --title "${GITHUB_REF_NAME#v}" --verify-tag --notes ""
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Build the installer and publish the release
         run: npm run desktop:release
         env:
