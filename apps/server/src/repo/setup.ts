@@ -3,7 +3,13 @@
  * and finishing setup in one transaction.
  */
 import { randomBytes, timingSafeEqual } from 'node:crypto';
-import { setupDraftSchema, zonedDateOf, type SetupDraft, type SetupRequest } from '@pmp/shared';
+import {
+  setupDraftSchema,
+  startsNextTime,
+  zonedDateOf,
+  type SetupDraft,
+  type SetupRequest,
+} from '@pmp/shared';
 import { eq } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { setupDrafts } from '../db/schema';
@@ -12,7 +18,7 @@ import { insertChore } from './chores';
 import { ConflictError, type DbOrTx } from './db';
 import { pairDevice } from './devices';
 import { recordEvent } from './events';
-import { restartPaydaySchedule, updateSettings } from './settings';
+import { getSettings, restartPaydaySchedule, updateSettings } from './settings';
 import { insertChild, insertParent, listParents } from './users';
 
 const DRAFT_ID = 1;
@@ -93,10 +99,13 @@ export function completeSetup(db: Db, args: CompleteSetupArgs): CompleteSetupRes
       childIds.set(key, insertChild(tx, { ...child, sortOrder }).id);
     });
 
+    // A quest whose bonus time is (nearly) over today starts next time, not late (spec 003).
+    const timezone = request.timezone ?? getSettings(tx).timezone;
+    const today = zonedDateOf(now, timezone);
     for (const { childKeys, ...chore } of request.chores) {
       insertChore(
         tx,
-        chore,
+        { ...chore, skippedOn: startsNextTime(chore, today, now, timezone) ? today : null },
         childKeys.map((k) => childIds.get(k)!),
       );
     }

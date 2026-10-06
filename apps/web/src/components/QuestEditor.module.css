@@ -183,6 +183,45 @@
   margin-top: 18px;
 }
 
+.hint {
+  color: var(--pmp-dim);
+  margin: 0;
+  font-size: 14px;
+  text-align: center;
+}
+
+.together {
+  margin-top: 10px;
+}
+
+/* A new quest that runs today: start today, or next time */
+.start {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 6px;
+
+  & button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 44px;
+    background: var(--pmp-panel);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--pmp-dim);
+    cursor: pointer;
+
+    &[data-on] {
+      border-color: var(--pmp-gold);
+      color: var(--pmp-text);
+    }
+  }
+}
+
 /* The zoomed window bar with its three draggable markers (spec 003) */
 .periods {
   display: grid;
@@ -212,6 +251,13 @@
       color: var(--pmp-text);
     }
   }
+}
+
+.dragHint {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--pmp-dim);
+  text-align: center;
 }
 
 .editor {

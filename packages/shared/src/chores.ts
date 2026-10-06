@@ -178,3 +178,22 @@ export function isPausedOn(pause: SchedulePause | null, date: string): boolean {
   if (pause === null) return false;
   return date >= pause.from && (pause.until === null || date <= pause.until);
 }
+
+/** A new quest waits for next time when less than this much early-bonus time is left today. */
+export const START_TODAY_LEAD_MIN = 30;
+
+/**
+ * Whether a new recurring quest that runs today should start next time instead (spec 003):
+ * made with under 30 minutes of its early-bonus time left, today it could only be on time,
+ * overdue or late. A one-off is for the day the parent picked, so it never waits.
+ */
+export function startsNextTime(
+  chore: ChoreSchedule & ChoreTimes,
+  date: string,
+  now: number,
+  timeZone: string,
+): boolean {
+  if (chore.oneOffDate !== null || !choreRunsOn(chore, date)) return false;
+  const bonusEnds = zonedTimeToInstant(date, chore.bonusBefore, timeZone);
+  return now > bonusEnds - START_TODAY_LEAD_MIN * 60_000;
+}

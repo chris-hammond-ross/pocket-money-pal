@@ -128,9 +128,46 @@ describe('POST /api/chores', () => {
     expect(f.today(f.billy.id, res.json().id)).toBeUndefined();
   });
 
+  it('starts next time when asked: skipped today, open tomorrow, and "Put back" still works', async () => {
+    const f = seed();
+    const res = await asPhone({
+      method: 'POST',
+      url: '/api/chores',
+      payload: { ...newQuest([f.billy.id]), startAfter: DAY },
+    });
+    const { id } = res.json();
+    expect(f.today(f.billy.id, id)).toMatchObject({ status: 'skipped' });
+    expect(
+      kioskToday(db, now, { devClock: false }).children[0]!.quests.some(
+        (q) => q.title === 'Feed the cat',
+      ),
+    ).toBe(false);
+    const put = await asPhone({ method: 'DELETE', url: `/api/chores/${id}/skip-today` });
+    expect(put.statusCode).toBe(204);
+    expect(f.today(f.billy.id, id)).toMatchObject({ status: 'open' });
+
+    ensureDay(db, '2026-10-01', at('00:00', '2026-10-01'));
+    expect(
+      listInstancesForDate(db, '2026-10-01').find(
+        (i) => i.choreId === id && i.childId === f.billy.id,
+      ),
+    ).toMatchObject({ status: 'open' });
+  });
+
+  it('ignores a start date that is no longer today (sent late from a phone)', async () => {
+    const f = seed();
+    const res = await asPhone({
+      method: 'POST',
+      url: '/api/chores',
+      payload: { ...newQuest([f.billy.id]), startAfter: '2026-09-29' },
+    });
+    expect(f.today(f.billy.id, res.json().id)).toMatchObject({ status: 'open' });
+  });
+
   it('refuses a bad quest or an unknown player', async () => {
     const f = seed();
     const post = (payload: object) => asPhone({ method: 'POST', url: '/api/chores', payload });
+    expect((await post({ ...newQuest([f.billy.id]), startAfter: 'soon' })).statusCode).toBe(400);
     expect((await post(newQuest([f.billy.id], { title: '' }))).statusCode).toBe(400);
     expect((await post(newQuest([f.billy.id], { dueBy: '16:00' }))).statusCode).toBe(400);
     expect((await post(newQuest([]))).statusCode).toBe(400);

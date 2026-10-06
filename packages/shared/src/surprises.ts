@@ -155,7 +155,10 @@ export function surpriseEligible(
     .map((c) => c.id);
 }
 
-/** "We'll all do it!" needs a run for all children and at least two who can take it. */
+/**
+ * "We'll all do it!" needs a run for all children and at least two who can take it. Such a
+ * run is team-only: nobody can grab it alone (with one child left, it's theirs).
+ */
 export function canGrabTogether(runChildId: number | null, eligible: readonly number[]): boolean {
   return runChildId === null && eligible.length >= 2;
 }
@@ -165,7 +168,8 @@ export type Grab = { childId: number } | { all: true };
 
 /**
  * Why a grab fails, or null when it wins (spec 006, "The claim race"): the run must be
- * live with time left, and the child (or, for "all", the run) eligible.
+ * live with time left, and the child (or, for "all", the run) eligible. A run that can be
+ * grabbed together can't be grabbed alone.
  */
 export function grabProblem(
   run: { status: SurpriseRunStatus; expiresAt: number | null; childId: number | null },
@@ -177,8 +181,9 @@ export function grabProblem(
   if (run.status === 'expired') return 'expired';
   if (run.status !== 'live') return 'not-live';
   if (run.expiresAt === null || now >= run.expiresAt) return 'expired';
-  if ('all' in grab) return canGrabTogether(run.childId, eligible) ? null : 'not-eligible';
-  return eligible.includes(grab.childId) ? null : 'not-eligible';
+  const team = canGrabTogether(run.childId, eligible);
+  if ('all' in grab) return team ? null : 'not-eligible';
+  return !team && eligible.includes(grab.childId) ? null : 'not-eligible';
 }
 
 // ---------------------------------------------------------------------------

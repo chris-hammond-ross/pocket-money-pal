@@ -258,7 +258,7 @@ describe('POST /api/surprises', () => {
 describe('one on the kiosk at a time', () => {
   it('queues the next until the first is grabbed, then gives it its full time frame', async () => {
     const { billy } = seed();
-    const first = await send({ task: patio, who: 'all', timeFrameMin: 10 });
+    const first = await send({ task: patio, who: billy.id, timeFrameMin: 10 });
     const second = await send({
       task: { ...patio, title: 'Fetch the post' },
       who: 'all',
@@ -295,21 +295,17 @@ describe('one on the kiosk at a time', () => {
 });
 
 describe('POST /api/surprises/:id/grab: the claim race', () => {
-  it('gives it to one of two children tapping at the same moment; the other hears 409', async () => {
+  it('takes one of two taps at the same moment; the other hears 409', async () => {
     const { billy, alice } = seed();
     const run = await send({ task: patio, who: 'all', timeFrameMin: 30 });
     now = at('17:00') + 4_000;
-    const [a, b] = await Promise.all([
-      grab(run.id, { childId: billy.id }),
-      grab(run.id, { childId: alice.id }),
-    ]);
+    const [a, b] = await Promise.all([grab(run.id, { all: true }), grab(run.id, { all: true })]);
     expect([a.statusCode, b.statusCode].sort()).toEqual([200, 409]);
     const loser = a.statusCode === 409 ? a : b;
     expect(loser.json()).toEqual({ error: 'already-grabbed' });
-    const winner = a.statusCode === 200 ? billy.id : alice.id;
     const grabbed = sent.filter((e) => e.type === 'surprise.grabbed');
     expect(grabbed).toHaveLength(1);
-    expect(grabbed[0]).toMatchObject({ childIds: [winner], team: false });
+    expect(grabbed[0]).toMatchObject({ childIds: [billy.id, alice.id], team: true });
     expect(db.select().from(chores).all()).toHaveLength(1);
   });
 
@@ -325,17 +321,18 @@ describe('POST /api/surprises/:id/grab: the claim race', () => {
     expect([late.statusCode, late.json()]).toEqual([409, { error: 'already-grabbed' }]);
   });
 
-  it('…and loses to an earlier one', async () => {
+  it('is the only way to take a surprise for all children: nobody grabs it alone', async () => {
     const { billy } = seed();
     const run = await send({ task: patio, who: 'all', timeFrameMin: 30 });
-    expect((await grab(run.id, { childId: billy.id })).statusCode).toBe(200);
-    const team = await grab(run.id, { all: true });
-    expect([team.statusCode, team.json()]).toEqual([409, { error: 'already-grabbed' }]);
+    expect((await board()).surprise).toMatchObject({ canTeam: true });
+    const alone = await grab(run.id, { childId: billy.id });
+    expect([alone.statusCode, alone.json()]).toEqual([403, { error: 'not-eligible' }]);
+    expect((await board()).surprise?.run.id).toBe(run.id);
   });
 
   it('refuses a grab arriving just after the countdown ran out, and takes one just before', async () => {
     const { billy } = seed();
-    const run = await send({ task: patio, who: 'all', timeFrameMin: 1 });
+    const run = await send({ task: patio, who: billy.id, timeFrameMin: 1 });
     now = run.expiresAt!;
     const late = await grab(run.id, { childId: billy.id });
     expect([late.statusCode, late.json()]).toEqual([409, { error: 'expired' }]);
@@ -361,6 +358,8 @@ describe('POST /api/surprises/:id/grab: the claim race', () => {
       run: { eligibleIds: [alice.id] },
     });
     expect((await grab(forAll.id, { childId: billy.id })).statusCode).toBe(403);
+    // With one child left who can take it, it's theirs alone.
+    expect((await grab(forAll.id, { childId: alice.id })).statusCode).toBe(200);
   });
 
   it("refuses a run that isn't up yet, and an unknown one", async () => {
@@ -377,7 +376,7 @@ describe('a grabbed surprise is a quest', () => {
     const { billy, alice } = seed();
     addChore(db, [billy.id], { bonusBefore: '18:00', dueBy: '18:30', lateAfter: '19:00' });
     ensureDay(db, DAY, at('00:00'));
-    const run = await send({ task: patio, who: 'all', timeFrameMin: 30 });
+    const run = await send({ task: patio, who: billy.id, timeFrameMin: 30 });
     await grab(run.id, { childId: billy.id });
 
     const b = await board();
@@ -411,7 +410,7 @@ describe('a grabbed surprise is a quest', () => {
 
   it('is claimed on the kiosk, waits in the tray with how fast it was grabbed, and pays the reward', async () => {
     const { billy } = seed();
-    const run = await send({ task: patio, who: 'all', timeFrameMin: 30 });
+    const run = await send({ task: patio, who: billy.id, timeFrameMin: 30 });
     now = at('17:00') + 4_000;
     await grab(run.id, { childId: billy.id });
     const { takers } = (await today())[0]!;
@@ -439,7 +438,7 @@ describe('a grabbed surprise is a quest', () => {
 
   it('can be deleted from a phone, but not edited into an ordinary quest', async () => {
     const { billy } = seed();
-    const run = await send({ task: patio, who: 'all', timeFrameMin: 30 });
+    const run = await send({ task: patio, who: billy.id, timeFrameMin: 30 });
     await grab(run.id, { childId: billy.id });
     const choreId = db.select().from(chores).get()!.id;
     const edit = await asPhone({
@@ -456,7 +455,7 @@ describe('a grabbed surprise is a quest', () => {
 
   it('can be taken back, open or waiting in the tray, until it is approved', async () => {
     const { billy, alice } = seed();
-    const open = await send({ task: patio, who: 'all', timeFrameMin: 30 });
+    const open = await send({ task: patio, who: billy.id, timeFrameMin: 30 });
     await grab(open.id, { childId: billy.id });
     sent = [];
     expect((await asPhone({ method: 'DELETE', url: `/api/surprises/${open.id}` })).statusCode).toBe(
@@ -470,7 +469,7 @@ describe('a grabbed surprise is a quest', () => {
     ).toEqual([]);
 
     // Claimed: it leaves the tray, and no points were ever paid.
-    const claimed = await send({ task: patio, who: 'all', timeFrameMin: 30 });
+    const claimed = await send({ task: patio, who: alice.id, timeFrameMin: 30 });
     await grab(claimed.id, { childId: alice.id });
     const id = (await today())[0]!.takers[0]!.instanceId;
     await kiosk({
@@ -490,7 +489,7 @@ describe('a grabbed surprise is a quest', () => {
     expect(db.select().from(ledger).all()).toEqual([]);
 
     // Approved: its points are in the ledger, so it stays.
-    const paid = await send({ task: patio, who: 'all', timeFrameMin: 30 });
+    const paid = await send({ task: patio, who: billy.id, timeFrameMin: 30 });
     await grab(paid.id, { childId: billy.id });
     const paidId = (await today())[0]!.takers[0]!.instanceId;
     await kiosk({

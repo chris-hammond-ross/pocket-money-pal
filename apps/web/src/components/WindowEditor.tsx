@@ -89,6 +89,7 @@ export function WindowEditor({
           </button>
         ))}
       </div>
+      <p className={classes.dragHint}>Drag the markers to set the times</p>
       <div className={classes.editor}>
         <div ref={rail} className={classes.rail}>
           <div style={{ left: 0, width: `${b}%`, background: 'var(--pmp-bonus)' }} />

@@ -6,7 +6,7 @@
  */
 import { z } from 'zod';
 import { choreRunsOn, isPausedOn, type SchedulePause } from './chores';
-import type { Chore, ChoreInput, ChorePatch, DayPlan, DayQuest } from './schemas';
+import type { Chore, ChoreCreate, ChorePatch, DayPlan, DayQuest } from './schemas';
 
 /** Request headers a queued change carries, and the PC's answers. Lower case, as Node has them. */
 export const OUTBOX_HEADERS = {
@@ -28,7 +28,7 @@ export const REPLAY_KEEP_MS = 30 * 86_400_000;
 
 /** A queued change. A new quest has a temporary negative id until the PC gives it one. */
 export type OutboxOp =
-  | { kind: 'chore.create'; choreId: number; input: ChoreInput & { libraryId: string | null } }
+  | { kind: 'chore.create'; choreId: number; input: ChoreCreate }
   | { kind: 'chore.update'; choreId: number; patch: ChorePatch }
   | { kind: 'chore.delete'; choreId: number }
   | { kind: 'pause'; pause: SchedulePause | null };

@@ -136,10 +136,15 @@ describe('the grab', () => {
     expect(canGrabTogether(2, [2])).toBe(false);
   });
 
-  it('wins while live with time left, for an eligible child or all together', () => {
+  it('wins while live with time left: all together, or the one child who can take it', () => {
     const now = at('17:29');
-    expect(grabProblem(live, { childId: 1 }, [1, 2], now)).toBeNull();
     expect(grabProblem(live, { all: true }, [1, 2], now)).toBeNull();
+    expect(grabProblem(live, { childId: 2 }, [2], now)).toBeNull();
+    expect(grabProblem({ ...live, childId: 2 }, { childId: 2 }, [2], now)).toBeNull();
+  });
+
+  it('refuses a lone grab when all children can do it together', () => {
+    expect(grabProblem(live, { childId: 1 }, [1, 2], at('17:00'))).toBe('not-eligible');
   });
 
   it('refuses a grab that comes too late, or after someone else', () => {

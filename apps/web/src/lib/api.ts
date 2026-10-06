@@ -37,7 +37,7 @@ import {
   type Grab,
   type ChildInput,
   type ChildPatch,
-  type ChoreInput,
+  type ChoreCreate,
   type ChoreLibraryItem,
   type ChorePatch,
   type ClaimRequest,
@@ -203,7 +203,7 @@ export const api = {
   /** A day on the phone's Day tab; `'today'` for today in the family time zone. */
   day: async (date: string) => dayPlanSchema.parse(await request(`/api/day/${date}`)),
   chores: async () => choreListSchema.parse(await request('/api/chores')),
-  createChore: async (chore: ChoreInput & { libraryId: string | null }, init?: QueueableInit) =>
+  createChore: async (chore: ChoreCreate, init?: QueueableInit) =>
     choreSchema.parse(
       await request('/api/chores', { ...json('POST', chore, init?.headers), signal: init?.signal }),
     ),

@@ -328,7 +328,7 @@ function Panel({
         >
           <span className={classes.tileAvatar}>👫</span>
           All children
-          <small>{well.length >= 2 ? 'first to grab, or all together' : 'first to grab'}</small>
+          <small>{well.length >= 2 ? 'everyone, together' : 'anyone who can'}</small>
         </button>
         {kids.map((kid) => (
           <button

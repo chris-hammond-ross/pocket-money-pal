@@ -4,15 +4,19 @@
  *
  * It edits a `SetupChore`, whose players are string keys, so first-run setup (drafts with
  * client keys) and the phone (chore ids as strings) share it. The phone adds its TODAY
- * section as `today`. Saving is the caller's job; the shared schema checks it first.
+ * section as `today`, and its `clock` for a new quest's STARTS choice (today, or next time
+ * when its bonus time is nearly over). Saving is the caller's job; the shared schema
+ * checks it first.
  */
 import { Switch } from '@mantine/core';
 import {
   CHORE_LIBRARY,
   WEEKDAYS,
   formatMoney,
+  choreRunsOn,
   pointsRange,
   setupChoreSchema,
+  startsNextTime,
   type SetupChore,
 } from '@pmp/shared';
 import { useState, type CSSProperties, type ReactNode } from 'react';
@@ -30,8 +34,9 @@ export interface EditorPlayer {
   colour: string;
 }
 
+// The star first: it's a new quest's icon, so it reads as chosen and changeable.
 const ICONS = [
-  ...new Set([...CHORE_LIBRARY.map((c) => c.icon), '⭐', '🧺', '🛁', '🐶', '🌱', '🚲', '📦']),
+  ...new Set(['⭐', ...CHORE_LIBRARY.map((c) => c.icon), '🧺', '🛁', '🐶', '🌱', '🚲', '📦']),
 ];
 
 const LOOT = [
@@ -51,6 +56,7 @@ export function QuestEditor({
   colour,
   today,
   todayDate,
+  clock,
   saving = false,
   error,
   onSave,
@@ -69,16 +75,20 @@ export function QuestEditor({
   today?: ReactNode;
   /** Today's date, to say which day a one-off for a later day is on. */
   todayDate?: string;
+  /** The family's clock, for a new quest that runs today: does it start today or next time? */
+  clock?: { now: number; timezone: string };
   saving?: boolean;
   /** Why the last save failed, if it did. */
   error?: string | null;
-  onSave: (chore: SetupChore) => void;
+  onSave: (chore: SetupChore, start: { nextTime: boolean }) => void;
   onDelete?: () => void;
   onClose: () => void;
 }) {
   const [c, setC] = useState(chore);
   const [showIcons, setShowIcons] = useState(isNew && !chore.title);
   const [armed, setArmed] = useState(false);
+  // Today or next time, once the parent picks; until then it follows the bonus time.
+  const [startPick, setStartPick] = useState<'today' | 'next' | null>(null);
 
   const parsed = setupChoreSchema.safeParse(c);
   const problem = parsed.success
@@ -86,6 +96,10 @@ export function QuestEditor({
     : (parsed.error.issues.find((i) => i.path[0] !== 'title')?.message ?? null);
   const range = pointsRange(c);
   const money = (points: number) => formatMoney(points * centsPerPoint, currency);
+  const asksStart =
+    isNew && !!clock && !!todayDate && c.oneOffDate === null && choreRunsOn(c, todayDate);
+  const lateToday = asksStart && startsNextTime(c, todayDate, clock.now, clock.timezone);
+  const start = startPick ?? (lateToday ? 'next' : 'today');
 
   const togglePlayer = (key: string) => {
     const childKeys = c.childKeys.includes(key)
@@ -113,6 +127,8 @@ export function QuestEditor({
           <input
             className={classes.title}
             placeholder="Quest name"
+            // A new quest starts at its name (Mantine's focus trap looks for this).
+            data-autofocus={isNew || undefined}
             value={c.title}
             maxLength={40}
             onChange={(e) => setC({ ...c, title: e.target.value })}
@@ -122,13 +138,14 @@ export function QuestEditor({
       }
       footer={
         <>
+          {!c.title.trim() && <p className={classes.hint}>Give the quest a name first</p>}
           {problem && c.title.trim() && <p className={classes.problem}>{problem}</p>}
           {error && <p className={classes.problem}>{error}</p>}
           <ArcadeButton
             disabled={!parsed.success || saving}
             onClick={() => {
               if (!parsed.success) return;
-              onSave({ ...c, title: c.title.trim() });
+              onSave({ ...c, title: c.title.trim() }, { nextTime: asksStart && start === 'next' });
               sound.pop();
             }}
           >
@@ -155,21 +172,7 @@ export function QuestEditor({
         </div>
       )}
 
-      <PixelLabel
-        right={
-          c.childKeys.length > 1 && (
-            <Switch
-              size="sm"
-              color="gold"
-              label="👫 TOGETHER?"
-              checked={c.together}
-              onChange={(e) => setC({ ...c, together: e.currentTarget.checked })}
-            />
-          )
-        }
-      >
-        PLAYERS
-      </PixelLabel>
+      <PixelLabel>PLAYERS</PixelLabel>
       <div className={classes.players}>
         {players.map((p) => (
           <button
@@ -184,8 +187,18 @@ export function QuestEditor({
           </button>
         ))}
       </div>
+      {c.childKeys.length > 1 && (
+        <Switch
+          className={classes.together}
+          size="sm"
+          color="gold"
+          label="👫 TOGETHER?"
+          checked={c.together}
+          onChange={(e) => setC({ ...c, together: e.currentTarget.checked })}
+        />
+      )}
 
-      <PixelLabel right={<span>drag the markers</span>}>QUEST WINDOW</PixelLabel>
+      <PixelLabel>QUEST WINDOW</PixelLabel>
       <WindowEditor times={c} onChange={(times) => setC((prev) => ({ ...prev, ...times }))} />
 
       <PixelLabel>LOOT</PixelLabel>
@@ -256,6 +269,36 @@ export function QuestEditor({
               </button>
             ))}
           </div>
+        </>
+      )}
+
+      {asksStart && (
+        <>
+          <PixelLabel>STARTS</PixelLabel>
+          <div className={classes.start}>
+            {(
+              [
+                ['today', '▶️', 'Today'],
+                ['next', '⏭️', 'Next time'],
+              ] as const
+            ).map(([key, icon, label]) => (
+              <button
+                key={key}
+                type="button"
+                data-on={start === key || undefined}
+                onClick={() => {
+                  setStartPick(key);
+                  sound.tap();
+                }}
+              >
+                <span>{icon}</span>
+                {label}
+              </button>
+            ))}
+          </div>
+          {lateToday && start === 'today' && (
+            <p className={classes.hint}>Today’s bonus time is nearly over, so it may start late.</p>
+          )}
         </>
       )}
 

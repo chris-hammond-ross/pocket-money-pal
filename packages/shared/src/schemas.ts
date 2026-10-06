@@ -1216,6 +1216,17 @@ export const choreLibraryRefSchema = z.object({
     .default(null),
 });
 
+/**
+ * `POST /api/chores` may also ask for the new quest to start after a date (the editor's
+ * "Next time"): if that date is still today, today's copies are made skipped.
+ */
+export const choreStartSchema = z.object({
+  startAfter: isoDateSchema.nullable().default(null),
+});
+
+/** A new quest as the phone sends it. */
+export type ChoreCreate = ChoreInput & { libraryId: string | null; startAfter?: string | null };
+
 // ---------------------------------------------------------------------------
 // The phone's Players tab (spec 003, ADR 0009)
 

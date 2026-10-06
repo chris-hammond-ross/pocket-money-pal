@@ -13,8 +13,9 @@ const REFUSALS: Record<string, string> = {
 
 /**
  * The surprise quest overlay (spec 001 "Surprise quest", spec 006 "Kiosk"): full screen,
- * with the alarm and a shake as it appears, the countdown, one "I'll do it!" per child who
- * can take it, and "We'll all do it!" for a surprise for everyone.
+ * with the alarm and a shake as it appears, the countdown, and "I'll do it!" for a child's
+ * own surprise, or just "We'll all do it!" for a surprise for everyone (with only one
+ * child who can take it, it's their "I'll do it!").
  *
  * A tap only sends the grab: the server settles the race, and the fanfare plays for its
  * `surprise.grabbed` event on every kiosk (`KioskCelebrations`). The overlay closes when
@@ -34,6 +35,8 @@ export function SurpriseOverlay({
   const [sending, setSending] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
   const takers = players.filter((c) => run.eligibleIds.includes(c.id));
+  // A surprise for everyone is done together: nobody grabs it alone.
+  const soloTakers = canTeam ? [] : takers;
   const left = (run.expiresAt ?? now) - now;
 
   // The alarm, once per surprise on this screen (muted in quiet hours, spec 005).
@@ -60,8 +63,8 @@ export function SurpriseOverlay({
     run.who !== 'all'
       ? `Just for ${takers[0]?.name ?? 'one player'}!`
       : canTeam
-        ? 'Grab it first, or all do it together!'
-        : 'First to grab it wins!';
+        ? 'One for everyone, all together!'
+        : `Just for ${takers[0]?.name ?? 'one player'} today!`;
   // Through the children's colours, with gold in the middle for two (spec 006).
   const colours = takers.map((c) => c.colour);
   const gradient = (colours.length === 2 ? [colours[0], arcade.gold, colours[1]] : colours).join(
@@ -102,9 +105,9 @@ export function SurpriseOverlay({
         ) : (
           <div
             className={classes.surpriseButtons}
-            style={{ '--n': takers.length } as CSSProperties}
+            style={{ '--n': Math.max(1, soloTakers.length) } as CSSProperties}
           >
-            {takers.map((child) => (
+            {soloTakers.map((child) => (
               <button
                 key={child.id}
                 type="button"

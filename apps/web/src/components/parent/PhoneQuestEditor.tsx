@@ -12,6 +12,7 @@ import { api } from '../../lib/api';
 import { useFamilyPc } from '../../lib/offline';
 import { sendOrQueue, tempChoreId, usePlanChores, usePlanDay } from '../../lib/outbox';
 import { clockTimeAt } from '../../lib/format';
+import { useServerNow } from '../../lib/server-clock';
 import { sound } from '../../lib/sounds';
 import { arcade } from '../../theme';
 import { ArcadeButton, PixelLabel } from '../arcade';
@@ -78,6 +79,7 @@ export function PhoneQuestEditor({
   const settings = useQuery({ queryKey: ['settings'], queryFn: api.settings });
   const actions = useChoreActions();
   const [sendingBack, setSendingBack] = useState<DayInstance | null>(null);
+  const now = useServerNow(today.data?.clockOffsetMs ?? 0);
 
   const saved = 'choreId' in target ? chores.data?.find((c) => c.id === target.choreId) : null;
   const [initial] = useState<SetupChore | null>(() => ('draft' in target ? target.draft : null));
@@ -90,7 +92,7 @@ export function PhoneQuestEditor({
       body: 'It goes to the family PC as soon as this phone can reach it.',
     });
   const save = useMutation({
-    mutationFn: async (next: SetupChore) => {
+    mutationFn: async ({ next, startAfter }: { next: SetupChore; startAfter: string | null }) => {
       const { libraryId, ...input } = toInput(next);
       const name = `${next.icon} ${next.title}`;
       if (saved) {
@@ -100,7 +102,7 @@ export function PhoneQuestEditor({
           (init) => api.updateChore(saved.id, input, init),
         );
       }
-      const create = { ...input, libraryId };
+      const create = { ...input, libraryId, startAfter };
       return sendOrQueue(
         { kind: 'chore.create', choreId: await tempChoreId(), input: create },
         name,
@@ -242,11 +244,14 @@ export function PhoneQuestEditor({
         colour={stage ? STAGE_COLOUR[stage] : undefined}
         today={todaySection}
         todayDate={plan.today}
+        clock={pc === 'on' ? { now, timezone: plan.timezone } : undefined}
         saving={save.isPending}
         error={
           save.error ? problemText(save.error) : remove.error ? problemText(remove.error) : null
         }
-        onSave={(next) => save.mutate(next)}
+        onSave={(next, start) =>
+          save.mutate({ next, startAfter: start.nextTime ? plan.today : null })
+        }
         onDelete={saved ? () => remove.mutate(saved) : undefined}
         onClose={onClose}
       />

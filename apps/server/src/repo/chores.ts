@@ -12,7 +12,11 @@ import { syncToday } from './today';
 import { listChildren } from './users';
 
 export type Chore = typeof chores.$inferSelect;
-export type ChoreFields = Omit<ChoreInput, 'childIds'> & { libraryId?: string | null };
+export type ChoreFields = Omit<ChoreInput, 'childIds'> & {
+  libraryId?: string | null;
+  /** Skipped on this date from the start: a new quest that waits for next time. */
+  skippedOn?: string | null;
+};
 
 /** Inserts a validated chore and its assignments. Wrap in a transaction with other writes. */
 export function insertChore(db: DbOrTx, fields: ChoreFields, childIds: readonly number[]): Chore {
@@ -32,6 +36,7 @@ export function insertChore(db: DbOrTx, fields: ChoreFields, childIds: readonly 
       latePenalty: fields.latePenalty,
       days: [...fields.days],
       oneOffDate: fields.oneOffDate,
+      skippedOn: fields.skippedOn ?? null,
     })
     .returning()
     .get();
@@ -137,22 +142,31 @@ export interface EditContext {
   parentId: number;
 }
 
-/** A new quest from the phone, with today's instances if it runs today. */
+/**
+ * A new quest from the phone, with today's instances if it runs today. With `startAfter`
+ * today (the editor's "Next time"), they're skipped, so it starts next time; a later
+ * "Put back" still brings it onto today's board.
+ */
 export function createChore(
   db: DbOrTx,
-  input: ChoreInput & { libraryId?: string | null },
+  input: ChoreInput & { libraryId?: string | null; startAfter?: string | null },
   ctx: EditContext,
 ): ChoreDto {
   checkPlayers(db, input.childIds);
-  const { childIds, ...fields } = input;
-  const chore = insertChore(db, fields, childIds);
+  const { childIds, startAfter, ...fields } = input;
+  const waits = startAfter === ctx.today && input.oneOffDate === null;
+  const chore = insertChore(db, { ...fields, skippedOn: waits ? ctx.today : null }, childIds);
   syncToday(db, chore.id, ctx.today);
   recordEvent(db, {
     type: 'chore.created',
     at: ctx.now,
     actorId: ctx.parentId,
     choreId: chore.id,
-    data: { title: chore.title, oneOff: chore.oneOffDate !== null },
+    data: {
+      title: chore.title,
+      oneOff: chore.oneOffDate !== null,
+      ...(waits && { startsNextTime: true }),
+    },
   });
   return toChoreDto(chore, childIds);
 }

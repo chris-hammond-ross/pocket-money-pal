@@ -11,6 +11,7 @@ import {
   pointsRange,
   rankNextUp,
   scorePoints,
+  startsNextTime,
   type ChoreLoot,
   type ChoreWindow,
 } from './chores';
@@ -218,5 +219,29 @@ describe('isPausedOn', () => {
     [{ from: '2026-10-20', until: null }, '2026-10-19', false],
   ])('%j on %s → %s', (pause, date, expected) => {
     expect(isPausedOn(pause, date)).toBe(expected);
+  });
+});
+
+describe('startsNextTime', () => {
+  // DAY is a Wednesday.
+  const quest = {
+    bonusBefore: '17:00',
+    dueBy: '18:30',
+    lateAfter: '19:30',
+    days: ['wed' as const],
+    oneOffDate: null,
+  };
+
+  it('starts today with at least 30 minutes of bonus time left, else next time', () => {
+    expect(startsNextTime(quest, DAY, at('16:30'), 'UTC')).toBe(false);
+    expect(startsNextTime(quest, DAY, at('16:31'), 'UTC')).toBe(true);
+    expect(startsNextTime(quest, DAY, at('20:00'), 'UTC')).toBe(true);
+  });
+
+  it("never waits for a quest that doesn't run today, or a one-off", () => {
+    expect(startsNextTime({ ...quest, days: ['thu'] }, DAY, at('20:00'), 'UTC')).toBe(false);
+    expect(startsNextTime({ ...quest, days: [], oneOffDate: DAY }, DAY, at('20:00'), 'UTC')).toBe(
+      false,
+    );
   });
 });

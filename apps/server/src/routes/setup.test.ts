@@ -231,10 +231,11 @@ describe('setup API', () => {
       ]);
       expect(db.select().from(choreAssignments).all()).toHaveLength(4);
 
-      // Wednesday: both beds and the fish, but not the Sunday bins.
+      // Wednesday: both beds and the fish, but not the Sunday bins. At 10:00 their 08:00
+      // bonus time is over, so they start next time instead of late (spec 003).
       const today = listInstancesForDate(db, '2026-09-30');
       expect(today).toHaveLength(3);
-      expect(today.every((i) => i.status === 'open')).toBe(true);
+      expect(today.every((i) => i.status === 'skipped')).toBe(true);
 
       expect(db.select().from(familySettings).get()).toMatchObject({
         centsPerPoint: 10,
@@ -326,7 +327,10 @@ describe('setup API', () => {
       });
       expect(res.statusCode).toBe(201);
       expect(db.select().from(familySettings).get()?.timezone).toBe('America/New_York');
-      expect(listInstancesForDate(db, '2026-09-30')).toHaveLength(3);
+      const today = listInstancesForDate(db, '2026-09-30');
+      expect(today).toHaveLength(3);
+      // 05:00 there: the bonus time is still to come, so they start today.
+      expect(today.every((i) => i.status === 'open')).toBe(true);
     });
 
     it('keeps the current time zone when none is sent', async () => {

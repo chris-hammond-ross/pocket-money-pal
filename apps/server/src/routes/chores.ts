@@ -2,6 +2,7 @@ import {
   choreInputSchema,
   choreLibraryRefSchema,
   chorePatchSchema,
+  choreStartSchema,
   idSchema,
   isoDateSchema,
   oneOffPassed,
@@ -76,6 +77,8 @@ export async function choreRoutes(
     if (!input.success) return reply.code(400).send({ error: input.error.issues });
     const ref = choreLibraryRefSchema.safeParse(req.body);
     if (!ref.success) return reply.code(400).send({ error: ref.error.issues });
+    const start = choreStartSchema.safeParse(req.body);
+    if (!start.success) return reply.code(400).send({ error: start.error.issues });
     try {
       const ctx = context(req);
       // Queued while the PC was off (spec 007): a one-off for a day gone by is no use now.
@@ -83,7 +86,11 @@ export async function choreRoutes(
         return reply.code(409).send({ error: 'date-passed' });
       }
       const chore = db.transaction((tx) =>
-        createChore(tx, { ...input.data, libraryId: ref.data.libraryId }, ctx),
+        createChore(
+          tx,
+          { ...input.data, libraryId: ref.data.libraryId, startAfter: start.data.startAfter },
+          ctx,
+        ),
       );
       app.hub.broadcast({ type: 'chore.created', choreId: chore.id });
       return reply.code(201).send(chore);
