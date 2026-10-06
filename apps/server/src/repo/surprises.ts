@@ -521,13 +521,31 @@ export function updateScheduledSurprise(
 }
 
 /**
- * Takes back a scheduled, queued or live run. A live one closes on every kiosk, and the
- * next one in the queue goes up. A grabbed one is a normal quest by then.
+ * Takes back a scheduled, queued, live or grabbed run. A live one closes on every kiosk, and
+ * the next one in the queue goes up. A grabbed one leaves the takers' columns and the tray,
+ * until any of it is approved: its points are in the ledger then (undo the approval first).
  */
 export function cancelSurprise(db: DbOrTx, id: number, ctx: EditContext): SurpriseMove[] {
   const run = getRun(db, id);
-  if (!['scheduled', 'queued', 'live'].includes(run.status)) {
+  if (!['scheduled', 'queued', 'live', 'grabbed'].includes(run.status)) {
     throw new ConflictError(`Surprise ${id} is ${run.status}: too late to take it back`);
+  }
+  if (run.status === 'grabbed' && run.choreId !== null) {
+    const onChore = eq(choreInstances.choreId, run.choreId);
+    const approved = db
+      .select({ id: choreInstances.id })
+      .from(choreInstances)
+      .where(and(onChore, eq(choreInstances.status, 'approved')))
+      .get();
+    if (approved) throw new ConflictError(`Surprise ${id} is approved: undo the approval first`);
+    db.update(choreInstances)
+      .set({ status: 'skipped' })
+      .where(and(onChore, inArray(choreInstances.status, ['open', 'claimed'])))
+      .run();
+    db.update(chores)
+      .set({ deletedAt: ctx.now, updatedAt: new Date(ctx.now).toISOString() })
+      .where(eq(chores.id, run.choreId))
+      .run();
   }
   db.update(surpriseRuns)
     .set({

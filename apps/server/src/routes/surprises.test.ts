@@ -453,6 +453,61 @@ describe('a grabbed surprise is a quest', () => {
     );
     expect((await board()).children[0]!.quests).toEqual([]);
   });
+
+  it('can be taken back, open or waiting in the tray, until it is approved', async () => {
+    const { billy, alice } = seed();
+    const open = await send({ task: patio, who: 'all', timeFrameMin: 30 });
+    await grab(open.id, { childId: billy.id });
+    sent = [];
+    expect((await asPhone({ method: 'DELETE', url: `/api/surprises/${open.id}` })).statusCode).toBe(
+      204,
+    );
+    expect(types()).toEqual(['surprise.cancelled']);
+    expect((await board()).children.flatMap((c) => c.quests)).toEqual([]);
+    expect(await today()).toEqual([]);
+    expect(
+      choreListSchema.parse((await asPhone({ method: 'GET', url: '/api/chores' })).json()),
+    ).toEqual([]);
+
+    // Claimed: it leaves the tray, and no points were ever paid.
+    const claimed = await send({ task: patio, who: 'all', timeFrameMin: 30 });
+    await grab(claimed.id, { childId: alice.id });
+    const id = (await today())[0]!.takers[0]!.instanceId;
+    await kiosk({
+      method: 'POST',
+      url: `/api/instances/${id}/claim`,
+      payload: { childId: alice.id, unprompted: false },
+    });
+    expect(
+      (await asPhone({ method: 'DELETE', url: `/api/surprises/${claimed.id}` })).statusCode,
+    ).toBe(204);
+    expect(getInstance(db, id).status).toBe('skipped');
+    expect(
+      trayListSchema.parse(
+        (await asPhone({ method: 'GET', url: '/api/instances/claimed' })).json(),
+      ),
+    ).toEqual([]);
+    expect(db.select().from(ledger).all()).toEqual([]);
+
+    // Approved: its points are in the ledger, so it stays.
+    const paid = await send({ task: patio, who: 'all', timeFrameMin: 30 });
+    await grab(paid.id, { childId: billy.id });
+    const paidId = (await today())[0]!.takers[0]!.instanceId;
+    await kiosk({
+      method: 'POST',
+      url: `/api/instances/${paidId}/claim`,
+      payload: { childId: billy.id, unprompted: false },
+    });
+    await asPhone({
+      method: 'POST',
+      url: '/api/instances/approve',
+      payload: { items: [{ id: paidId }] },
+    });
+    expect((await asPhone({ method: 'DELETE', url: `/api/surprises/${paid.id}` })).statusCode).toBe(
+      409,
+    );
+    expect(getInstance(db, paidId).status).toBe('approved');
+  });
 });
 
 describe('a team surprise', () => {

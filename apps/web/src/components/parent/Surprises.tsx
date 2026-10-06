@@ -288,7 +288,8 @@ function useSendAgain() {
 
 /**
  * A SURPRISES TODAY row's sheet (spec 006): take back one that's waiting or up on the
- * kiosk; who took one and how fast; or, after nobody grabbed it, send it again.
+ * kiosk; who took one and how fast, and take that back too until any of it is approved;
+ * or, after nobody grabbed it, send it again.
  */
 export function SurpriseSheet({
   runId,
@@ -306,6 +307,7 @@ export function SurpriseSheet({
   const again = useSendAgain();
   const now = useServerNow(clockOffsetMs);
   const [busy, setBusy] = useState(false);
+  const [armed, setArmed] = useState(false);
   const run = surprises.data?.find((r) => r.id === runId);
   if (!run) return null;
   const state = surpriseRowState(run);
@@ -397,6 +399,20 @@ export function SurpriseSheet({
         </div>
       </>
     );
+    // A child is already on it: a second tap, so a slip doesn't take it off their board.
+    if (run.status === 'grabbed' && !run.takers.some((t) => t.status === 'approved')) {
+      footer = (
+        <ArcadeButton
+          tone="red"
+          disabled={busy}
+          onClick={() => (armed ? void takeBack() : setArmed(true))}
+        >
+          {armed
+            ? `Take it off ${run.team ? 'their boards' : `${names[0]}’s board`}?`
+            : '✕ Take it back'}
+        </ArcadeButton>
+      );
+    }
   }
 
   return (

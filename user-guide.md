@@ -100,7 +100,7 @@ A surprise quest pops up full screen on the kiosk, and the kids race to grab it.
 
 <img src="screenshots/phone-surprise.png" alt="The surprise quest panel" width="300">
 
-When it's for everyone, the kiosk also offers **We'll all do it!**, and each child gets the full reward. Whoever grabs it gets it as a quest on their column; they tap it when it's done, and it comes to your tray like any other. Today's surprises appear at the top of the Day tab, where you can take one back or send it again.
+When it's for everyone, the kiosk also offers **We'll all do it!**, and each child gets the full reward. Whoever grabs it gets it as a quest on their column; they tap it when it's done, and it comes to your tray like any other. Today's surprises appear at the top of the Day tab, where you can take one back or send it again. Sent one by mistake? Tap its row and **Take it back**, even after a child has grabbed it: it comes off their board (and out of your tray if they'd already said it was done). Once you've approved it the points are paid, so undo the approval first.
 
 <img src="screenshots/kiosk-surprise.png" alt="A surprise quest on the kiosk">
 

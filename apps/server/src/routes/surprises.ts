@@ -169,7 +169,7 @@ export async function surpriseRoutes(
     }
   });
 
-  /** Take back a scheduled, queued or live one. */
+  /** Take back a scheduled, queued, live or grabbed one (nothing approved yet). */
   app.delete('/api/surprises/:id', parentOnly, async (req, reply) => {
     const id = idParam(req);
     if (id === null) return reply.code(404).send({ error: 'not-found' });
