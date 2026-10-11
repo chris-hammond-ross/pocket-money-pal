@@ -4,6 +4,7 @@ import {
   jarProgress,
   milestonesCrossed,
   moveLimits,
+  piggyLimits,
   pourIntervalMs,
   pourStepCents,
   POUR_HOLD_DELAY_MS,
@@ -22,11 +23,30 @@ import { flyTokens } from './fly';
 /** A jar as the kiosk draws it right now, including coins not yet confirmed by the server. */
 export type ShownJar = Jar & { limits: MoveLimits };
 
+/** Where coins can be poured: a jar (by id) or the child's piggy bank (ADR 0019). */
+export const PIGGY = 'piggy';
+export type PourKey = number | typeof PIGGY;
+
+/** What a hold pours into. The piggy bank has no price, so it's never full. */
+export interface PourTarget {
+  id: PourKey;
+  inCents: number;
+  targetCents: number | null;
+  limits: MoveLimits;
+}
+
+/** The piggy bank as the kiosk draws it right now. */
+export interface ShownPiggy extends PourTarget {
+  id: typeof PIGGY;
+  targetCents: null;
+}
+
 /** How long a move the server hasn't reflected yet is trusted before the server wins. */
 const EXPECT_MS = 5_000;
 
 interface Expected {
   jars: Record<number, number>;
+  piggy?: number;
   toSort: number;
 }
 
@@ -38,10 +58,11 @@ interface Expected {
  */
 export function useJarMoney(child: KioskChild) {
   const queryClient = useQueryClient();
-  const [hold, setHold] = useState<{ goalId: number; cents: number } | null>(null);
+  const [hold, setHold] = useState<{ goalId: PourKey; cents: number } | null>(null);
   const [expected, setExpected] = useState<Expected | null>(null);
 
   const serverToSort = child.money.toSortCents;
+  const serverPiggy = child.money.piggyCents;
   const serverIn = new Map(child.jars.map((j) => [j.id, j.inCents]));
 
   // The fetch caught up with what we sent: back to the server. (Adjusting state while
@@ -49,6 +70,7 @@ export function useJarMoney(child: KioskChild) {
   const caughtUp =
     expected !== null &&
     expected.toSort === serverToSort &&
+    (expected.piggy === undefined || expected.piggy === serverPiggy) &&
     Object.entries(expected.jars).every(([id, cents]) => serverIn.get(Number(id)) === cents);
   if (caughtUp) setExpected(null);
   // Or it's been too long: the server wins.
@@ -76,23 +98,34 @@ export function useJarMoney(child: KioskChild) {
     };
   });
 
+  const piggyHold = hold?.goalId === PIGGY ? hold.cents : 0;
+  const piggy: ShownPiggy = {
+    id: PIGGY,
+    inCents: (live?.piggy ?? serverPiggy) + piggyHold,
+    targetCents: null,
+    limits: piggyLimits(toSortCents + piggyHold),
+  };
+
   // The latest values for callbacks that run later (timers, the server's answer).
-  const latest = useLatest({ jars, toSortCents });
+  const latest = useLatest({ jars, piggy, toSortCents });
 
   /** Sends one move. Resolves true when the server took it. */
   const commit = useCallback(
-    async (goalId: number, cents: number): Promise<boolean> => {
+    async (goalId: PourKey, cents: number): Promise<boolean> => {
       const now = latest.current;
-      const jar = now.jars.find((j) => j.id === goalId);
+      const target = goalId === PIGGY ? now.piggy : now.jars.find((j) => j.id === goalId);
       const holding = hold?.goalId === goalId ? hold.cents : 0;
-      if (!jar || cents === 0) return false;
+      if (!target || cents === 0) return false;
+      const after = target.inCents - holding + cents;
       setExpected((prev) => ({
-        jars: { ...prev?.jars, [goalId]: jar.inCents - holding + cents },
+        jars: goalId === PIGGY ? { ...prev?.jars } : { ...prev?.jars, [goalId]: after },
+        piggy: goalId === PIGGY ? after : prev?.piggy,
         toSort: now.toSortCents + holding - cents,
       }));
       setHold(null);
       try {
-        await api.moveGoal(goalId, cents);
+        if (goalId === PIGGY) await api.movePiggy(child.id, cents);
+        else await api.moveGoal(goalId, cents);
         void queryClient.invalidateQueries({ queryKey: ['savings', child.id] });
         return true;
       } catch {
@@ -105,7 +138,7 @@ export function useJarMoney(child: KioskChild) {
     [child.id, hold, queryClient, latest],
   );
 
-  return { toSortCents, jars, hold, setHold, commit };
+  return { toSortCents, jars, piggy, hold, setHold, commit };
 }
 
 export type JarMoney = ReturnType<typeof useJarMoney>;
@@ -135,7 +168,7 @@ export interface PourCallbacks {
  * the jar, faster the longer it's held (10p, 25p, 50p, £1). It stops when the child lets go,
  * the jar is full or "to sort" is empty, then sends **one** move. A quick tap stays a tap.
  */
-export function usePourHold(money: JarMoney, jar: ShownJar, cb: PourCallbacks) {
+export function usePourHold(money: JarMoney, jar: PourTarget, cb: PourCallbacks) {
   const state = useRef<{
     start: number;
     timer: ReturnType<typeof setTimeout> | undefined;
@@ -193,12 +226,14 @@ export function usePourHold(money: JarMoney, jar: ShownJar, cb: PourCallbacks) {
         const to = callbacks.current.to();
         if (from && to) void flyTokens(from, to, { durationMs: 420, size: 26 });
         moneySound.clink(s.coins++);
-        for (const m of milestonesCrossed(before, after, j.targetCents)) {
-          callbacks.current.onMilestone?.(m);
-        }
-        if (after >= j.targetCents) {
-          callbacks.current.onFull?.();
-          return;
+        if (j.targetCents !== null) {
+          for (const m of milestonesCrossed(before, after, j.targetCents)) {
+            callbacks.current.onMilestone?.(m);
+          }
+          if (after >= j.targetCents) {
+            callbacks.current.onFull?.();
+            return;
+          }
         }
         s.timer = setTimeout(pourCoin, pourIntervalMs(held));
       };

@@ -210,6 +210,37 @@ export function moveProblem(
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// The piggy bank (ADR 0019): a child's one place for saving, with no price and no smash
+
+export const PIGGY_NAME = 'Piggy bank';
+export const PIGGY_EMOJI = '🐷';
+
+/** The share of each payday's pocket money that goes straight into the piggy bank. */
+export const DEFAULT_PIGGY_PERCENT = 25;
+
+/** The phone's chips for that share. */
+export const PIGGY_PERCENT_CHOICES = [0, 10, 20, 25, 30, 50, 75, 100] as const;
+
+/**
+ * The piggy bank's part of a payday's converted money: `percent` of it, rounded down to
+ * whole cents (so it never takes more than the share). Gifts aren't pocket money.
+ */
+export function piggyShareCents(convertedCents: number, percent: number): number {
+  if (!Number.isInteger(convertedCents)) throw new TypeError('convertedCents must be an integer');
+  if (convertedCents <= 0) return 0;
+  const p = Math.min(100, Math.max(0, Math.round(percent)));
+  return Math.floor((convertedCents * p) / 100);
+}
+
+/**
+ * Coins into the piggy bank: anything up to "to sort". Nothing comes back out on the
+ * kiosk; a parent spends from it on the phone.
+ */
+export function piggyLimits(toSortCents: number): MoveLimits {
+  return { maxIn: Math.max(0, toSortCents), maxOut: 0 };
+}
+
 /** Holding a jar: the hold must last this long before coins pour (a quick tap stays a tap). */
 export const POUR_HOLD_DELAY_MS = 250;
 

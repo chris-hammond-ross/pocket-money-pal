@@ -187,13 +187,24 @@ export function SpendSheet({
   const ui = useParentUi();
   const [cents, setCents] = useState(0);
   const [note, setNote] = useState<string>(SPEND_NOTES[0]);
-  const [from, setFrom] = useState<number | null>(null);
+  /** Null for "to sort", a jar's id, or the piggy bank (ADR 0019). */
+  const [from, setFrom] = useState<number | 'piggy' | null>(null);
   const jars = child.jars.filter((j) => j.inCents > 0 && !j.smashed);
-  const source = from === null ? null : jars.find((j) => j.id === from);
-  const available = source ? source.inCents : child.money.toSortCents;
+  const piggy = from === 'piggy';
+  const source = from === null || piggy ? null : jars.find((j) => j.id === from);
+  const available = piggy
+    ? child.money.piggyCents
+    : source
+      ? source.inCents
+      : child.money.toSortCents;
   const m = (c: number) => formatMoney(c, currency);
   const spend = useMoneyMutation(
-    () => api.spend(child.id, { cents, note: note.trim(), goalId: source?.id ?? null }),
+    () =>
+      api.spend(child.id, {
+        cents,
+        note: note.trim(),
+        ...(piggy ? { piggy: true } : { goalId: source?.id ?? null }),
+      }),
     () => {
       sound.pop();
       ui.notify({
@@ -234,6 +245,11 @@ export function SpendSheet({
         <button type="button" data-on={from === null || undefined} onClick={() => setFrom(null)}>
           🪙 To sort {m(child.money.toSortCents)}
         </button>
+        {child.money.piggyCents > 0 && (
+          <button type="button" data-on={piggy || undefined} onClick={() => setFrom('piggy')}>
+            🐷 Piggy bank {m(child.money.piggyCents)}
+          </button>
+        )}
         {jars.map((j) => (
           <button
             key={j.id}

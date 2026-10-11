@@ -264,6 +264,10 @@ export const api = {
   deleteGoal: (id: number) => request(`/api/goals/${id}`, { method: 'DELETE' }),
   moveGoal: async (id: number, cents: number) =>
     goalMoveResultSchema.parse(await request(`/api/goals/${id}/move`, json('POST', { cents }))),
+  movePiggy: async (childId: number, cents: number) =>
+    goalMoveResultSchema.parse(
+      await request(`/api/children/${childId}/piggy`, json('POST', { cents })),
+    ),
   smashGoal: (id: number) => request(`/api/goals/${id}/smash`, { method: 'POST' }),
   unsmashGoal: (id: number) => request(`/api/goals/${id}/smash`, { method: 'DELETE' }),
   buyGoal: (id: number) => request(`/api/goals/${id}/bought`, { method: 'POST' }),

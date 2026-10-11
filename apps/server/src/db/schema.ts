@@ -50,6 +50,8 @@ export const familySettings = sqliteTable('family_settings', {
   paydayAuto: integer('payday_auto', { mode: 'boolean' }).notNull().default(true),
   /** When the payday day or time last changed (epoch ms): earlier slots never run. */
   paydayChangedAt: integer('payday_changed_at'),
+  /** The share of each payday's pocket money that goes into the piggy bank (ADR 0019). */
+  piggyPercent: integer('piggy_percent').notNull().default(25),
   ...timestamps,
 });
 
@@ -220,9 +222,13 @@ export const ledger = sqliteTable(
   ],
 );
 
+export const GOAL_KINDS = ['jar', 'piggy'] as const;
+
 /**
  * Savings jars (spec 004; the plan's `goals`). A jar's money is the sum of its
- * `goal_allocation` and `spend` ledger rows, never a column.
+ * `goal_allocation` and `spend` ledger rows, never a column. A child's piggy bank (ADR
+ * 0019) is a row of kind `piggy`: at most one each, made on its first coins, with no
+ * price (`target_cents` 0). It's never smashed, bought, edited or deleted.
  */
 export const goals = sqliteTable(
   'goals',
@@ -231,6 +237,7 @@ export const goals = sqliteTable(
     childId: integer('child_id')
       .notNull()
       .references(() => users.id),
+    kind: text('kind', { enum: GOAL_KINDS }).notNull().default('jar'),
     name: text('name').notNull(),
     emoji: text('emoji').notNull(),
     targetCents: integer('target_cents').notNull(),
@@ -251,7 +258,12 @@ export const goals = sqliteTable(
     deletedAt: integer('deleted_at'),
     ...timestamps,
   },
-  (t) => [index('goals_child').on(t.childId)],
+  (t) => [
+    index('goals_child').on(t.childId),
+    uniqueIndex('goals_one_piggy')
+      .on(t.childId)
+      .where(sql`${t.kind} = 'piggy'`),
+  ],
 );
 
 /** Gifts from a phone, waiting on the kiosk as envelopes until opened (spec 004). */

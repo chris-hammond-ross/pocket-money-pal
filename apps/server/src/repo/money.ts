@@ -1,7 +1,8 @@
 /**
  * Money and jars (spec 004, ADR 0010). Every balance is derived from the child's ledger
  * rows by `summariseMoney` in @pmp/shared; nothing here stores a balance. Jars are the
- * `goals` table; coins move between "to sort" and a jar as `goal_allocation` rows.
+ * `goals` table; coins move between "to sort" and a jar as `goal_allocation` rows. The
+ * piggy bank (ADR 0019) is a `goals` row of kind `piggy`, so its money works the same way.
  */
 import {
   earningAverages,
@@ -11,6 +12,9 @@ import {
   jarStats,
   moveLimits,
   moveProblem,
+  PIGGY_EMOJI,
+  PIGGY_NAME,
+  piggyLimits,
   STATS_WINDOW_DAYS,
   summariseMoney,
   type ChildMoney,
@@ -83,36 +87,78 @@ export function moneyRowsOf(db: DbOrTx, childId: number): MoneyLedgerRow[] {
     .all();
 }
 
-/** The child's jars that aren't deleted or bought, in jar order. */
+/** The child's jars that aren't deleted or bought, in jar order. Never the piggy bank. */
 export function liveGoalsOf(db: DbOrTx, childId: number): Goal[] {
   return db
     .select()
     .from(goals)
-    .where(and(eq(goals.childId, childId), isNull(goals.deletedAt), isNull(goals.boughtAt)))
+    .where(
+      and(
+        eq(goals.childId, childId),
+        eq(goals.kind, 'jar'),
+        isNull(goals.deletedAt),
+        isNull(goals.boughtAt),
+      ),
+    )
     .orderBy(asc(goals.sortOrder), asc(goals.id))
     .all();
+}
+
+/** The child's piggy bank, or null before its first coins (ADR 0019). */
+export function piggyOf(db: DbOrTx, childId: number): Goal | null {
+  return (
+    db
+      .select()
+      .from(goals)
+      .where(and(eq(goals.childId, childId), eq(goals.kind, 'piggy')))
+      .get() ?? null
+  );
+}
+
+/** The child's piggy bank, made the first time coins go in. */
+export function ensurePiggy(db: DbOrTx, childId: number): Goal {
+  return (
+    piggyOf(db, childId) ??
+    db
+      .insert(goals)
+      .values({
+        childId,
+        kind: 'piggy',
+        name: PIGGY_NAME,
+        emoji: PIGGY_EMOJI,
+        targetCents: 0,
+        sortOrder: -1,
+        createdBy: childId,
+      })
+      .returning()
+      .get()
+  );
 }
 
 export interface ChildMoneyState {
   money: ChildMoney;
   goals: Goal[];
   jarCents: Map<number, number>;
+  piggy: Goal | null;
 }
 
-/** A child's money and jars, from the ledger alone. */
+/** A child's money, jars and piggy bank, from the ledger alone. */
 export function moneyStateOf(db: DbOrTx, childId: number): ChildMoneyState {
   const live = liveGoalsOf(db, childId);
+  const piggy = piggyOf(db, childId);
   const summary = summariseMoney(
     moneyRowsOf(db, childId),
-    live.map((g) => g.id),
+    [...live.map((g) => g.id), ...(piggy ? [piggy.id] : [])],
     getSettings(db).centsPerPoint,
   );
   return {
     goals: live,
     jarCents: summary.jarCents,
+    piggy,
     money: {
       savedCents: summary.savedCents,
       toSortCents: summary.toSortCents,
+      piggyCents: piggy ? (summary.jarCents.get(piggy.id) ?? 0) : 0,
       unconvertedPoints: summary.unconverted.points,
       unconvertedCents: summary.unconverted.cents,
     },
@@ -237,10 +283,13 @@ export function familyMoney(db: DbOrTx, now: number) {
 // ---------------------------------------------------------------------------
 // Jars
 
-/** A jar that still exists (not deleted, not bought). */
+/**
+ * A jar that still exists (not deleted, not bought). The piggy bank isn't a jar: the jar
+ * calls (edit, delete, move, smash, buy) can't reach it.
+ */
 function getLiveGoal(db: DbOrTx, id: number): Goal {
   const goal = db.select().from(goals).where(eq(goals.id, id)).get();
-  if (!goal) throw new NotFoundError(`Goal ${id} not found`);
+  if (!goal || goal.kind !== 'jar') throw new NotFoundError(`Goal ${id} not found`);
   if (goal.deletedAt !== null || goal.boughtAt !== null) throw new MoneyConflictError('gone');
   return goal;
 }
@@ -425,6 +474,34 @@ export function moveGoal(db: DbOrTx, id: number, cents: number, now: number): Go
   };
 }
 
+/**
+ * Coins from "to sort" into the piggy bank (ADR 0019), made on its first coins. Nothing
+ * comes out on the kiosk: a parent spends from it on the phone.
+ */
+export function movePiggy(db: DbOrTx, childId: number, cents: number, now: number): GoalMoveResult {
+  getActiveChild(db, childId);
+  const state = moneyStateOf(db, childId);
+  if (moveProblem(cents, piggyLimits(state.money.toSortCents))) {
+    throw new MoneyConflictError('too-much');
+  }
+  const piggy = ensurePiggy(db, childId);
+  appendLedger(db, {
+    childId,
+    kind: 'goal_allocation',
+    cents,
+    goalId: piggy.id,
+    createdBy: childId,
+    at: now,
+  });
+  return {
+    goalId: piggy.id,
+    childId,
+    cents,
+    inCents: state.money.piggyCents + cents,
+    toSortCents: state.money.toSortCents - cents,
+  };
+}
+
 /** "🔨 Hold to smash" a full jar: it waits for a grown-up to buy it. */
 export function smashGoal(db: DbOrTx, id: number, now: number): Goal {
   const goal = getLiveGoal(db, id);
@@ -575,7 +652,7 @@ export function openEnvelope(
   return opened;
 }
 
-/** "🛒 Spent": money out, from "to sort" or a jar, never more than is there. */
+/** "🛒 Spent": money out, from "to sort", a jar or the piggy bank, never more than is there. */
 export function spendMoney(
   db: DbOrTx,
   childId: number,
@@ -585,8 +662,10 @@ export function spendMoney(
 ): void {
   getActiveChild(db, childId);
   const state = moneyStateOf(db, childId);
-  const goalId = input.goalId ?? null;
-  if (goalId !== null) {
+  const goalId = input.piggy ? (state.piggy?.id ?? null) : (input.goalId ?? null);
+  if (input.piggy) {
+    if (input.cents > state.money.piggyCents) throw new MoneyConflictError('too-much');
+  } else if (goalId !== null) {
     const goal = getLiveGoal(db, goalId);
     if (goal.childId !== childId) throw new NotFoundError(`Goal ${goalId} isn't this child's`);
     if (goal.smashedAt !== null) throw new MoneyConflictError('smashed');
@@ -608,7 +687,12 @@ export function spendMoney(
     at: now,
     actorId: parentId,
     childId,
-    data: { cents: input.cents, note: input.note, ...(goalId !== null && { goalId }) },
+    data: {
+      cents: input.cents,
+      note: input.note,
+      ...(goalId !== null && { goalId }),
+      ...(input.piggy && { piggy: true }),
+    },
   });
 }
 

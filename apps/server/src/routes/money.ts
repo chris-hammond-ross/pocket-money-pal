@@ -7,6 +7,7 @@ import {
   goalPatchSchema,
   idSchema,
   PAYDAY_PUSH_URL,
+  piggyMoveSchema,
   smashPushText,
   spendSchema,
   type MoneyOverview,
@@ -24,6 +25,7 @@ import {
   getActiveChild,
   MoneyConflictError,
   moveGoal,
+  movePiggy,
   openEnvelope,
   sendEnvelope,
   setGoalImage,
@@ -110,13 +112,14 @@ export async function moneyRoutes(
   /** The phone's Payday tab: payday, and every child's money, jars and envelopes. */
   app.get('/api/money', parentOnly, async (): Promise<MoneyOverview> => {
     const at = now();
-    const { timezone, currency, centsPerPoint } = getSettings(db);
+    const { timezone, currency, centsPerPoint, piggyPercent } = getSettings(db);
     return {
       serverNow: at,
       timezone,
       currency,
       centsPerPoint,
       payday: paydayInfo(db, at),
+      piggyPercent,
       children: familyMoney(db, at),
     };
   });
@@ -219,6 +222,21 @@ export async function moneyRoutes(
     }
   });
 
+  /** Kiosk: coins from "to sort" into the piggy bank (ADR 0019). One call per hold or press. */
+  app.post('/api/children/:id/piggy', async (req, reply) => {
+    const id = paramId(req);
+    if (id === null) return reply.code(404).send({ error: 'not-found' });
+    const body = piggyMoveSchema.safeParse(req.body);
+    if (!body.success) return reply.code(400).send({ error: body.error.issues });
+    try {
+      const move = db.transaction((tx) => movePiggy(tx, id, body.data.cents, now()));
+      app.hub.broadcast({ type: 'goal.moved', move });
+      return move;
+    } catch (err) {
+      return refuse(reply, err);
+    }
+  });
+
   /** Kiosk: smash a full jar. The phones get a push (ADR 0010). */
   app.post('/api/goals/:id/smash', async (req, reply) => {
     const id = paramId(req);
@@ -301,7 +319,7 @@ export async function moneyRoutes(
     }
   });
 
-  /** Phone: money out, from "to sort" or a jar. */
+  /** Phone: money out, from "to sort", a jar or the piggy bank. */
   app.post('/api/children/:id/spend', parentOnly, async (req, reply) => {
     const id = paramId(req);
     if (id === null) return reply.code(404).send({ error: 'not-found' });

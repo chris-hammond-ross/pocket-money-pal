@@ -5,6 +5,8 @@ import {
   PAYDAY_DAY_NAMES,
   PAYDAY_DAY_ORDER,
   PAYDAY_TIMES,
+  PIGGY_PERCENT_CHOICES,
+  piggyShareCents,
   rateCaption,
   type Jar,
   type MoneyOverview,
@@ -50,7 +52,8 @@ function useMoney() {
 
 /**
  * The 💰 Payday tab (spec 004): what needs a grown-up (smashed jars, prices to check), the
- * next payday and its settings, each child's week, and a money page per child.
+ * next payday and its settings, the piggy bank's share (ADR 0019), each child's week, and a
+ * money page per child.
  */
 export function PaydayTab() {
   const money = useMoney();
@@ -78,6 +81,8 @@ export function PaydayTab() {
           <NeedsYou players={data.children} currency={data.currency} onEdit={setSheet} />
           <PixelLabel>NEXT PAYDAY</PixelLabel>
           <NextPayday overview={data} />
+          <PixelLabel>PIGGY BANK</PixelLabel>
+          <PiggyShare overview={data} />
           <PixelLabel>THIS WEEK</PixelLabel>
           {data.children.map((c) => (
             <button
@@ -103,7 +108,8 @@ export function PaydayTab() {
           ))}
           <p className={classes.rateLine}>
             ⭐ {rateCaption(data.centsPerPoint, data.currency)}. Points turn into money at payday;
-            the kids pour it into their jars.
+            {data.piggyPercent > 0 ? ` ${data.piggyPercent}% goes into the piggy bank and` : ''} the
+            kids pour {data.piggyPercent > 0 ? 'the rest' : 'it'} into their jars.
           </p>
         </>
       )}
@@ -127,13 +133,14 @@ export function PaydayTab() {
   );
 }
 
-/** "115 pts waiting = £5.75 · 🪙 £1.25 to sort · 🍯 £36.00 in jars". */
+/** "115 pts waiting = £5.75 · 🪙 £1.25 to sort · 🐷 £4.00 in the piggy · 🍯 £36.00 in jars". */
 function weekLine(c: Child, currency: string): string {
   const m = (cents: number) => formatMoney(cents, currency);
   const inJars = c.jars.reduce((sum, j) => sum + j.inCents, 0);
   return [
     `${c.money.unconvertedPoints} pts waiting = ${m(Math.max(0, c.money.unconvertedCents))}`,
     `🪙 ${m(c.money.toSortCents)} to sort`,
+    `🐷 ${m(c.money.piggyCents)} in the piggy`,
     `🍯 ${m(inJars)} in jars`,
   ].join(' · ');
 }
@@ -410,6 +417,65 @@ function NextPayday({ overview }: { overview: MoneyOverview & { clockOffsetMs: n
 }
 
 // ---------------------------------------------------------------------------
+// PIGGY BANK
+
+/** How much of each payday goes straight into the piggy bank (ADR 0019). */
+function PiggyShare({ overview }: { overview: MoneyOverview }) {
+  const ui = useParentUi();
+  const queryClient = useQueryClient();
+  const { piggyPercent, currency } = overview;
+  const save = useMutation({
+    mutationFn: (percent: number) => api.updateSettings({ piggyPercent: percent }),
+    onSuccess: () => {
+      sound.pop();
+      void queryClient.invalidateQueries({ queryKey: ['money'] });
+    },
+    onError: (err) =>
+      ui.notify({ icon: '⚠️', title: 'Not saved', body: problemText(err), tone: 'error' }),
+  });
+  const example = 1000;
+
+  return (
+    <div className={classes.card}>
+      <div className={classes.nextHead}>
+        <span>🐷</span>
+        <div>
+          <b>
+            {piggyPercent === 0 ? 'Nothing goes in by itself' : `${piggyPercent}% of each payday`}
+          </b>
+          <span className={classes.dim}>
+            {piggyPercent === 0
+              ? 'The kids can still put coins in themselves.'
+              : `goes straight into the piggy bank: ${formatMoney(
+                  piggyShareCents(example, piggyPercent),
+                  currency,
+                )} of every ${formatMoney(example, currency)}. Gifts don’t.`}
+          </span>
+        </div>
+      </div>
+      <span className={classes.fieldLabel}>Saved automatically</span>
+      <div className={classes.scrollChips}>
+        {PIGGY_PERCENT_CHOICES.map((percent) => (
+          <button
+            key={percent}
+            type="button"
+            data-on={piggyPercent === percent || undefined}
+            disabled={save.isPending}
+            onClick={() => save.mutate(percent)}
+          >
+            {percent === 0 ? 'Off' : `${percent}%`}
+          </button>
+        ))}
+      </div>
+      <p className={classes.dim}>
+        The piggy bank is just for saving: the kids can put coins in on the kiosk, but only you can
+        take money out (🛒 Spent).
+      </p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // A player's money page
 
 function PlayerMoney({
@@ -490,6 +556,13 @@ function PlayerMoney({
         JARS
       </PixelLabel>
       <div className={classes.card}>
+        <div className={classes.jarRow} style={{ '--c': child.colour } as CSSProperties}>
+          <span className={classes.jarPic}>🐷</span>
+          <span className={classes.grow}>
+            <b>Piggy bank</b>
+            <span className={classes.dim}>{m(child.money.piggyCents)} saved · just for saving</span>
+          </span>
+        </div>
         {child.jars.length === 0 && <div className={classes.empty}>No jars yet.</div>}
         {child.jars.map((jar) => (
           <button
@@ -565,7 +638,11 @@ function BookRow({
   const detail = [
     date,
     row.kind === 'payday' && row.points !== null ? `${row.points} pts` : null,
-    row.jar && row.kind === 'spend' ? `from the ${row.jar.name} jar` : null,
+    row.jar && row.kind === 'spend'
+      ? row.jar.piggy
+        ? 'from the piggy bank'
+        : `from the ${row.jar.name} jar`
+      : null,
     row.by,
   ]
     .filter(Boolean)

@@ -15,14 +15,17 @@ import { celebrate } from '../../../lib/confetti';
 import { sound } from '../../../lib/sounds';
 import { arcade } from '../../../theme';
 import { Jar, type JarMark } from './Jar';
-import { JarPopup } from './JarPopup';
+import { JarPopup, PiggyPopup } from './JarPopup';
 import classes from './money.module.css';
+import { Piggy } from './Piggy';
 import {
   money,
   paydayCountdown,
+  PIGGY,
   usePourHold,
   useJarMoney,
   type JarMoney,
+  type PourKey,
   type ShownJar,
 } from './use-jar-money';
 
@@ -38,8 +41,9 @@ export interface MoneyContext {
 }
 
 /**
- * A child's savings screen (spec 004): the savings book on the left, and the jars on the
- * right. Hold a jar to pour coins in from "to sort"; tap it for the jar pop-up.
+ * A child's savings screen (spec 004): the savings book on the left, and the piggy bank
+ * (ADR 0019) then the jars on the right. Hold the piggy bank or a jar to pour coins in from
+ * "to sort"; tap it for its pop-up.
  */
 export function SavingsScreen({
   child,
@@ -53,7 +57,7 @@ export function SavingsScreen({
   onNewJar: () => void;
 }) {
   const jarMoney = useJarMoney(child);
-  const [popupId, setPopupId] = useState<number | null>(null);
+  const [popupId, setPopupId] = useState<PourKey | null>(null);
   const toSortRef = useRef<HTMLDivElement>(null);
   const feedback = useMoneyFeedback(child, ctx.currency);
   useIdleClose(onClose, IDLE_CLOSE_MS);
@@ -93,6 +97,17 @@ export function SavingsScreen({
           shake={feedback.shake}
         />
         <div className={classes.jarsGrid}>
+          <PiggyCard
+            child={child}
+            currency={ctx.currency}
+            money={jarMoney}
+            from={() => toSortRef.current?.getBoundingClientRect() ?? null}
+            onTap={() => {
+              sound.tap();
+              setPopupId(PIGGY);
+            }}
+            onEmpty={(rect) => feedback.empty(rect, countdown)}
+          />
           {jarMoney.jars.map((jar) => (
             <JarCard
               key={jar.id}
@@ -129,6 +144,17 @@ export function SavingsScreen({
             toSortRect={() => toSortRef.current?.getBoundingClientRect() ?? null}
             onMilestone={(cents) => feedback.milestone(popupJar, cents)}
             onFull={() => feedback.full(popupJar)}
+            onClose={() => setPopupId(null)}
+          />
+        )}
+        {popupId === PIGGY && (
+          <PiggyPopup
+            key="piggy"
+            child={child}
+            currency={ctx.currency}
+            countdown={countdown}
+            money={jarMoney}
+            toSortRect={() => toSortRef.current?.getBoundingClientRect() ?? null}
             onClose={() => setPopupId(null)}
           />
         )}
@@ -208,6 +234,14 @@ function SavingsBook({
                   <td className={classes.n}>{m(book.data.thisWeek.cents)}</td>
                   <td />
                 </tr>
+                {book.data.money.piggyCents > 0 && (
+                  <tr className={classes.bookJarLine}>
+                    <td className={classes.what} colSpan={4}>
+                      &nbsp;↳ in the 🐷 piggy bank
+                    </td>
+                    <td className={classes.n}>{m(book.data.money.piggyCents)}</td>
+                  </tr>
+                )}
                 {book.data.jars.map((j) => (
                   <tr key={`jar-${j.id}`} className={classes.bookJarLine}>
                     <td className={classes.what} colSpan={4}>
@@ -254,7 +288,7 @@ function BookRow({
       ? `Payday · ${date(row.dateAt)}`
       : row.kind === 'bought'
         ? `Bought the ${row.jar?.emoji ?? ''} ${row.jar?.name ?? row.note} · ${date(row.at)}`
-        : `${row.note ?? ''}${row.jar ? ` (from the ${row.jar.name} jar)` : ''} · ${date(row.at)}`;
+        : `${row.note ?? ''}${fromWhere(row.jar)} · ${date(row.at)}`;
   return (
     <tr className={row.kind === 'payday' ? classes.bookPayday : undefined}>
       <td className={classes.what}>
@@ -267,6 +301,54 @@ function BookRow({
       </td>
       <td className={classes.n}>{m(row.balanceCents)}</td>
     </tr>
+  );
+}
+
+/** " (from the Basketball jar)" or " (from the piggy bank)" for money spent from one. */
+function fromWhere(jar: SavingsRow['jar']): string {
+  if (!jar) return '';
+  return jar.piggy ? ' (from the piggy bank)' : ` (from the ${jar.name} jar)`;
+}
+
+/**
+ * The piggy bank's card (ADR 0019), first on the shelf: hold it to pour coins in from "to
+ * sort", or tap it for its pop-up. It has no price, so it never fills up or smashes.
+ */
+function PiggyCard({
+  child,
+  currency,
+  money: jarMoney,
+  from,
+  onTap,
+  onEmpty,
+}: {
+  child: KioskChild;
+  currency: string;
+  money: JarMoney;
+  from: () => DOMRect | null;
+  onTap: () => void;
+  onEmpty: (rect: DOMRect | null) => void;
+}) {
+  const piggyRef = useRef<HTMLDivElement>(null);
+  const hold = usePourHold(jarMoney, jarMoney.piggy, {
+    onTap,
+    onEmpty: () => onEmpty(piggyRef.current?.getBoundingClientRect() ?? null),
+    from,
+    to: () => piggyRef.current?.getBoundingClientRect() ?? null,
+  });
+  return (
+    <div
+      className={`${classes.jarCard} ${classes.piggyCard}`}
+      style={{ '--c': child.colour } as CSSProperties}
+      {...hold}
+    >
+      <div ref={piggyRef} className={classes.piggyArt}>
+        <Piggy width={150} />
+      </div>
+      <div className={classes.jarCardName}>Piggy bank</div>
+      <div className={classes.jarCardAmount}>{money(jarMoney.piggy.inCents, currency)}</div>
+      <div className={classes.jarCardStats}>Just for saving 🔒</div>
+    </div>
   );
 }
 

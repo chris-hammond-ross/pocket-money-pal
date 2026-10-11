@@ -18,6 +18,7 @@ export function getSettings(db: DbOrTx): FamilySettings {
         ? null
         : { from: row.quietFrom, until: row.quietUntil },
     payday: { day: row.paydayDay, time: row.paydayTime, auto: row.paydayAuto },
+    piggyPercent: row.piggyPercent,
   };
 }
 

@@ -1232,3 +1232,58 @@
   background: rgba(5, 5, 20, 0.7);
   pointer-events: none;
 }
+
+/* The piggy bank (ADR 0019): first on the savings screen's shelf and in the payday show. */
+.piggyCard {
+  border-color: color-mix(in srgb, #ff9fc9 55%, transparent);
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255, 159, 201, 0.16), transparent 70%), var(--pmp-panel);
+}
+
+.piggyArt {
+  display: grid;
+  place-items: center;
+  min-height: 151px;
+}
+
+.piggyNote {
+  margin-top: 12px;
+  font-size: 17px;
+  color: var(--pmp-dim);
+}
+
+.showPiggyShare {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 20px;
+  border-radius: 14px;
+  background: #ffd6e8;
+  color: #4a1430;
+  font-size: 26px;
+  font-weight: 700;
+
+  & b {
+    color: #b0306c;
+  }
+}
+
+/* Twemoji's pig with a coin behind its back (the pig's top edge sits ~30% down its box). */
+.piggy {
+  position: relative;
+  flex: none;
+}
+
+.piggyPig {
+  position: absolute;
+  inset: auto 0 0;
+  width: 100%;
+  user-select: none;
+}
+
+.piggyCoin {
+  position: absolute;
+  top: 0;
+  left: 44%;
+  width: 30%;
+  user-select: none;
+}

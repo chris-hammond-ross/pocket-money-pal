@@ -48,6 +48,8 @@ export const familySettingsSchema = z.object({
   quietHours: z.object({ from: z.string(), until: z.string() }).nullable(),
   /** Weekly payday (spec 004): day 0 = Sunday, "HH:MM", and whether it starts by itself. */
   payday: z.object({ day: z.number().int(), time: z.string(), auto: z.boolean() }),
+  /** The share of each payday's pocket money that goes into the piggy bank (ADR 0019). */
+  piggyPercent: z.number().int(),
 });
 export type FamilySettings = z.infer<typeof familySettingsSchema>;
 
@@ -65,6 +67,7 @@ export const familySettingsPatchSchema = z
     paydayDay: z.number().int().min(0).max(6),
     paydayTime: z.lazy(() => paydayTimeSchema),
     paydayAuto: z.boolean(),
+    piggyPercent: z.lazy(() => piggyPercentSchema),
   })
   .partial();
 export type FamilySettingsPatch = z.infer<typeof familySettingsPatchSchema>;
@@ -74,9 +77,13 @@ export const paydayTimeSchema = z
   .string()
   .regex(/^([01]\d|2[0-3]):00$/, 'Payday is on the hour, as HH:00');
 
+/** Payday's share for the piggy bank, as a whole percentage (ADR 0019). */
+export const piggyPercentSchema = z.number().int().min(0).max(100);
+
 /**
  * `PATCH /api/settings` from a phone: the loot rate (from now on), the currency, quiet hours and the kiosk
- * volume on the Players tab, and payday's day, time and how it starts on the Payday tab.
+ * volume on the Players tab, and payday's day, time, how it starts and the piggy bank's
+ * share on the Payday tab.
  */
 export const phoneSettingsPatchSchema = z
   .object({
@@ -89,6 +96,7 @@ export const phoneSettingsPatchSchema = z
     paydayDay: z.number().int().min(0).max(6),
     paydayTime: paydayTimeSchema,
     paydayAuto: z.boolean(),
+    piggyPercent: piggyPercentSchema,
   })
   .partial()
   .strict()
@@ -695,27 +703,37 @@ export const goalMoveSchema = z
   })
   .strict();
 
+/** `POST /api/children/:id/piggy`: coins from "to sort" into the piggy bank (kiosk). */
+export const piggyMoveSchema = z.object({ cents: centsAmountSchema }).strict();
+
 /** `POST /api/children/:id/envelopes`: a gift from the phone. */
 export const envelopeCreateSchema = z
   .object({ cents: centsAmountSchema, note: moneyNoteSchema })
   .strict();
 export type EnvelopeCreate = z.infer<typeof envelopeCreateSchema>;
 
-/** `POST /api/children/:id/spend`: money out, from "to sort" (no goalId) or a jar. */
+/**
+ * `POST /api/children/:id/spend`: money out, from "to sort" (no goalId), a jar, or the
+ * piggy bank (`piggy`, ADR 0019).
+ */
 export const spendSchema = z
   .object({
     cents: centsAmountSchema,
     note: moneyNoteSchema,
     goalId: idSchema.nullable().optional(),
+    piggy: z.boolean().optional(),
   })
-  .strict();
+  .strict()
+  .refine((s) => !(s.piggy && s.goalId != null), 'Take it from a jar or the piggy bank, not both');
 export type SpendInput = z.infer<typeof spendSchema>;
 
 export const childMoneySchema = z.object({
   /** The money balance. */
   savedCents: z.number().int(),
-  /** Saved money not in a jar yet. */
+  /** Saved money not in a jar or the piggy bank yet. */
   toSortCents: z.number().int(),
+  /** In the piggy bank (ADR 0019): part of what's saved, never "to sort". */
+  piggyCents: z.number().int(),
   /** Points since the last payday ("this week so far"). */
   unconvertedPoints: z.number().int(),
   /** What payday would make of them now, each at its own rate. */
@@ -796,6 +814,8 @@ export const moneyOverviewSchema = z.object({
   currency: z.string(),
   centsPerPoint: z.number().int(),
   payday: paydayInfoSchema,
+  /** The share of each payday that goes into the piggy bank (ADR 0019). */
+  piggyPercent: z.number().int(),
   children: z.array(
     z.object({
       id: idSchema,
@@ -827,8 +847,8 @@ export const savingsRowSchema = z.object({
   balanceCents: z.number().int(),
   /** The parent who sent or spent it. */
   by: z.string().nullable(),
-  /** Spent from a jar, or the jar bought. */
-  jar: z.object({ emoji: z.string(), name: z.string() }).nullable(),
+  /** Spent from a jar or the piggy bank, or the jar bought. */
+  jar: z.object({ emoji: z.string(), name: z.string(), piggy: z.boolean() }).nullable(),
 });
 export type SavingsRow = z.infer<typeof savingsRowSchema>;
 
@@ -886,6 +906,8 @@ export const paydaySummarySchema = z.object({
       /** Converted at this payday (0 when nothing was). */
       points: z.number().int(),
       cents: z.number().int(),
+      /** The part of `cents` that went straight into the piggy bank (ADR 0019). */
+      piggyCents: z.number().int(),
       envelopes: z.array(
         z.object({ id: idSchema, fromName: z.string(), note: z.string(), cents: z.number().int() }),
       ),

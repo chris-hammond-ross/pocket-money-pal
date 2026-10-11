@@ -674,13 +674,19 @@ describe('payday', () => {
     expect(sent.at(-1)).toEqual({ type: 'payday.done', paydayId });
 
     const billyMoney = await moneyOf(billy.id);
+    // A quarter of the pay goes straight into the piggy bank (ADR 0019); gifts don't.
     expect(billyMoney.money).toEqual({
       savedCents: 500,
-      toSortCents: 500,
+      toSortCents: 375,
+      piggyCents: 125,
       unconvertedPoints: 0,
       unconvertedCents: 0,
     });
-    expect((await moneyOf(alice.id)).money.savedCents).toBe(2000);
+    expect((await moneyOf(alice.id)).money).toMatchObject({
+      savedCents: 2000,
+      toSortCents: 2000,
+      piggyCents: 0,
+    });
 
     const summary = paydaySummarySchema.parse(
       (await asKiosk({ method: 'GET', url: '/api/paydays/latest' })).json(),
@@ -695,6 +701,7 @@ describe('payday', () => {
     expect(summary.children.find((c) => c.childId === billy.id)).toMatchObject({
       points: 80,
       cents: 500,
+      piggyCents: 125,
       envelopes: [],
       stats: { bestDay: { date: DAY, points: 80 } },
       streak: { days: 0, best: 0, tier: 0 },
@@ -702,6 +709,7 @@ describe('payday', () => {
     expect(summary.children.find((c) => c.childId === alice.id)).toMatchObject({
       points: 0,
       cents: 0,
+      piggyCents: 0,
       envelopes: [{ fromName: 'Grandma', cents: 2000 }],
     });
     expect(db.select().from(events).where(eq(events.type, 'payday.ran')).get()).toMatchObject({
@@ -812,11 +820,166 @@ describe('payday', () => {
   });
 });
 
+describe('the piggy bank (ADR 0019)', () => {
+  const pour = (childId: number, cents: number) =>
+    asKiosk({ method: 'POST', url: `/api/children/${childId}/piggy`, payload: { cents } });
+  const piggyId = (childId: number) =>
+    db
+      .select()
+      .from(goals)
+      .where(eq(goals.childId, childId))
+      .all()
+      .find((g) => g.kind === 'piggy')?.id;
+
+  it("takes the family's share of payday money, and nothing of gifts", async () => {
+    const { billy, alice } = seed();
+    const share = await asPhone({
+      method: 'PATCH',
+      url: '/api/settings',
+      payload: { piggyPercent: 50 },
+    });
+    expect(share.json()).toMatchObject({ piggyPercent: 50 });
+    expect((await overview()).piggyPercent).toBe(50);
+    expect(db.select().from(events).where(eq(events.type, 'settings.updated')).get()).toMatchObject(
+      {
+        data: { piggyPercent: { from: 25, to: 50 } },
+      },
+    );
+    givePoints(billy.id, 45); // £2.25
+    giveMoney(alice.id, 1000);
+
+    expect((await asPhone({ method: 'POST', url: '/api/paydays' })).json()).toMatchObject({
+      children: [
+        { childId: billy.id, cents: 225, piggyCents: 112 },
+        { childId: alice.id, cents: 0, piggyCents: 0 },
+      ],
+    });
+    expect((await moneyOf(billy.id)).money).toMatchObject({
+      savedCents: 225,
+      toSortCents: 113,
+      piggyCents: 112,
+    });
+    // Alice had no pay, so she has no piggy bank row yet.
+    expect(piggyId(alice.id)).toBeUndefined();
+    // The piggy bank isn't a jar.
+    expect((await moneyOf(billy.id)).jars).toEqual([]);
+  });
+
+  it('takes nothing when the share is off', async () => {
+    const { billy } = seed();
+    await asPhone({ method: 'PATCH', url: '/api/settings', payload: { piggyPercent: 0 } });
+    givePoints(billy.id, 40);
+    await asPhone({ method: 'POST', url: '/api/paydays' });
+    expect((await moneyOf(billy.id)).money).toMatchObject({ toSortCents: 200, piggyCents: 0 });
+    expect(piggyId(billy.id)).toBeUndefined();
+  });
+
+  it('refuses a share outside 0–100%', async () => {
+    seed();
+    for (const piggyPercent of [-1, 101, 12.5]) {
+      const res = await asPhone({
+        method: 'PATCH',
+        url: '/api/settings',
+        payload: { piggyPercent },
+      });
+      expect(res.statusCode).toBe(400);
+    }
+  });
+
+  it('takes coins from "to sort" on the kiosk, never more, and never gives them back', async () => {
+    const { billy } = seed();
+    giveMoney(billy.id, 500);
+    const res = await pour(billy.id, 300);
+    expect(res.statusCode).toBe(200);
+    const id = piggyId(billy.id)!;
+    expect(res.json()).toEqual({
+      goalId: id,
+      childId: billy.id,
+      cents: 300,
+      inCents: 300,
+      toSortCents: 200,
+    });
+    expect(sent.at(-1)).toMatchObject({ type: 'goal.moved', move: { goalId: id, cents: 300 } });
+    expect((await pour(billy.id, 100)).json()).toMatchObject({ inCents: 400, toSortCents: 100 });
+    // One piggy bank per child, however many pours.
+    expect(db.select().from(goals).where(eq(goals.kind, 'piggy')).all()).toHaveLength(1);
+
+    expect((await pour(billy.id, 101)).json()).toEqual({ error: 'too-much' });
+    expect((await pour(billy.id, -100)).statusCode).toBe(400);
+    expect((await pour(billy.id, 0)).statusCode).toBe(400);
+    expect((await pour(999, 1)).statusCode).toBe(404);
+    expect((await moneyOf(billy.id)).money).toMatchObject({
+      savedCents: 500,
+      toSortCents: 100,
+      piggyCents: 400,
+    });
+  });
+
+  it("can't be reached by the jar calls", async () => {
+    const { billy } = seed();
+    giveMoney(billy.id, 500);
+    await pour(billy.id, 300);
+    const id = piggyId(billy.id)!;
+    expect((await move(id, -100)).statusCode).toBe(404);
+    expect((await asKiosk({ method: 'DELETE', url: `/api/goals/${id}` })).statusCode).toBe(404);
+    expect((await asKiosk({ method: 'POST', url: `/api/goals/${id}/smash` })).statusCode).toBe(404);
+    const patch = await asPhone({
+      method: 'PATCH',
+      url: `/api/goals/${id}`,
+      payload: { targetCents: 100 },
+    });
+    expect(patch.statusCode).toBe(404);
+    expect((await moneyOf(billy.id)).money.piggyCents).toBe(300);
+  });
+
+  it('is spent from on the phone, never more than is in it', async () => {
+    const { billy } = seed();
+    giveMoney(billy.id, 500);
+    await pour(billy.id, 300);
+    const spend = (payload: object) =>
+      asPhone({ method: 'POST', url: `/api/children/${billy.id}/spend`, payload });
+
+    expect((await spend({ cents: 301, note: '🎮 Game', piggy: true })).json()).toEqual({
+      error: 'too-much',
+    });
+    const both = await spend({ cents: 1, note: '🎮 Game', piggy: true, goalId: piggyId(billy.id) });
+    expect(both.statusCode).toBe(400);
+    expect((await spend({ cents: 250, note: '🎮 Game', piggy: true })).statusCode).toBe(204);
+    expect((await moneyOf(billy.id)).money).toMatchObject({
+      savedCents: 250,
+      toSortCents: 200,
+      piggyCents: 50,
+    });
+
+    const book = savingsBookSchema.parse(
+      (await asKiosk({ method: 'GET', url: `/api/children/${billy.id}/savings` })).json(),
+    );
+    expect(book.rows[0]).toMatchObject({
+      kind: 'spend',
+      cents: -250,
+      jar: { emoji: '🐷', name: 'Piggy bank', piggy: true },
+    });
+    expect(book.money.piggyCents).toBe(50);
+  });
+
+  it('shows on the kiosk board', async () => {
+    const { billy } = seed();
+    giveMoney(billy.id, 500);
+    await pour(billy.id, 200);
+    const board = kioskTodaySchema.parse(
+      (await asKiosk({ method: 'GET', url: '/api/kiosk/today' })).json(),
+    );
+    const child = board.children.find((c) => c.id === billy.id)!;
+    expect(child.money).toMatchObject({ toSortCents: 300, piggyCents: 200 });
+    expect(child.jars).toEqual([]);
+  });
+});
+
 describe('the savings book', () => {
   it('lists what changed the savings, newest first, with the running balance', async () => {
     const { billy } = seed();
     givePoints(billy.id, 40);
-    await asPhone({ method: 'POST', url: '/api/paydays' }); // +£2.00
+    await asPhone({ method: 'POST', url: '/api/paydays' }); // +£2.00, 50p of it to the piggy bank
     const env = await asPhone({
       method: 'POST',
       url: `/api/children/${billy.id}/envelopes`,
@@ -837,7 +1000,7 @@ describe('the savings book', () => {
 
     const res = await asKiosk({ method: 'GET', url: `/api/children/${billy.id}/savings` });
     const book = savingsBookSchema.parse(res.json());
-    expect(book.money).toMatchObject({ savedCents: 1900, toSortCents: 400 });
+    expect(book.money).toMatchObject({ savedCents: 1900, toSortCents: 350, piggyCents: 50 });
     expect(book.thisWeek).toEqual({ quests: 0, points: 12, cents: 60 });
     expect(book.jars).toEqual([{ id: jar, emoji: '🏀', name: 'Basketball', inCents: 1500 }]);
     expect(book.rows.map((r) => [r.kind, r.cents, r.balanceCents])).toEqual([
@@ -857,6 +1020,7 @@ describe('the savings book', () => {
     expect(book.money).toEqual({
       savedCents: 0,
       toSortCents: 0,
+      piggyCents: 0,
       unconvertedPoints: 0,
       unconvertedCents: 0,
     });
@@ -893,10 +1057,14 @@ describe('the ledger', () => {
     const rows = db.select().from(ledger).where(eq(ledger.childId, billy.id)).all();
     const saved = rows.filter((r) => r.kind !== 'goal_allocation').reduce((s, r) => s + r.cents, 0);
     const inJar = rows.filter((r) => r.goalId === jar).reduce((s, r) => s + r.cents, 0);
+    const inPiggy = rows
+      .filter((r) => r.goalId !== null && r.goalId !== jar)
+      .reduce((s, r) => s + r.cents, 0);
     const m = await moneyOf(billy.id);
     expect(m.money.savedCents).toBe(saved);
     expect(m.jars[0]!.inCents).toBe(inJar);
-    expect(m.money.toSortCents).toBe(saved - inJar);
+    expect(m.money.piggyCents).toBe(inPiggy);
+    expect(m.money.toSortCents).toBe(saved - inJar - inPiggy);
     expect(m.money.unconvertedPoints).toBe(7);
   });
 });

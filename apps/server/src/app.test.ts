@@ -45,6 +45,7 @@ describe('server app', () => {
       pause: null,
       quietHours: { from: '20:00', until: '07:00' },
       payday: { day: 0, time: '18:00', auto: true },
+      piggyPercent: 25,
     });
   });
 

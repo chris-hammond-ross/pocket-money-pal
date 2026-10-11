@@ -6,14 +6,22 @@ import {
   type PaydaySummary,
 } from '@pmp/shared';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { celebrate } from '../../../lib/confetti';
 import { moneySound, sound } from '../../../lib/sounds';
 import { arcade } from '../../../theme';
 import { Jar } from './Jar';
 import classes from './money.module.css';
+import { Piggy } from './Piggy';
 import { useIdleClose, useMoneyFeedback } from './SavingsScreen';
-import { money, usePourHold, useJarMoney, type JarMoney, type ShownJar } from './use-jar-money';
+import {
+  money,
+  usePourHold,
+  useJarMoney,
+  type JarMoney,
+  type PourTarget,
+  type ShownJar,
+} from './use-jar-money';
 
 type Phase = 'title' | 'stats' | 'convert' | 'envelopes' | 'pour' | 'finale';
 
@@ -28,8 +36,9 @@ const IDLE_CLOSE_MS = 3 * 60_000;
 
 /**
  * The payday show (spec 004), on every kiosk at once: the title and drum roll, the week's
- * stats, points counting into money, envelopes, then each child pours their pay into jars.
- * The server already converted the money; the show only displays it.
+ * stats, points counting into money (and the piggy bank's share, ADR 0019), envelopes, then
+ * each child pours their pay into the piggy bank and jars. The server already converted
+ * the money and filled the piggy bank; the show only displays it.
  */
 export function PaydayShow({
   summary,
@@ -201,6 +210,17 @@ export function PaydayShow({
               </div>
             )}
 
+            {s.piggyCents > 0 && (phase !== 'convert' || progress >= 1) && converting && (
+              <motion.div
+                className={classes.showPiggyShare}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <span>🐷 Saved in your piggy bank</span>
+                <b>+{money(s.piggyCents, currency)}</b>
+              </motion.div>
+            )}
+
             {(phase === 'envelopes' || phase === 'pour') &&
               s.envelopes.map((e) => (
                 <motion.div
@@ -286,27 +306,44 @@ function PourColumn({
           {money(jarMoney.toSortCents, currency)}
         </b>
       </div>
-      {jarMoney.jars.length === 0 ? (
+      <div className={classes.showJars}>
+        <ShowJar
+          target={jarMoney.piggy}
+          art={<Piggy width={110} />}
+          name="Piggy bank"
+          amount={<em>{money(jarMoney.piggy.inCents, currency)}</em>}
+          money={jarMoney}
+          from={() => toSortRef.current?.getBoundingClientRect() ?? null}
+          onEmpty={(rect) => feedback.empty(rect, null)}
+        />
+        {jarMoney.jars
+          .filter((j) => !j.smashed)
+          .map((jar) => (
+            <ShowJar
+              key={jar.id}
+              target={jar}
+              art={
+                <Jar
+                  fill={jar.progress.fill}
+                  emoji={jar.emoji}
+                  colour={child.colour}
+                  width={96}
+                  glow={jar.progress.full}
+                />
+              }
+              name={jar.name}
+              amount={jarAmount(jar, currency)}
+              money={jarMoney}
+              from={() => toSortRef.current?.getBoundingClientRect() ?? null}
+              onEmpty={(rect) => feedback.empty(rect, null)}
+              onMilestone={(cents) => feedback.milestone(jar, cents)}
+              onFull={() => feedback.full(jar)}
+            />
+          ))}
+      </div>
+      {jarMoney.jars.length === 0 && (
         <div className={classes.caption} style={{ fontSize: 22 }}>
-          Make a jar on the savings screen to start saving!
-        </div>
-      ) : (
-        <div className={classes.showJars}>
-          {jarMoney.jars
-            .filter((j) => !j.smashed)
-            .map((jar) => (
-              <ShowJar
-                key={jar.id}
-                jar={jar}
-                child={child}
-                currency={currency}
-                money={jarMoney}
-                from={() => toSortRef.current?.getBoundingClientRect() ?? null}
-                onEmpty={(rect) => feedback.empty(rect, null)}
-                onMilestone={(cents) => feedback.milestone(jar, cents)}
-                onFull={() => feedback.full(jar)}
-              />
-            ))}
+          Make a jar on the savings screen to save for something special!
         </div>
       )}
       <button type="button" className={classes.doneButton} onClick={onDone}>
@@ -317,50 +354,53 @@ function PourColumn({
   );
 }
 
+/** "£12.00 / £24.99", or "£20.00 → ⭐ £25" on a big jar. */
+function jarAmount(jar: ShownJar, currency: string) {
+  return (
+    <>
+      <em>{money(jar.inCents, currency)}</em>{' '}
+      {jar.progress.big && jar.progress.nextMilestoneCents !== null
+        ? `→ ⭐ ${formatMoneyShort(jar.progress.nextMilestoneCents, currency)}`
+        : `/ ${money(jar.targetCents, currency)}`}
+    </>
+  );
+}
+
+/** A jar, or the piggy bank, to hold and pour into. */
 function ShowJar({
-  jar,
-  child,
-  currency,
+  target,
+  art,
+  name,
+  amount,
   money: jarMoney,
   from,
   onEmpty,
   onMilestone,
   onFull,
 }: {
-  jar: ShownJar;
-  child: KioskChild;
-  currency: string;
+  target: PourTarget;
+  art: ReactNode;
+  name: string;
+  amount: ReactNode;
   money: JarMoney;
   from: () => DOMRect | null;
   onEmpty: (rect: DOMRect | null) => void;
-  onMilestone: (cents: number) => void;
-  onFull: () => void;
+  onMilestone?: (cents: number) => void;
+  onFull?: () => void;
 }) {
   const ref = useRef<HTMLButtonElement>(null);
-  const hold = usePourHold(jarMoney, jar, {
+  const hold = usePourHold(jarMoney, target, {
     onEmpty: () => onEmpty(ref.current?.getBoundingClientRect() ?? null),
     onMilestone,
     onFull,
     from,
     to: () => ref.current?.getBoundingClientRect() ?? null,
   });
-  const m = (cents: number) => money(cents, currency);
   return (
     <button ref={ref} type="button" className={classes.showJar} {...hold}>
-      <Jar
-        fill={jar.progress.fill}
-        emoji={jar.emoji}
-        colour={child.colour}
-        width={96}
-        glow={jar.progress.full}
-      />
-      <b>{jar.name}</b>
-      <span>
-        <em>{m(jar.inCents)}</em>{' '}
-        {jar.progress.big && jar.progress.nextMilestoneCents !== null
-          ? `→ ⭐ ${formatMoneyShort(jar.progress.nextMilestoneCents, currency)}`
-          : `/ ${m(jar.targetCents)}`}
-      </span>
+      {art}
+      <b>{name}</b>
+      <span>{amount}</span>
     </button>
   );
 }

@@ -358,7 +358,7 @@ describe('payday', () => {
     expect(paid).toHaveLength(1);
     expect(paid[0]).toMatchObject({
       slot: SUN('2026-10-04'),
-      children: [{ childId: billy.id, points: 40, cents: 200, envelopes: 0 }],
+      children: [{ childId: billy.id, points: 40, cents: 200, piggyCents: 50, envelopes: 0 }],
     });
     expect(moneyStateOf(db, billy.id).money).toMatchObject({
       savedCents: 200,
@@ -367,7 +367,9 @@ describe('payday', () => {
     // A week later, the next one (with nothing to convert, but the show still plays).
     vi.advanceTimersByTime(7 * 24 * HOUR);
     expect(paid.map((p) => p.slot)).toEqual([SUN('2026-10-04'), SUN('2026-10-11')]);
-    expect(paid[1]!.children).toEqual([{ childId: billy.id, points: 0, cents: 0, envelopes: 0 }]);
+    expect(paid[1]!.children).toEqual([
+      { childId: billy.id, points: 0, cents: 0, piggyCents: 0, envelopes: 0 },
+    ]);
   });
 
   it('catches up a missed payday once, dated at the payday time', () => {
@@ -444,7 +446,7 @@ describe('payday', () => {
       vi.advanceTimersByTime(7 * 24 * HOUR);
       expect(paid.map((p) => p.slot)).toEqual([SUN('2026-10-11')]);
       expect(paid[0]!.children).toEqual([
-        { childId: billy.id, points: 40, cents: 200, envelopes: 0 },
+        { childId: billy.id, points: 40, cents: 200, piggyCents: 50, envelopes: 0 },
       ]);
     });
 

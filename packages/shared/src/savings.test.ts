@@ -12,6 +12,8 @@ import {
   moveLimits,
   moveProblem,
   pendingConversion,
+  piggyLimits,
+  piggyShareCents,
   pourStepCents,
   quickAmounts,
   stepPrice,
@@ -263,6 +265,45 @@ describe('moving coins', () => {
     expect(stepPrice(1000, -1, 2500)).toBe(100);
     expect(stepPrice(100, -1, 100)).toBe(100);
     expect(stepPrice(95_000, 1, 10_000)).toBe(100_000);
+  });
+});
+
+describe('the piggy bank', () => {
+  it('takes its share of payday money, rounded down to whole cents', () => {
+    expect(piggyShareCents(1000, 25)).toBe(250);
+    expect(piggyShareCents(575, 25)).toBe(143); // 143.75
+    expect(piggyShareCents(575, 100)).toBe(575);
+    expect(piggyShareCents(575, 0)).toBe(0);
+  });
+
+  it('takes nothing from no money, and keeps the percentage within 0–100', () => {
+    expect(piggyShareCents(0, 25)).toBe(0);
+    expect(piggyShareCents(-200, 25)).toBe(0);
+    expect(piggyShareCents(1000, 150)).toBe(1000);
+    expect(piggyShareCents(1000, -5)).toBe(0);
+    expect(() => piggyShareCents(10.5, 25)).toThrow(TypeError);
+  });
+
+  it('takes anything up to "to sort", and gives nothing back on the kiosk', () => {
+    expect(piggyLimits(825)).toEqual({ maxIn: 825, maxOut: 0 });
+    expect(piggyLimits(0)).toEqual({ maxIn: 0, maxOut: 0 });
+    expect(piggyLimits(-50)).toEqual({ maxIn: 0, maxOut: 0 });
+  });
+
+  it('counts as saved money that is not "to sort"', () => {
+    const piggy = 9;
+    const money = summariseMoney(
+      [
+        row('conversion', { cents: 1000 }),
+        row('goal_allocation', { cents: 250, goalId: piggy }),
+        row('spend', { cents: -50, goalId: piggy }),
+      ],
+      [piggy],
+      5,
+    );
+    expect(money.savedCents).toBe(950);
+    expect(money.jarCents.get(piggy)).toBe(200);
+    expect(money.toSortCents).toBe(750);
   });
 });
 

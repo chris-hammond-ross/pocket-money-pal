@@ -1,7 +1,8 @@
 /**
  * Payday (spec 004, ADR 0010): which slot is waiting, running a payday (open envelopes,
- * then one `conversion` row per child with points to convert), the show's summary, and
- * each child's savings book. The scheduler and "Start payday now" both call `runPayday`.
+ * then one `conversion` row per child with points to convert, and the piggy bank's share
+ * of it, ADR 0019), the show's summary, and each child's savings book. The scheduler and
+ * "Start payday now" both call `runPayday`.
  */
 import {
   conversionFor,
@@ -10,6 +11,7 @@ import {
   manualPaydaySlot,
   nextPaydaySlot,
   paydayStats,
+  piggyShareCents,
   zonedDateOf,
   type PaydayInfo,
   type PaydayState,
@@ -24,6 +26,7 @@ import type { DbOrTx } from './db';
 import { recordEvent } from './events';
 import { appendLedger, EARNED_POINT_KINDS } from './ledger';
 import {
+  ensurePiggy,
   getActiveChild,
   liveGoalsOf,
   moneyRowsOf,
@@ -78,13 +81,21 @@ export function paydayInfo(db: DbOrTx, now: number): PaydayInfo {
 export interface PaydayResult {
   paydayId: number;
   slot: number;
-  children: { childId: number; points: number; cents: number; envelopes: number }[];
+  children: {
+    childId: number;
+    points: number;
+    cents: number;
+    piggyCents: number;
+    envelopes: number;
+  }[];
 }
 
 /**
  * Runs a payday for `slot`, in the caller's transaction: every active child's unopened
  * envelopes open, then their points since the last conversion become money, each row at
- * its own rate, when both come out above zero (ADR 0010). Refused if the slot is covered.
+ * its own rate, when both come out above zero (ADR 0010). The family's piggy share of that
+ * money goes straight into each child's piggy bank (ADR 0019); gifts don't. Refused if
+ * the slot is covered.
  */
 export function runPayday(
   db: DbOrTx,
@@ -98,7 +109,7 @@ export function runPayday(
     .values({ at: args.slot, ranAt: args.now, startedBy: args.startedBy })
     .returning()
     .get();
-  const { centsPerPoint } = getSettings(db);
+  const { centsPerPoint, piggyPercent } = getSettings(db);
   const children = listChildren(db).map((child) => {
     const opened = unopenedEnvelopes(db, child.id);
     for (const e of opened) openEnvelope(db, e.id, args.now, payday.id);
@@ -114,10 +125,24 @@ export function runPayday(
         at: args.now,
       });
     }
+    const piggyCents = piggyShareCents(conversion?.cents ?? 0, piggyPercent);
+    if (piggyCents > 0) {
+      appendLedger(db, {
+        childId: child.id,
+        kind: 'goal_allocation',
+        cents: piggyCents,
+        goalId: ensurePiggy(db, child.id).id,
+        paydayId: payday.id,
+        note: 'Payday',
+        createdBy: args.startedBy,
+        at: args.now,
+      });
+    }
     return {
       childId: child.id,
       points: conversion?.points ?? 0,
       cents: conversion?.cents ?? 0,
+      piggyCents,
       envelopes: opened.length,
     };
   });
@@ -219,6 +244,9 @@ export function paydaySummary(db: DbOrTx, id?: number): PaydaySummary | null {
       .where(and(eq(ledger.childId, child.id), eq(ledger.paydayId, payday.id)))
       .all();
     const conversion = rows.find((r) => r.kind === 'conversion');
+    const piggyCents = rows
+      .filter((r) => r.kind === 'goal_allocation')
+      .reduce((sum, r) => sum + r.cents, 0);
     const openedIds = rows.filter((r) => r.kind === 'extra_income').map((r) => r.id);
     const opened =
       openedIds.length === 0
@@ -253,6 +281,7 @@ export function paydaySummary(db: DbOrTx, id?: number): PaydaySummary | null {
       streak: streakOf(db, child.id, zonedDateOf(payday.ranAt, timezone)),
       points: conversion ? -conversion.points : 0,
       cents: conversion?.cents ?? 0,
+      piggyCents,
       envelopes: opened.map((e) => ({
         id: e.id,
         fromName: e.fromName,
@@ -297,7 +326,13 @@ export function savingsBook(db: DbOrTx, childId: number): SavingsBook {
       .map((p) => [p.id, p.at]),
   );
   const jarRows = db
-    .select({ id: goals.id, name: goals.name, emoji: goals.emoji, boughtAt: goals.boughtAt })
+    .select({
+      id: goals.id,
+      kind: goals.kind,
+      name: goals.name,
+      emoji: goals.emoji,
+      boughtAt: goals.boughtAt,
+    })
     .from(goals)
     .where(eq(goals.childId, childId))
     .all();
@@ -336,7 +371,7 @@ export function savingsBook(db: DbOrTx, childId: number): SavingsBook {
         note: r.note,
         quests: null,
         points: null,
-        jar: jar && { emoji: jar.emoji, name: jar.name },
+        jar: jar && { emoji: jar.emoji, name: jar.name, piggy: jar.kind === 'piggy' },
       });
     }
   }

@@ -145,7 +145,10 @@ export async function playerRoutes(
   app.post('/api/children/:id/sick-today', parentOnly, sickRoute(true));
   app.delete('/api/children/:id/sick-today', parentOnly, sickRoute(false));
 
-  /** LOOT RATE (from now on), the currency, quiet hours and the kiosk volume; payday's day, time and how it starts. */
+  /**
+   * LOOT RATE (from now on), the currency, quiet hours and the kiosk volume; payday's day,
+   * time, how it starts and the piggy bank's share.
+   */
   app.patch('/api/settings', parentOnly, async (req, reply) => {
     const patch = phoneSettingsPatchSchema.safeParse(req.body);
     if (!patch.success) return reply.code(400).send({ error: patch.error.issues });
@@ -154,7 +157,7 @@ export async function playerRoutes(
       const before = getSettings(tx);
       const after = updateSettings(tx, patch.data, ctx.now);
       const changed = (
-        ['centsPerPoint', 'currency', 'quietHours', 'volume', 'payday'] as const
+        ['centsPerPoint', 'currency', 'quietHours', 'volume', 'payday', 'piggyPercent'] as const
       ).filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]));
       if (changed.length > 0) {
         recordEvent(tx, {
