@@ -1,0 +1,13 @@
+// The landing site: a static-assets-only Worker (no script). Deployed by Workers Builds
+// from this folder on every push to main that touches apps/site/ (see README.md).
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "pocketmoneypal",
+  "compatibility_date": "2026-10-28",
+  "assets": {
+    "directory": "./public",
+    // Missing paths get public/404.html with a 404 status.
+    "not_found_handling": "404-page",
+  },
+  "routes": [{ "pattern": "pocketmoneypal.com", "custom_domain": true }],
+}
