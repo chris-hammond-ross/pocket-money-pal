@@ -1,6 +1,6 @@
 import type { NetworkInterfaceInfo } from 'node:os';
 import { describe, expect, it } from 'vitest';
-import { isOnPc, lanAddresses } from './net';
+import { isOnPc, lanAddresses, originOfIp } from './net';
 
 function v4(address: string, internal = false): NetworkInterfaceInfo {
   return {
@@ -56,5 +56,35 @@ describe('isOnPc', () => {
     ['::ffff:10.0.0.6', false],
   ])('%s → %s', (ip, expected) => {
     expect(isOnPc(ip, interfaces)).toBe(expected);
+  });
+});
+
+describe('originOfIp (ADR 0021)', () => {
+  it.each([
+    // The PC: loopback, or one of its own addresses, its own Tailscale address included.
+    ['127.0.0.1', 'pc'],
+    ['::1', 'pc'],
+    ['192.168.1.20', 'pc'],
+    ['100.101.102.103', 'pc'],
+    // The home network.
+    ['192.168.1.77', 'lan'],
+    ['::ffff:10.0.0.6', 'lan'],
+    ['172.16.0.9', 'lan'],
+    ['172.31.255.1', 'lan'],
+    ['169.254.10.10', 'lan'],
+    ['fd12:3456:789a::1', 'lan'],
+    ['fe80::abcd%12', 'lan'],
+    // Everything else: other tailnet devices (both of Tailscale's ranges), the internet.
+    ['100.88.12.34', 'remote'],
+    ['100.64.0.1', 'remote'],
+    ['fd7a:115c:a1e0::9c39:cd40', 'remote'],
+    ['fd7a:115c:a1e0:ab12:4843:cd96:6258:b240', 'remote'],
+    ['172.32.0.1', 'remote'],
+    ['203.0.113.9', 'remote'],
+    ['192.0.2.77', 'remote'],
+    ['2a00:1450:4009:81f::200e', 'remote'],
+    ['not-an-address', 'remote'],
+  ])('%s → %s', (ip, expected) => {
+    expect(originOfIp(ip, interfaces)).toBe(expected);
   });
 });

@@ -362,7 +362,12 @@ describe('the HTTPS address', () => {
       method: 'GET',
       url: '/api/health',
       remoteAddress: '127.0.0.1',
-      headers: { 'x-forwarded-proto': 'https', 'x-forwarded-host': 'family-pc.tail1234.ts.net' },
+      // `tailscale serve` always names the client: here, the PC itself.
+      headers: {
+        'x-forwarded-for': '127.0.0.1',
+        'x-forwarded-proto': 'https',
+        'x-forwarded-host': 'family-pc.tail1234.ts.net',
+      },
     });
     expect(getKv(db, 'secure_url')).toBe('https://family-pc.tail1234.ts.net');
   });

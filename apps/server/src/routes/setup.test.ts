@@ -20,13 +20,13 @@ import {
   users,
 } from '../db/schema';
 import { listInstancesForDate } from '../repo/instances';
-import { testDb } from '../test-helpers';
+import { PHONE_IP, testDb } from '../test-helpers';
 import { SETUP_TOKEN_HEADER } from './setup';
 
 /** Wednesday 30 September 2026, 10:00 in London. */
 const NOW = zonedTimeToInstant('2026-09-30', '10:00', 'Europe/London');
 /** A phone on the LAN (TEST-NET-1, never one of this machine's addresses). */
-const PHONE = '192.0.2.77';
+const PHONE = PHONE_IP;
 const ANDROID_UA =
   'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36';
 

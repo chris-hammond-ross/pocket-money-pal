@@ -159,6 +159,55 @@ describe('GET /api/backup', () => {
   });
 });
 
+describe('the relay registration (ADR 0021)', () => {
+  const RELAY = JSON.stringify({
+    kioskId: 'k1',
+    secret: 'relay-secret-1234567890',
+    url: 'https://abc.pocketmoneypal.app',
+  });
+
+  it('is never written into a backup file, not even in its free pages', async () => {
+    await seed();
+    setKv(db, 'relay', RELAY);
+    const file = await exportBackup();
+    expect(file.includes('relay-secret-1234567890')).toBe(false);
+    const dir = mkdtempSync(join(tmpdir(), 'pmp-bak-'));
+    try {
+      writeFileSync(join(dir, 'b.db'), file);
+      const copy = new Database(join(dir, 'b.db'), { readonly: true });
+      const keys = copy.prepare('SELECT key FROM server_kv').pluck().all();
+      copy.close();
+      expect(keys).not.toContain('relay');
+      expect(keys).toContain('vapid');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('is never taken from a backup, and this server keeps its own', async () => {
+    await seed();
+    // A file that carries one anyway (made by hand, say).
+    const made = await createBackup(db, { images: [], appVersion: 'test', now: 0 });
+    const withRelay = new Database(made.file);
+    withRelay
+      .prepare(
+        "INSERT INTO server_kv (key, value, created_at, updated_at) VALUES ('relay', ?, '', '')",
+      )
+      .run('{"secret":"theirs"}');
+    withRelay.close();
+    const file = readFileSync(made.file);
+    await made.cleanup();
+
+    setKv(db, 'relay', RELAY);
+    const checked = await inspect(file);
+    expect(checked.statusCode).toBe(200);
+    const { uploadId } = backupInspectResultSchema.parse(checked.json());
+    const res = await restore({ uploadId, confirm: 'RESTORE' });
+    expect(res.statusCode).toBe(200);
+    expect(getKv(db, 'relay')).toBe(RELAY);
+  });
+});
+
 describe('export, factory reset, import', () => {
   it('brings everything back, during setup, and pairs the phone that restored', async () => {
     await seed();

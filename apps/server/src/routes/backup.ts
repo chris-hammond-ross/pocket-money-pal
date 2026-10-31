@@ -8,9 +8,10 @@ import {
 } from '@pmp/shared';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { deviceOf, requireParent, authOf, setDeviceCookie } from '../auth/devices';
+import { remoteLimit } from '../auth/limits';
 import type { Db } from '../db/client';
 import type { GoalImages } from '../goal-image';
-import { isOnPc } from '../net';
+import { requestOrigin } from '../net';
 import {
   BackupError,
   createBackup,
@@ -103,31 +104,35 @@ export async function backupRoutes(
   });
 
   /** Checks an uploaded backup and says what's in it. Nothing changes yet. */
-  app.post('/api/backup/inspect', { bodyLimit: BACKUP_BODY_LIMIT }, async (req, reply) => {
-    if (!Buffer.isBuffer(req.body)) return reply.code(415).send({ error: 'backup-file' });
-    const access = accessOf(req, reply);
-    if (!access) return reply;
-    let checked;
-    try {
-      checked = await inspectBackup(db, req.body, {
-        migrationsDir,
-        token: req.cookies[DEVICE_COOKIE],
-      });
-    } catch (err) {
-      if (err instanceof BackupError && err.problem !== 'no-parent') {
-        return reply.code(PROBLEM_STATUS[err.problem]).send({ error: `backup-${err.problem}` });
+  app.post(
+    '/api/backup/inspect',
+    { bodyLimit: BACKUP_BODY_LIMIT, ...remoteLimit('setup') },
+    async (req, reply) => {
+      if (!Buffer.isBuffer(req.body)) return reply.code(415).send({ error: 'backup-file' });
+      const access = accessOf(req, reply);
+      if (!access) return reply;
+      let checked;
+      try {
+        checked = await inspectBackup(db, req.body, {
+          migrationsDir,
+          token: req.cookies[DEVICE_COOKIE],
+        });
+      } catch (err) {
+        if (err instanceof BackupError && err.problem !== 'no-parent') {
+          return reply.code(PROBLEM_STATUS[err.problem]).send({ error: `backup-${err.problem}` });
+        }
+        throw err;
       }
-      throw err;
-    }
-    await dropPending();
-    const { summary, ...file } = checked;
-    pending = { ...file, id: newUploadId(), at: now(), access };
-    const result: BackupInspectResult = { uploadId: pending.id, summary };
-    return result;
-  });
+      await dropPending();
+      const { summary, ...file } = checked;
+      pending = { ...file, id: newUploadId(), at: now(), access };
+      const result: BackupInspectResult = { uploadId: pending.id, summary };
+      return result;
+    },
+  );
 
   /** Replaces everything with the checked backup. */
-  app.post('/api/backup/restore', async (req, reply) => {
+  app.post('/api/backup/restore', remoteLimit('setup'), async (req, reply) => {
     const body = backupRestoreRequestSchema.safeParse(req.body);
     if (!body.success) return reply.code(400).send({ error: body.error.issues });
     const access = accessOf(req, reply);
@@ -144,7 +149,7 @@ export async function backupRoutes(
     if (access === 'parent' && confirm?.trim().toUpperCase() !== RESTORE_WORD) {
       return reply.code(400).send({ error: 'confirm' });
     }
-    const onPc = isOnPc(req.ip);
+    const onPc = requestOrigin(req) === 'pc';
     const token = access === 'parent' ? req.cookies[DEVICE_COOKIE] : undefined;
 
     let result;

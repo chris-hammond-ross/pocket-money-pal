@@ -10,8 +10,9 @@ import {
 } from '@pmp/shared';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { authOf, deviceOf, requireParent, setDeviceCookie } from '../auth/devices';
+import { remoteLimit } from '../auth/limits';
 import type { Db } from '../db/client';
-import { isOnPc, lanAddresses } from '../net';
+import { lanAddresses, requestOrigin } from '../net';
 import {
   checkPairingCode,
   countActiveDevices,
@@ -117,7 +118,7 @@ export async function deviceRoutes(
    * only while setup is done and no phone is paired at all.
    */
   app.get('/api/devices/pc-invite', async (req, reply) => {
-    if (!isOnPc(req.ip)) return reply.code(403).send({ error: 'pc-only' });
+    if (requestOrigin(req) !== 'pc') return reply.code(403).send({ error: 'pc-only' });
     if (isSetupNeeded(db)) return reply.code(409).send({ error: 'setup-needed' });
     if (countActiveDevices(db) > 0) return reply.code(409).send({ error: 'phones-paired' });
     return invite(createPairingCode(db, { createdByDevice: null, now: now() }));
@@ -127,7 +128,7 @@ export async function deviceRoutes(
     reply.code(CODE_STATUS[problem]).send({ error: `code-${problem}` });
 
   /** The new phone checks its code, and learns which grown-ups it can pair as. */
-  app.post('/api/devices/pair/check', async (req, reply) => {
+  app.post('/api/devices/pair/check', remoteLimit('pair'), async (req, reply) => {
     const body = pairCheckRequestSchema.safeParse(req.body);
     if (!body.success) return reply.code(400).send({ error: body.error.issues });
     const check = checkPairingCode(db, body.data.code, now());
@@ -140,10 +141,10 @@ export async function deviceRoutes(
   });
 
   /** The new phone pairs as the grown-up it picked. The code is spent. */
-  app.post('/api/devices/pair', async (req, reply) => {
+  app.post('/api/devices/pair', remoteLimit('pair'), async (req, reply) => {
     const body = pairRequestSchema.safeParse(req.body);
     if (!body.success) return reply.code(400).send({ error: body.error.issues });
-    if (isOnPc(req.ip)) return reply.code(403).send({ error: 'not-on-pc' });
+    if (requestOrigin(req) === 'pc') return reply.code(403).send({ error: 'not-on-pc' });
     // Already paired: pairing again would leave the old token dangling.
     if (deviceOf(db, req)) return reply.code(409).send({ error: 'already-paired' });
 

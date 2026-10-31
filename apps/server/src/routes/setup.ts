@@ -8,9 +8,10 @@ import {
 } from '@pmp/shared';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Db } from '../db/client';
-import { isOnPc, lanAddresses } from '../net';
+import { lanAddresses, requestOrigin } from '../net';
 import { ConflictError } from '../repo/db';
 import { setDeviceCookie } from '../auth/devices';
+import { remoteLimit } from '../auth/limits';
 import { deviceNameFrom } from '../repo/devices';
 import {
   completeSetup,
@@ -24,10 +25,15 @@ import {
 /** Header a phone sends the setup token in (it arrives in the kiosk QR code's URL). */
 export const SETUP_TOKEN_HEADER = 'x-setup-token';
 
-/** Whether a request may run setup: from the family PC, or with the setup token (ADR 0005). */
+/**
+ * Whether a request may run setup: from the family PC, or with the setup token (ADR 0005).
+ * A remote request is never the PC (ADR 0021), so it always needs the token.
+ */
 export function canRunSetup(db: Db, req: FastifyRequest): boolean {
   const token = req.headers[SETUP_TOKEN_HEADER];
-  return isOnPc(req.ip) || isSetupToken(db, typeof token === 'string' ? token : undefined);
+  return (
+    requestOrigin(req) === 'pc' || isSetupToken(db, typeof token === 'string' ? token : undefined)
+  );
 }
 
 export interface SetupRouteOptions {
@@ -56,23 +62,23 @@ export async function setupRoutes(
 
   app.get('/api/setup/status', async (req): Promise<SetupStatus> => ({
     needed: isSetupNeeded(db),
-    onPc: isOnPc(req.ip),
+    onPc: requestOrigin(req) === 'pc',
   }));
 
   // The kiosk's title screen: only the PC may see the token it puts in the QR code.
   app.get('/api/setup/kiosk', async (req, reply) => {
-    if (!isOnPc(req.ip)) return reply.code(403).send({ error: 'pc-only' });
+    if (requestOrigin(req) !== 'pc') return reply.code(403).send({ error: 'pc-only' });
     if (!isSetupNeeded(db)) return reply.code(409).send({ error: 'setup-done' });
     const info: SetupKioskInfo = { token: getSetupToken(db), hosts: lanAddresses(), publicUrl };
     return info;
   });
 
-  app.get('/api/setup/draft', async (req, reply) => {
+  app.get('/api/setup/draft', remoteLimit('setup'), async (req, reply) => {
     if (!allowSetup(req, reply)) return reply;
     return { draft: getDraft(db) };
   });
 
-  app.put('/api/setup/draft', async (req, reply) => {
+  app.put('/api/setup/draft', remoteLimit('setup'), async (req, reply) => {
     const parsed = setupDraftSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.issues });
     if (!allowSetup(req, reply)) return reply;
@@ -80,13 +86,13 @@ export async function setupRoutes(
     return reply.code(204).send();
   });
 
-  app.post('/api/setup', async (req, reply) => {
+  app.post('/api/setup', remoteLimit('setup'), async (req, reply) => {
     const parsed = setupRequestSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.issues });
     if (!allowSetup(req, reply)) return reply;
 
     const request = parsed.data;
-    const onPc = isOnPc(req.ip);
+    const onPc = requestOrigin(req) === 'pc';
     let result;
     try {
       result = completeSetup(db, {

@@ -1,7 +1,7 @@
 import type { FastifyRequest } from 'fastify';
 import { deviceOf } from './auth/devices';
 import type { Db } from './db/client';
-import { isOnPc } from './net';
+import { requestOrigin } from './net';
 import { getKv, setKv } from './repo/kv';
 
 /**
@@ -29,7 +29,7 @@ export class SecureUrl {
     if (this.fixed || req.protocol !== 'https') return;
     const origin = `https://${req.host}`;
     if (origin === this.learned) return;
-    if (!isOnPc(req.ip) && !deviceOf(this.db, req)) return;
+    if (requestOrigin(req) !== 'pc' && !deviceOf(this.db, req)) return;
     setKv(this.db, 'secure_url', origin);
     this.learned = origin;
   }

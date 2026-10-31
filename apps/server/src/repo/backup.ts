@@ -55,7 +55,10 @@ const IMAGES_TABLE = 'pmp_backup_images';
 const NOT_RESTORED = new Set(['setup_drafts', 'pairing_codes']);
 
 /** `server_kv` keys that belong to this server, not the family: never taken from a backup. */
-const OWN_KV = ['secure_url'];
+const OWN_KV = ['secure_url', 'relay'];
+
+/** `server_kv` keys never written into a backup: the relay's secret (ADR 0021). */
+const NOT_EXPORTED_KV = ['relay'];
 
 /** Makes a backup file of the whole family, with its jar pictures. */
 export async function createBackup(
@@ -68,12 +71,19 @@ export async function createBackup(
     db.$client.prepare('VACUUM INTO ?').run(out.file);
     const copy = new Database(out.file);
     try {
+      // What's deleted below is zeroed, not left in free pages for someone to dig out.
+      copy.pragma('secure_delete = ON');
       copy.exec(`
         CREATE TABLE ${META_TABLE} (key TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE ${IMAGES_TABLE} (name TEXT PRIMARY KEY, bytes BLOB NOT NULL);
         DELETE FROM setup_drafts;
         DELETE FROM pairing_codes;
       `);
+      copy
+        .prepare(
+          `DELETE FROM server_kv WHERE key IN (${NOT_EXPORTED_KV.map(() => '?').join(', ')})`,
+        )
+        .run(...NOT_EXPORTED_KV);
       const meta = copy.prepare(`INSERT INTO ${META_TABLE} (key, value) VALUES (?, ?)`);
       const image = copy.prepare(`INSERT INTO ${IMAGES_TABLE} (name, bytes) VALUES (?, ?)`);
       copy.transaction(() => {

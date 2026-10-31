@@ -124,13 +124,9 @@ describe('serving the web app', () => {
     // Listen before the upgrade finishes: the hello is the very first message.
     let received: (message: unknown) => void = () => undefined;
     const hello = new Promise<unknown>((done) => (received = done));
-    const ws = await app.injectWS(
-      '/ws',
-      {},
-      {
-        onInit: (socket) => socket.once('message', (data) => received(JSON.parse(String(data)))),
-      },
-    );
+    const ws = await app.injectWS('/ws', { socket: { remoteAddress: '127.0.0.1' } } as never, {
+      onInit: (socket) => socket.once('message', (data) => received(JSON.parse(String(data)))),
+    });
     expect(await hello).toMatchObject({ type: 'hello', build: 'b42', apiVersion: API_VERSION });
     ws.terminate();
   });

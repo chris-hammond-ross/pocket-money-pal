@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../app';
 import type { Db } from '../db/client';
 import { familySettings, ledger, setupDrafts } from '../db/schema';
-import { getKv } from '../repo/kv';
+import { getKv, setKv } from '../repo/kv';
 import { insertParent } from '../repo/users';
 import { ensureDay } from '../scheduler';
 import { addChild, addChore, pairedCookie, PHONE_IP, testDb } from '../test-helpers';
@@ -92,6 +92,7 @@ describe('POST /api/factory-reset', () => {
 
   it('empties every family table and starts setup again', async () => {
     await seed();
+    setKv(db, 'relay', '{"secret":"s3cret"}');
     const vapid = getKv(db, 'vapid');
     expect(rowCount('ledger')).toBeGreaterThan(0);
 
@@ -105,8 +106,9 @@ describe('POST /api/factory-reset', () => {
     expect(settings).toHaveLength(1);
     expect(settings[0]).toMatchObject({ id: 1, familyName: 'Our Family', centsPerPoint: 5 });
     expect(db.select().from(setupDrafts).get()?.token).toBe(setupToken);
-    // The server's own identity stays.
+    // The server's own identity stays, and it's still registered with the relay.
     expect(getKv(db, 'vapid')).toBe(vapid);
+    expect(getKv(db, 'relay')).toBe('{"secret":"s3cret"}');
 
     const status = setupStatusSchema.parse(
       (await app.inject({ url: '/api/setup/status', remoteAddress: PHONE_IP })).json(),

@@ -40,8 +40,17 @@ export function addChore(db: Db, childIds: number[], fields: Partial<ChoreInput>
   );
 }
 
-/** A phone on the LAN (TEST-NET-1, never one of this machine's addresses). */
-export const PHONE_IP = '192.0.2.77';
+/**
+ * A phone on the home Wi-Fi: a private address no real PC is likely to have. (Not TEST-NET:
+ * that's a public range, so it would be remote, ADR 0021.)
+ */
+export const PHONE_IP = '192.168.213.77';
+
+/** A phone on the tailnet: `tailscale serve` reports its 100.64.0.0/10 address. */
+export const TAILNET_IP = '100.88.12.34';
+
+/** A phone on mobile data, as a proxy or the relay reports it (TEST-NET-3). */
+export const PUBLIC_IP = '203.0.113.9';
 
 /** Pairs a phone to `parentId` and returns its `cookie` header. */
 export function pairedCookie(db: Db, parentId: number, now = 0): string {

@@ -13,8 +13,11 @@ import { getSetupToken } from './setup';
  */
 const KEPT_TABLES = new Set(['__drizzle_migrations', 'server_kv']);
 
-/** The server's own identity survives: phones re-pair against the same push keys and address. */
-const KEPT_KV: KvKey[] = ['vapid', 'secure_url'];
+/**
+ * The server's own identity survives: phones re-pair against the same push keys and address,
+ * and the PC stays registered with the relay (ADR 0021).
+ */
+const KEPT_KV: KvKey[] = ['vapid', 'secure_url', 'relay'];
 
 /**
  * Empties every family table (all but the migrations record and `server_kv`) and runs

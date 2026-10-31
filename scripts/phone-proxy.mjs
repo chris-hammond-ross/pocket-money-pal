@@ -13,14 +13,16 @@
  * host, so the phone's pairing never leaks into the kiosk's window.
  *
  * Settings: PHONE_PROXY_PORT (5199), PHONE_PROXY_TARGET (http://localhost:5173),
- * PHONE_PROXY_IP (192.0.2.77, a documentation address that is never this PC's).
+ * PHONE_PROXY_IP (192.168.213.77, a home-network address no real PC is likely to have).
+ * To act as a phone away from home (ADR 0021), use a tailnet or public address instead:
+ * PHONE_PROXY_IP=100.88.12.34. It then has to be paired for everything but pairing.
  */
 import http from 'node:http';
 import net from 'node:net';
 
 const port = Number(process.env.PHONE_PROXY_PORT || 5199);
 const target = new URL(process.env.PHONE_PROXY_TARGET || 'http://localhost:5173');
-const phoneIp = process.env.PHONE_PROXY_IP || '192.0.2.77';
+const phoneIp = process.env.PHONE_PROXY_IP || '192.168.213.77';
 const targetPort = Number(target.port || 80);
 
 /** The browser's headers, as a phone on the LAN talking straight to the dev server. */

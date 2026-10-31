@@ -1,6 +1,6 @@
 # Pocket Money Pal
 
-A game-like chore and pocket-money app for kids. Read `docs/plan.md` for the full plan (architecture, process, roadmap). Build work runs in sessions listed in `docs/roadmap.md`: follow its standard session rules and write a handover note when you finish.
+A game-like chore and pocket-money app for kids. Read `docs/plan.md` for the full plan (architecture, process, roadmap). Build work runs in sessions listed in `docs/roadmap/README.md` (one file per phase in `docs/roadmap/phases/`): follow its standard session rules and add a handover note to `docs/roadmap/handover/` when you finish.
 
 ## Architecture in one breath
 
@@ -51,7 +51,8 @@ Features are prototyped **before** they are built. When asked to prototype a fea
 ## Product context worth remembering
 
 - Kiosk: a shared family PC, second monitor dedicated to the app, used by kids and almost never by adults. Readable from across the room; touch/mouse friendly; sounds and animations are core, not garnish.
-- Parents act from their paired phones on the home Wi-Fi: approvals and every other parent action happen there, never on the kiosk. There's no kiosk PIN or parent mode (ADR 0008).
+- Parents act from their paired phones, on the home Wi-Fi or, with hands-off remote access, through the relay (ADR 0021): approvals and every other parent action happen there, never on the kiosk. There's no kiosk PIN or parent mode (ADR 0008). A request through the relay or any proxy is `remote` and must come from a paired phone.
 - Chores speak in **points**; goals/savings speak in **money**.
 - Home Assistant is an optional integration, never a dependency.
+- Two ways to run it: **hands-off** (paid licence, relay on Cloudflare at `*.pocketmoneypal.app`, private repo `pocket-money-pal-app`) and **hands-on** (free, LAN or bring-your-own HTTPS). The PC is the only place family data lives in both; the relay forwards and stores nothing.
 - Open source is a long-term goal: keep things configurable, but don't sacrifice features for it.

@@ -5,6 +5,7 @@ import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
 import { WS_PATH, pingRequestSchema, type Health } from '@pmp/shared';
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
+import { installRemoteGuard } from './auth/remote';
 import { serverVersion } from './build-info';
 import type { ServerClock } from './clock';
 import type { Db } from './db/client';
@@ -87,6 +88,7 @@ export async function buildApp({
 }: AppOptions): Promise<FastifyInstance> {
   // Trust X-Forwarded-For from loopback only: Vite's dev proxy (and a local HTTPS proxy such
   // as `tailscale serve`) forward the real client, so a phone is never mistaken for the PC.
+  // `requestOrigin` (net.ts) turns that client into `pc`, `lan` or `remote` (ADR 0021).
   const app = Fastify({ logger, trustProxy: 'loopback' });
   // Only a served bundle has a build to compare: without one, clients never see an update.
   const servedDist = webDist && existsSync(resolve(webDist, 'index.html')) ? webDist : null;
@@ -105,11 +107,14 @@ export async function buildApp({
   app.decorate('notifier', notifier);
   app.addHook('onClose', async () => notifier.stop());
 
+  await app.register(fastifyCookie);
+  // First of all the hooks: a remote request must be a paired phone (ADR 0021).
+  await installRemoteGuard(app, { db });
+
   const secure = new SecureUrl(db, secureUrl);
   // After the cookie is parsed, so a paired phone counts as trusted.
   app.addHook('preHandler', async (req) => secure.learn(req));
 
-  await app.register(fastifyCookie);
   await app.register(fastifyWebsocket);
   // Before the routes, so it covers every write (spec 007).
   installReplay(app, { db, now });
