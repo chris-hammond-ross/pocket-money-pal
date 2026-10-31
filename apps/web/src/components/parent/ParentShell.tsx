@@ -41,11 +41,11 @@ import {
 } from '@pmp/shared';
 
 type Tab = 'day' | 'week' | 'players' | 'payday';
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'day', label: '🕒 Day' },
-  { key: 'week', label: '📅 Week' },
-  { key: 'players', label: '🎮 Players' },
-  { key: 'payday', label: '💰 Payday' },
+const TABS: { key: Tab; icon: string; label: string }[] = [
+  { key: 'day', icon: '🕒', label: 'Day' },
+  { key: 'week', icon: '📅', label: 'Week' },
+  { key: 'players', icon: '🎮', label: 'Players' },
+  { key: 'payday', icon: '💰', label: 'Payday' },
 ];
 
 const BANNER_MS = 4500;
@@ -261,7 +261,8 @@ export function ParentShell({ welcome }: { welcome: Banner | null }) {
                 sound.tap();
               }}
             >
-              {t.label}
+              <span>{t.icon}</span>
+              <span>{t.label}</span>
             </button>
           ))}
         </nav>
