@@ -53,12 +53,15 @@ export function ensureVapidKeys(db: DbOrTx): VapidKeys {
   return keys;
 }
 
-/** A sender through the browser vendor's push service, with `web-push`. */
-export function webPushSender(keys: VapidKeys, subject: string): PushSender {
+/**
+ * A sender through the browser vendor's push service, with `web-push`. The keys are read
+ * for each message, since restoring a backup brings back its own (ADR 0020).
+ */
+export function webPushSender(keys: () => VapidKeys, subject: string): PushSender {
   return async (subscription, message) => {
     try {
       await webpush.sendNotification(subscription, JSON.stringify(message), {
-        vapidDetails: { subject, ...keys },
+        vapidDetails: { subject, ...keys() },
         // A claim is stale after a few hours; "high" asks Android to wake from Doze.
         TTL: 4 * 60 * 60,
         urgency: 'high',

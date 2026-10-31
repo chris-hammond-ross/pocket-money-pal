@@ -27,6 +27,7 @@ import classes from './parent.module.css';
 import { PhoneQuestEditor, type EditorTarget } from './PhoneQuestEditor';
 import { PaydayTab } from './money/PaydayTab';
 import { PlayersTab } from './PlayersTab';
+import { SetupTab } from './SetupTab';
 import { SurprisePanel } from './SurprisePanel';
 import { SurpriseSheet } from './Surprises';
 import { Tray } from './Tray';
@@ -40,12 +41,13 @@ import {
   type SurpriseRun,
 } from '@pmp/shared';
 
-type Tab = 'day' | 'week' | 'players' | 'payday';
+type Tab = 'day' | 'week' | 'players' | 'payday' | 'setup';
 const TABS: { key: Tab; icon: string; label: string }[] = [
   { key: 'day', icon: '🕒', label: 'Day' },
   { key: 'week', icon: '📅', label: 'Week' },
   { key: 'players', icon: '🎮', label: 'Players' },
   { key: 'payday', icon: '💰', label: 'Payday' },
+  { key: 'setup', icon: '⚙️', label: 'Setup' },
 ];
 
 const BANNER_MS = 4500;
@@ -54,7 +56,7 @@ const FLASH_MS = 1500;
 const SAME_MOMENT_MS = 2000;
 
 /**
- * The parent phone (spec 003): Day / Week / Players tabs with no header above them, the
+ * The parent phone (spec 003): Day / Week / Players / Payday / Setup tabs with no header above them, the
  * to-check tray pinned to the bottom, and an in-app banner when a child claims a chore.
  */
 export function ParentShell({ welcome }: { welcome: Banner | null }) {
@@ -273,6 +275,7 @@ export function ParentShell({ welcome }: { welcome: Banner | null }) {
           {tab === 'players' &&
             (pc === 'off' ? <NeedsPc what="The Players tab" /> : <PlayersTab />)}
           {tab === 'payday' && (pc === 'off' ? <NeedsPc what="Payday" /> : <PaydayTab />)}
+          {tab === 'setup' && (pc === 'off' ? <NeedsPc what="The Setup tab" /> : <SetupTab />)}
         </main>
         <Tray
           items={items}
@@ -413,7 +416,7 @@ function openTrayFromUrl(): boolean {
 
 /**
  * After pairing, over HTTPS: "Notify this phone about claimed chores?" once per phone
- * (spec 003). Either answer is final here; the Players tab has the switch afterwards.
+ * (spec 003). Either answer is final here; the Setup tab has the switch afterwards.
  */
 function PushOptIn() {
   const ui = useParentUi();
@@ -471,7 +474,7 @@ function PushOptIn() {
     >
       <p className={classes.centre}>
         Get a notification on this phone when a child claims a chore? Quiet hours are respected, and
-        you can change this on the Players tab.
+        you can change this on the Setup tab.
       </p>
     </Sheet>
   );

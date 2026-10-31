@@ -9,7 +9,8 @@ export interface PushRouteOptions {
   db: Db;
   now: () => number;
   notifier: ClaimNotifier;
-  vapidPublicKey: string;
+  /** Read on each request: restoring a backup brings back its own keys (ADR 0020). */
+  vapidPublicKey: () => string;
   secureUrl: SecureUrl;
 }
 
@@ -27,7 +28,7 @@ export async function pushRoutes(
   /** Where "Switch to secure app" goes: set by PMP_SECURE_URL, or learned. */
   app.get('/api/access', async (): Promise<AccessInfo> => ({ secureUrl: secureUrl.get() }));
 
-  app.get('/api/push/key', parentOnly, async () => ({ publicKey: vapidPublicKey }));
+  app.get('/api/push/key', parentOnly, async () => ({ publicKey: vapidPublicKey() }));
 
   /** Stores (or replaces) this phone's subscription. */
   app.post('/api/devices/me/push-subscription', parentOnly, async (req, reply) => {

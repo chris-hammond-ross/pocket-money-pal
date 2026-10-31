@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   adjustRequestSchema,
   approveRequestSchema,
+  backupRestoreRequestSchema,
   chorePatchSchema,
   pairCheckRequestSchema,
   pairRequestSchema,
@@ -381,5 +382,20 @@ describe('money and jar schemas (spec 004)', () => {
       { type: 'money.spent', childId: 2, cents: 300 },
     ];
     for (const event of events) expect(serverEventSchema.safeParse(event).success).toBe(true);
+  });
+});
+
+describe('backupRestoreRequestSchema', () => {
+  it('needs an upload id; the word and the grown-up are optional', () => {
+    expect(backupRestoreRequestSchema.safeParse({ uploadId: 'abc' }).success).toBe(true);
+    expect(
+      backupRestoreRequestSchema.safeParse({ uploadId: 'abc', confirm: 'RESTORE', parentId: 2 })
+        .success,
+    ).toBe(true);
+    expect(backupRestoreRequestSchema.safeParse({}).success).toBe(false);
+    expect(backupRestoreRequestSchema.safeParse({ uploadId: '' }).success).toBe(false);
+    expect(backupRestoreRequestSchema.safeParse({ uploadId: 'abc', parentId: 0 }).success).toBe(
+      false,
+    );
   });
 });

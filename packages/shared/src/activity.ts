@@ -54,6 +54,9 @@ export const ACTIVITY_TYPES = [
   'schedule.paused',
   'schedule.resumed',
   'payday.skipped',
+  // Backup and restore (ADR 0020)
+  'backup.exported',
+  'backup.restored',
   // System
   'day.scheduled',
 ] as const;

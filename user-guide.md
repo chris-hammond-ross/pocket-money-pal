@@ -60,10 +60,15 @@ The **Players** tab has a card for each child: their streak, quests, points toda
 - **Bonus points:** the **+5**, **+10** and **−5** buttons further down give or take points straight away, for anything you like. The kiosk shows them land. They count towards payday but not towards levels.
 - **Sick day:** the button next to a child's card skips all their waiting quests today, so their streak is safe. Tap **Undo** to bring them back.
 - **Players:** tap a card to change a child's name, age, avatar or colour, or to remove them. **+ New player** adds one.
-- **Loot rate and currency:** what one point is worth. A new rate only applies from then on.
-- **Quiet hours** (8pm to 7am to start): no notifications, and no sounds on the kiosk. Animations still play.
-- **Kiosk sounds:** the kiosk's volume.
 - **Paired phones:** pair another grown-up's phone, or revoke a lost one.
+
+The **Setup** tab holds the family's settings, under the app's version number:
+
+- **Loot rate and currency:** what one point is worth. A new rate only applies from then on.
+- **Notifications:** this phone's notifications, and **quiet hours** (8pm to 7am to start): no notifications, and no sounds on the kiosk. Animations still play.
+- **Sounds:** the kiosk's volume, and **Phone sounds** to turn this phone's own sounds on or off.
+- **Data:** download a backup of everything, or restore one.
+- **Danger zone:** the factory reset, to start again from scratch.
 
 ## Payday, jars and gifts
 

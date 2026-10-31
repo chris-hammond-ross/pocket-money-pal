@@ -2,6 +2,8 @@ import {
   accessInfoSchema,
   adjustmentSchema,
   approvalSchema,
+  backupInspectResultSchema,
+  backupRestoreResultSchema,
   choreLibrarySchema,
   choreListSchema,
   choreSchema,
@@ -35,6 +37,7 @@ import {
   surpriseTodaySchema,
   trayListSchema,
   type Grab,
+  type BackupRestoreRequest,
   type ChildInput,
   type ChildPatch,
   type ChoreCreate,
@@ -170,6 +173,25 @@ export const api = {
   /** Wipes the family back to a fresh install (ADR 0014): `confirm` is the typed word. */
   factoryReset: async (confirm: string) =>
     factoryResetResultSchema.parse(await request('/api/factory-reset', json('POST', { confirm }))),
+  /** Where a paired phone downloads the family's backup (ADR 0020). */
+  backupUrl: '/api/backup',
+  /**
+   * Uploads a backup to be checked; nothing changes yet. During setup the setup token
+   * goes along, as for the rest of setup.
+   */
+  inspectBackup: async (file: Blob) =>
+    backupInspectResultSchema.parse(
+      await request('/api/backup/inspect', {
+        method: 'POST',
+        body: file,
+        headers: { 'content-type': 'application/octet-stream', ...setupTokenHeaders() },
+      }),
+    ),
+  /** Replaces everything with the checked backup. */
+  restoreBackup: async (body: BackupRestoreRequest) =>
+    backupRestoreResultSchema.parse(
+      await request('/api/backup/restore', json('POST', body, setupTokenHeaders())),
+    ),
   /** A pairing code for another phone, or with `move` for this phone's HTTPS address. */
   invite: async (move = false) =>
     pairingInviteSchema.parse(await request('/api/devices/invites', json('POST', { move }))),

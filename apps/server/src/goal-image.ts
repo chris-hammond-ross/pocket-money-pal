@@ -6,7 +6,7 @@
  */
 import { randomBytes } from 'node:crypto';
 import { lookup } from 'node:dns/promises';
-import { mkdir, readdir, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { isIP } from 'node:net';
 import { join } from 'node:path';
 
@@ -245,6 +245,12 @@ export function createImageFetcher(options: Partial<FetchOptions> = {}): ImageFe
   };
 }
 
+/** A jar picture's file name and contents. */
+export interface GoalImageFile {
+  name: string;
+  bytes: Buffer;
+}
+
 const FILE_NAME = /^goal-\d+-[0-9a-f]{8}\.(png|jpg|webp|gif)$/;
 
 /** Jar pictures on disk, in `images/` next to the database. */
@@ -284,5 +290,31 @@ export class GoalImages {
     if (!this.dir) return;
     const names = await readdir(this.dir).catch(() => [] as string[]);
     await Promise.all(names.map((name) => this.remove(name)));
+  }
+
+  /** Every jar picture, for a backup (ADR 0020). */
+  async readAll(): Promise<GoalImageFile[]> {
+    if (!this.dir) return [];
+    const names = await readdir(this.dir).catch(() => [] as string[]);
+    const files: GoalImageFile[] = [];
+    for (const name of names) {
+      const file = this.fileOf(name);
+      if (file) files.push({ name, bytes: await readFile(file.path) });
+    }
+    return files;
+  }
+
+  /**
+   * Replaces every jar picture with a backup's (ADR 0020). Only files with a jar picture's
+   * name that really are pictures are written.
+   */
+  async restoreAll(files: GoalImageFile[]): Promise<void> {
+    await this.removeAll();
+    if (!this.dir) return;
+    await mkdir(this.dir, { recursive: true });
+    for (const { name, bytes } of files) {
+      const file = this.fileOf(name);
+      if (file && sniffImage(bytes) === FILE_NAME.exec(name)![1]) await writeFile(file.path, bytes);
+    }
   }
 }

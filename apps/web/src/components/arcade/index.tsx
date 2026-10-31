@@ -92,7 +92,7 @@ export function Sheet({
 
 /**
  * LOOT RATE: "1 point = 5p", a 1p–20p slider and "20 points = £1.00". `onChange` follows the
- * thumb; `onCommit` fires when it's let go (the Players tab saves then).
+ * thumb; `onCommit` fires when it's let go (the Setup tab saves then).
  */
 export function RateSlider({
   value,

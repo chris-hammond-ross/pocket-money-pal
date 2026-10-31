@@ -11,6 +11,7 @@ import type { Db } from './db/client';
 import { createImageFetcher, GoalImages, type ImageFetcher } from './goal-image';
 import { ClaimNotifier, ensureVapidKeys, webPushSender, type PushSender } from './push';
 import { getSettings } from './repo/settings';
+import { backupRoutes } from './routes/backup';
 import { choreRoutes } from './routes/chores';
 import { devRoutes } from './routes/dev';
 import { deviceRoutes } from './routes/devices';
@@ -58,6 +59,8 @@ export interface AppOptions {
   vapidSubject?: string;
   /** Where jar pictures are kept (`images/` next to the database); null keeps none. */
   imagesDir?: string | null;
+  /** The migrations, to bring an older backup up to date (ADR 0020); null refuses those. */
+  migrationsDir?: string | null;
   /** Fetches a shop link's picture. Defaults to the internet (tests fake it). */
   imageFetcher?: ImageFetcher;
   /**
@@ -78,6 +81,7 @@ export async function buildApp({
   pushSender,
   vapidSubject = 'mailto:pocketmoneypal@localhost',
   imagesDir = null,
+  migrationsDir = null,
   imageFetcher = createImageFetcher(),
   onScheduleChanged,
 }: AppOptions): Promise<FastifyInstance> {
@@ -90,7 +94,8 @@ export async function buildApp({
   const hub = new WsHub(version);
   app.decorate('hub', hub);
 
-  const vapid = ensureVapidKeys(db);
+  ensureVapidKeys(db);
+  const vapid = () => ensureVapidKeys(db);
   const notifier = new ClaimNotifier({
     db,
     now,
@@ -133,10 +138,18 @@ export async function buildApp({
     db,
     now,
     notifier,
-    vapidPublicKey: vapid.publicKey,
+    vapidPublicKey: () => vapid().publicKey,
     secureUrl: secure,
   });
   await app.register(resetRoutes, { db, now, images, onScheduleChanged });
+  await app.register(backupRoutes, {
+    db,
+    now,
+    images,
+    migrationsDir,
+    appVersion: VERSION,
+    onScheduleChanged,
+  });
   if (devClock) await app.register(devRoutes, { db, clock: devClock });
 
   // Phase 0 plumbing check: any client can ping every connected screen.

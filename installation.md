@@ -86,24 +86,29 @@ Phones only allow notifications and installed web apps over a secure (HTTPS) add
 
 Good to know:
 
-- No notifications are sent during **quiet hours** (8pm to 7am unless you change them on the Players tab).
+- No notifications are sent during **quiet hours** (8pm to 7am unless you change them on the Setup tab).
 - Several chores finished within two minutes arrive as one notification.
 - Notifications go through Google's push service, so the PC needs to be online for them. Everything else stays on your network.
 - On Samsung phones the installed app doesn't appear in Settings > Apps. It's still installed: Chrome lists it at `chrome://webapks`.
 
 ## Backup and restore
 
-Everything the family has made lives in one folder: `%APPDATA%\Pocket Money Pal` (paste that into File Explorer's address bar).
+Backups are made from a paired phone, under **DATA** on the Setup tab.
 
-**To back up:**
+**To back up:** tap **💾 Download backup**. The phone saves one file, `pocket-money-pal-<date>.pmpbackup`, holding everything: players, quests, points, jars and their pictures, paydays and paired phones. Keep it somewhere private, such as your own cloud storage. It holds the keys that send notifications to your phones.
 
-1. Right-click the tray icon and choose **Quit**.
-2. Copy `pmp.db` from that folder, along with `pmp.db-wal` and `pmp.db-shm` if they're there, and the `images` folder if there is one (jar pictures).
-3. Start Pocket Money Pal again from the Start menu.
+**To restore:**
 
-**To restore:** quit the app, put the copies back in the same folder (replacing what's there), and start it again.
+- **Over the current data:** tap **📦 Restore from a backup**, pick the file, check what's in it, and type `RESTORE`. Anything since the backup was saved is lost.
+- **After a factory reset, or on a new PC:** on the first setup screen, tap **📦 Restore from a backup** instead of START.
 
-There's also a **Factory reset** at the bottom of the phone's Players tab, for starting again from scratch. It can't be undone, so take a backup first if you might want the old data back.
+Phones that were paired when the backup was made are paired again straight away. A phone the backup doesn't know asks which grown-up you are.
+
+A backup from a newer version of the app can only be restored once the PC is updated. Older backups are fine.
+
+There's also a **Factory reset** under **DANGER ZONE** on the same tab, for starting again from scratch. It can't be undone, so download a backup first if you might want the old data back.
+
+**By hand:** everything also lives in one folder, `%APPDATA%\Pocket Money Pal`. With the app quit (tray icon > **Quit**), copying `pmp.db` (with `pmp.db-wal` and `pmp.db-shm` if they're there) and the `images` folder is a backup too.
 
 ## Updating
 

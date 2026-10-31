@@ -1,7 +1,8 @@
 /**
  * First-run setup at /setup (spec 003, ADR 0005): title, game masters, player select, hand
  * out quests, today's board. Works on a phone (arriving from the kiosk's QR code with the
- * setup token) or on the family PC itself.
+ * setup token) or on the family PC itself. The title screen can restore a backup instead
+ * (ADR 0020).
  */
 import {
   SETUP_STAGES,
@@ -17,13 +18,13 @@ import {
   type SetupChild,
   type SetupChore,
   type SetupDraft,
-  type SetupResult,
   type SetupStatus,
 } from '@pmp/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
 import { ArcadeButton } from '../../components/arcade';
+import { RestoreBackup } from '../../components/parent/BackupRestore';
 import { PlayerEditor } from '../../components/PlayerEditor';
 import { QuestEditor } from '../../components/QuestEditor';
 import { ApiError, api } from '../../lib/api';
@@ -67,10 +68,11 @@ export function SetupPage() {
       initial={draft.data ?? EMPTY_DRAFT}
       library={library.data}
       currency={settings.data?.currency ?? DEFAULT_CURRENCY}
+      onPc={status.data.onPc}
       onFinishing={() => setFinishing(true)}
       onFailed={() => setFinishing(false)}
-      onFinished={(result) =>
-        navigate(result.paired || !status.data.onPc ? '/parent' : '/kiosk', {
+      onFinished={(paired) =>
+        navigate(paired || !status.data.onPc ? '/parent' : '/kiosk', {
           replace: true,
           state: { justSetUp: true },
         })
@@ -122,6 +124,7 @@ function SetupFlow({
   initial,
   library,
   currency,
+  onPc,
   onFinishing,
   onFailed,
   onFinished,
@@ -129,9 +132,11 @@ function SetupFlow({
   initial: SetupDraft;
   library: ChoreLibraryItem[];
   currency: string;
+  onPc: boolean;
   onFinishing: () => void;
   onFailed: () => void;
-  onFinished: (result: SetupResult) => void;
+  /** `paired`: this phone is paired now, so it carries on at /parent. */
+  onFinished: (paired: boolean) => void;
 }) {
   const queryClient = useQueryClient();
   const { draft, setDraft, saveError, discard } = useSetupDraft(initial);
@@ -153,6 +158,17 @@ function SetupFlow({
 
   const mastersProblem = gameMastersProblem(draft.parentNames.map((name) => ({ name })));
 
+  /** Setup is over, by finishing it or by restoring a backup. */
+  const done = (paired: boolean) => {
+    forgetSetupToken();
+    // Set it now, so /kiosk and /parent don't bounce back here on a stale "needed".
+    queryClient.setQueryData<SetupStatus>(['setup-status'], (s) => s && { ...s, needed: false });
+    void queryClient.invalidateQueries({
+      predicate: (q) => !SETUP_ONLY_QUERIES.includes(String(q.queryKey[0])),
+    });
+    onFinished(paired);
+  };
+
   const finish = useMutation({
     mutationFn: () =>
       api.finishSetup({
@@ -168,15 +184,9 @@ function SetupFlow({
       onFinishing();
     },
     onSuccess: (result) => {
-      forgetSetupToken();
       sound.fanfare();
       celebrate({ count: 180, y: 0.55 });
-      // Set it now, so /kiosk and /parent don't bounce back here on a stale "needed".
-      queryClient.setQueryData<SetupStatus>(['setup-status'], (s) => s && { ...s, needed: false });
-      void queryClient.invalidateQueries({
-        predicate: (q) => !SETUP_ONLY_QUERIES.includes(String(q.queryKey[0])),
-      });
-      onFinished(result);
+      done(result.paired);
     },
     onError: (err) => {
       onFailed();
@@ -207,7 +217,22 @@ function SetupFlow({
   switch (draft.stage) {
     case 'title':
       body = <TitleStage />;
-      footer = <ArcadeButton onClick={() => goTo(1)}>▶ START</ArcadeButton>;
+      footer = (
+        <>
+          <ArcadeButton onClick={() => goTo(1)}>▶ START</ArcadeButton>
+          <RestoreBackup
+            setup
+            onPc={onPc}
+            onStart={() => {
+              // No more draft saves: the restore ends setup.
+              discard();
+              onFinishing();
+            }}
+            onFailed={onFailed}
+            onRestored={done}
+          />
+        </>
+      );
       break;
 
     case 'masters':

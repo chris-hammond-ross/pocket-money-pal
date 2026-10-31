@@ -454,6 +454,49 @@ export const factoryResetResultSchema = z.object({
 });
 export type FactoryResetResult = z.infer<typeof factoryResetResultSchema>;
 
+/** The word a parent types to restore a backup over the family's data (ADR 0020). */
+export const RESTORE_WORD = 'RESTORE';
+
+/** What a backup holds, shown before it's restored (`POST /api/backup/inspect`). */
+export const backupSummarySchema = z.object({
+  familyName: z.string(),
+  /** When it was made (epoch ms). */
+  exportedAt: z.number().int(),
+  /** The app version that made it. */
+  appVersion: z.string(),
+  players: z.array(z.object({ name: z.string(), avatar: z.string().nullable() })),
+  /** The grown-ups in it: the phone restoring picks which one it is. */
+  parents: z.array(z.object({ id: idSchema, name: z.string() })),
+  /** The phone asking was paired when the backup was made, so it stays paired. */
+  knowsThisPhone: z.boolean(),
+});
+export type BackupSummary = z.infer<typeof backupSummarySchema>;
+
+export const backupInspectResultSchema = z.object({
+  /** Names the checked upload for `POST /api/backup/restore`. */
+  uploadId: z.string(),
+  summary: backupSummarySchema,
+});
+export type BackupInspectResult = z.infer<typeof backupInspectResultSchema>;
+
+/**
+ * `POST /api/backup/restore`. A paired phone types `RESTORE_WORD` (during setup there's
+ * nothing to lose). `parentId` pairs this phone as that grown-up, when the backup doesn't
+ * already know it.
+ */
+export const backupRestoreRequestSchema = z.object({
+  uploadId: z.string().min(1).max(64),
+  confirm: z.string().max(20).optional(),
+  parentId: idSchema.optional(),
+});
+export type BackupRestoreRequest = z.infer<typeof backupRestoreRequestSchema>;
+
+export const backupRestoreResultSchema = z.object({
+  /** This phone is paired after the restore (kept from the backup, or paired just now). */
+  paired: z.boolean(),
+});
+export type BackupRestoreResult = z.infer<typeof backupRestoreResultSchema>;
+
 /** `GET /api/devices/me`: the parent this device is paired to. */
 export const deviceMeSchema = z.object({
   deviceId: idSchema,

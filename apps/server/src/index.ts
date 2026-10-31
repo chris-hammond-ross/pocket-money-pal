@@ -24,6 +24,7 @@ const app = await buildApp({
   secureUrl: config.secureUrl,
   vapidSubject: config.vapidSubject,
   imagesDir: join(dirname(config.dbPath), 'images'),
+  migrationsDir: config.migrationsDir,
   onScheduleChanged: () => rescheduleNow(),
   logger: { level: process.env.PMP_LOG_LEVEL ?? 'info' },
 });

@@ -24,6 +24,12 @@ import {
 /** Header a phone sends the setup token in (it arrives in the kiosk QR code's URL). */
 export const SETUP_TOKEN_HEADER = 'x-setup-token';
 
+/** Whether a request may run setup: from the family PC, or with the setup token (ADR 0005). */
+export function canRunSetup(db: Db, req: FastifyRequest): boolean {
+  const token = req.headers[SETUP_TOKEN_HEADER];
+  return isOnPc(req.ip) || isSetupToken(db, typeof token === 'string' ? token : undefined);
+}
+
 export interface SetupRouteOptions {
   db: Db;
   now: () => number;
@@ -43,10 +49,7 @@ export async function setupRoutes(
       void reply.code(409).send({ error: 'setup-done' });
       return false;
     }
-    const token = req.headers[SETUP_TOKEN_HEADER];
-    if (isOnPc(req.ip) || isSetupToken(db, typeof token === 'string' ? token : undefined)) {
-      return true;
-    }
+    if (canRunSetup(db, req)) return true;
     void reply.code(403).send({ error: 'setup-token' });
     return false;
   };
