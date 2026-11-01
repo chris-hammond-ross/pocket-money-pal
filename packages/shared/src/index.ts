@@ -21,3 +21,4 @@ export * from './streaks';
 export * from './surprises';
 export * from './time';
 export * from './version';
+export * from './tunnel';

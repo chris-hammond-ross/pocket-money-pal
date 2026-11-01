@@ -25,6 +25,8 @@ import { pushRoutes } from './routes/push';
 import { resetRoutes } from './routes/reset';
 import { setupRoutes } from './routes/setup';
 import { surpriseRoutes } from './routes/surprises';
+import { Relay } from './relay/relay';
+import type { RelayStatus, TunnelTiming } from './relay/client';
 import { installReplay } from './replay';
 import { SecureUrl } from './secure-url';
 import { WsHub } from './ws';
@@ -54,6 +56,13 @@ export interface AppOptions {
   publicUrl?: string | null;
   /** `PMP_SECURE_URL`: the HTTPS address; otherwise it's learned (ADR 0009). */
   secureUrl?: string | null;
+  /**
+   * `PMP_RELAY_URL`: the relay the PC dials out to while registered (ADR 0021). Null (the
+   * default, for tests) never connects.
+   */
+  relayUrl?: string | null;
+  /** Faster reconnects and keepalives, for tests against a fake relay. */
+  relayTiming?: Partial<TunnelTiming>;
   /** Sends Web Push messages. Defaults to the browser vendors' push services (tests fake it). */
   pushSender?: PushSender;
   /** `PMP_VAPID_SUBJECT`: the contact push services see in the VAPID token. */
@@ -79,6 +88,8 @@ export async function buildApp({
   now = devClock?.now ?? Date.now,
   publicUrl = null,
   secureUrl = null,
+  relayUrl = null,
+  relayTiming,
   pushSender,
   vapidSubject = 'mailto:pocketmoneypal@localhost',
   imagesDir = null,
@@ -111,7 +122,21 @@ export async function buildApp({
   // First of all the hooks: a remote request must be a paired phone (ADR 0021).
   await installRemoteGuard(app, { db });
 
-  const secure = new SecureUrl(db, secureUrl);
+  const relay = new Relay({
+    app,
+    db,
+    relayUrl,
+    appVersion: VERSION,
+    log: app.log,
+    timing: relayTiming,
+    onChange: (status: RelayStatus) => app.log.debug({ relay: status }, 'Relay status'),
+  });
+  app.decorate('relay', relay);
+  // Connects once the app is ready to answer, and lets go when it closes.
+  app.addHook('onReady', async () => relay.reload());
+  app.addHook('onClose', async () => relay.stop());
+
+  const secure = new SecureUrl(db, secureUrl, () => relay.url());
   // After the cookie is parsed, so a paired phone counts as trusted.
   app.addHook('preHandler', async (req) => secure.learn(req));
 
@@ -190,5 +215,6 @@ declare module 'fastify' {
   interface FastifyInstance {
     hub: WsHub;
     notifier: ClaimNotifier;
+    relay: Relay;
   }
 }

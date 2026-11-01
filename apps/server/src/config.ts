@@ -3,6 +3,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_PORT } from '@pmp/shared';
 
+/** The hands-off relay (ADR 0021). `PMP_RELAY_URL` points at staging or a local fake. */
+export const DEFAULT_RELAY_URL = 'https://pocketmoneypal.app';
+
 const here = dirname(fileURLToPath(import.meta.url));
 
 /** First existing path, or the first candidate if none exist. */
@@ -21,6 +24,8 @@ export interface Config {
   publicUrl: string | null;
   /** The HTTPS address (e.g. https://family-pc.tail1234.ts.net), if not learned (ADR 0009). */
   secureUrl: string | null;
+  /** The relay the PC dials out to, once registered (ADR 0021). */
+  relayUrl: string;
   /** Contact in the VAPID token that push services see (`mailto:` or `https:`). */
   vapidSubject: string | undefined;
   /** `PMP_DEV_CLOCK=1`: the clock can be moved with `/api/dev/clock` (development only). */
@@ -39,6 +44,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       env.PMP_MIGRATIONS ?? firstExisting(resolve(here, 'drizzle'), resolve(here, '../drizzle')),
     publicUrl: env.PMP_PUBLIC_URL?.replace(/\/+$/, '') || null,
     secureUrl: env.PMP_SECURE_URL?.replace(/\/+$/, '') || null,
+    relayUrl: env.PMP_RELAY_URL?.replace(/\/+$/, '') || DEFAULT_RELAY_URL,
     vapidSubject: env.PMP_VAPID_SUBJECT || undefined,
     webDist: existsSync(resolve(webDist, 'index.html')) ? webDist : null,
     devClock: env.PMP_DEV_CLOCK === '1',

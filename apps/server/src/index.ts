@@ -22,6 +22,7 @@ const app = await buildApp({
   webDist: config.webDist,
   publicUrl: config.publicUrl,
   secureUrl: config.secureUrl,
+  relayUrl: config.relayUrl,
   vapidSubject: config.vapidSubject,
   imagesDir: join(dirname(config.dbPath), 'images'),
   migrationsDir: config.migrationsDir,
@@ -64,10 +65,12 @@ const scheduler = startScheduler({
 rescheduleNow = () => void scheduler.runNow();
 clock.onChange(rescheduleNow);
 
-// A write from outside the server (e.g. editing a chore in a SQLite tool) refreshes screens.
+// A write from outside the server (e.g. editing a chore in a SQLite tool) refreshes screens,
+// and a registration written by `npm run relay:set` connects.
 const stopWatching = watchExternalWrites(db, () => {
   app.log.info('Database changed outside the server');
   app.hub.broadcast({ type: 'data.changed' });
+  app.relay.reload();
 });
 
 const lanUrls = lanAddresses().map((address) => `http://${address}:${config.port}`);

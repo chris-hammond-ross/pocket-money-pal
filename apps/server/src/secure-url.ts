@@ -5,7 +5,8 @@ import { requestOrigin } from './net';
 import { getKv, setKv } from './repo/kv';
 
 /**
- * The server's HTTPS address (ADR 0009), for "Switch to secure app": `PMP_SECURE_URL`, or
+ * The server's HTTPS address (ADR 0009), for "Switch to secure app": the family's relay
+ * address once registered (ADR 0021), then `PMP_SECURE_URL`, then the address
  * learned the first time the PC or a paired phone reaches the server over HTTPS (through
  * `tailscale serve`, say). `req.protocol` is only taken from loopback proxies, and a
  * stranger's request never teaches it, so it can't be pointed at another site.
@@ -16,12 +17,14 @@ export class SecureUrl {
   constructor(
     private readonly db: Db,
     private readonly fixed: string | null,
+    /** The relay address, while the PC is registered. */
+    private readonly relay: () => string | null = () => null,
   ) {
     this.learned = getKv(db, 'secure_url');
   }
 
   get(): string | null {
-    return this.fixed ?? this.learned;
+    return this.relay() ?? this.fixed ?? this.learned;
   }
 
   /** Call on each request: remembers its origin if it came over HTTPS from someone trusted. */
