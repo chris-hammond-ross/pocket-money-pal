@@ -214,7 +214,8 @@ export class TunnelProtocolError extends Error {
 }
 
 const encoder = new TextEncoder();
-const decoder = new TextDecoder('utf-8', { fatal: true });
+// `ignoreBOM` is the default, but the Workers runtime types require it.
+const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false });
 
 /** The frame as one binary WebSocket message. */
 export function encodeTunnelFrame(frame: TunnelFrame): Uint8Array {
