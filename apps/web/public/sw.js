@@ -19,6 +19,13 @@ const CACHE_FIRST_SHELLS = ['pmp-shell-v1', 'pmp-shell-v2'];
 const SHELL = '/parent';
 /** How long a page load waits for the server before falling back to the cached shell. */
 const NETWORK_MS = 3000;
+/**
+ * Answers only something between the phone and the PC gives: `tailscale serve` or a reverse
+ * proxy with the app closed (502), the relay with the PC off (503). The server never sends
+ * them, so they mean "the PC isn't there", like no answer at all. Same list as `api.ts`.
+ */
+const GATEWAY_STATUSES = [502, 503, 504];
+const fromGateway = (res) => GATEWAY_STATUSES.includes(res.status);
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -65,7 +72,7 @@ self.addEventListener('fetch', (event) => {
         });
         const timeout = new Promise((done) => setTimeout(done, NETWORK_MS, null));
         const res = await Promise.race([fresh.catch(() => null), timeout]);
-        if (res) return res;
+        if (res && !fromGateway(res)) return res;
         // Too slow or unreachable: the cached shell if there is one, else keep waiting.
         return (await cache.match(SHELL)) ?? fresh;
       }),
@@ -241,6 +248,7 @@ async function sendItem(item, ids) {
   } catch {
     return { outcome: 'offline' };
   }
+  if (fromGateway(res)) return { outcome: 'offline' };
   if (res.status >= 500) return { outcome: 'error' };
   const body = res.status === 204 ? null : await res.json().catch(() => null);
   const fields = {

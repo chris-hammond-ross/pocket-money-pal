@@ -76,11 +76,22 @@ export class ApiError extends Error {
 }
 
 /**
- * A request to the PC. Not reaching it at all (it's off, or the phone is off the home
- * network) is an `ApiError` with status 0 and code `offline`, and is noted for the offline
- * queue (spec 007); any answer at all means it's on.
+ * Answers only something between the phone and the PC gives (`tailscale serve` or a reverse
+ * proxy with the app closed, the relay's `503 pc-offline`). The server itself never sends
+ * them, so they mean the PC isn't there.
+ */
+export const GATEWAY_STATUSES: readonly number[] = [502, 503, 504];
+
+/**
+ * A request to the PC. Not reaching it (it's off, the app is closed behind a proxy, or the
+ * phone is off the home network) is an `ApiError` with status 0 and code `offline`, and is
+ * noted for the offline queue (spec 007); any answer from the PC itself means it's on.
  */
 async function request(path: string, init?: RequestInit): Promise<unknown> {
+  const offline = () => {
+    noteUnreachable();
+    return new ApiError(0, 'offline', `${init?.method ?? 'GET'} ${path}: can't reach the PC`);
+  };
   let res: Response;
   try {
     res = await fetch(path, {
@@ -88,9 +99,9 @@ async function request(path: string, init?: RequestInit): Promise<unknown> {
       headers: { ...(init?.body && { 'content-type': 'application/json' }), ...init?.headers },
     });
   } catch {
-    noteUnreachable();
-    throw new ApiError(0, 'offline', `${init?.method ?? 'GET'} ${path}: can't reach the PC`);
+    throw offline();
   }
+  if (GATEWAY_STATUSES.includes(res.status)) throw offline();
   noteReachable(res.headers.get('date'));
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
