@@ -4,9 +4,16 @@
  * states: not set up, connected (or connecting), and a problem. Every change arrives as
  * `relay.changed`, which refetches `relay`.
  */
-import { RELAY_RECONNECTING_AFTER_MS, type RelayInfo, type TunnelProblem } from '@pmp/shared';
+import {
+  acceptsLicenceKeyEdit,
+  formatLicenceKey,
+  licenceKeyCaret,
+  RELAY_RECONNECTING_AFTER_MS,
+  type RelayInfo,
+  type TunnelProblem,
+} from '@pmp/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api, ApiError } from '../../lib/api';
 import { sound } from '../../lib/sounds';
 import { ArcadeButton, CloseButton, Sheet } from '../arcade';
@@ -66,6 +73,14 @@ function LicenceForm({ cta = 'Connect' }: { cta?: string }) {
   const queryClient = useQueryClient();
   const ui = useParentUi();
   const [key, setKey] = useState('');
+  // Typing or pasting reformats the key (PMP-XXXXX-…); the cursor goes back where it was.
+  const input = useRef<HTMLInputElement>(null);
+  const caret = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (caret.current === null) return;
+    input.current?.setSelectionRange(caret.current, caret.current);
+    caret.current = null;
+  }, [key]);
   const [askMove, setAskMove] = useState(false);
   const connect = useMutation({
     mutationFn: (takeOver: boolean) => api.connectRelay(key, takeOver),
@@ -95,14 +110,26 @@ function LicenceForm({ cta = 'Connect' }: { cta?: string }) {
     <>
       <input
         className={`${classes.codeInput} ${classes.licenceInput}`}
-        placeholder="PMP-XXXXX-…"
+        ref={input}
+        placeholder="PMP-XXXXX-XXXXX-XXXXX-XXXXX"
         value={key}
-        maxLength={100}
         autoCapitalize="characters"
         autoComplete="off"
         spellCheck={false}
         aria-label="Licence key"
-        onChange={(e) => setKey(e.target.value)}
+        onChange={(e) => {
+          const raw = e.target.value;
+          const at = e.target.selectionStart ?? raw.length;
+          if (!acceptsLicenceKeyEdit(key, raw)) {
+            // The key is complete: put it back, with the cursor where it was.
+            const el = e.target;
+            requestAnimationFrame(() => el.setSelectionRange(at - 1, at - 1));
+            return;
+          }
+          const next = formatLicenceKey(raw);
+          caret.current = licenceKeyCaret(raw, at, next);
+          setKey(next);
+        }}
       />
       {showError && <p className={classes.error}>{connectProblem(error)}</p>}
       <div className={classes.remoteActions}>

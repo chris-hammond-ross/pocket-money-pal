@@ -15,6 +15,60 @@ export function normaliseLicenceKey(input: string): string {
   return key.startsWith('PMP') && key.length === 23 ? key.slice(3) : key;
 }
 
+const LICENCE_PREFIX = 'PMP';
+/** A key's own characters, after the prefix (ADR 0024). */
+export const LICENCE_KEY_LENGTH = 20;
+const LICENCE_GROUP = 5;
+
+/**
+ * What's typed or pasted, shown the way keys are printed: `PMP-XXXXX-XXXXX-XXXXX-XXXXX`.
+ * Spaces, dashes and case don't matter, the prefix is added if it's missing, and anything
+ * past 20 characters is dropped. A lone "P" or "PM" (the start of the prefix) and a bare
+ * "PMP" stay as they are, so they can still be deleted.
+ */
+export function formatLicenceKey(input: string): string {
+  const flat = input.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (flat === '' || LICENCE_PREFIX.startsWith(flat)) return flat;
+  const body = (flat.startsWith(LICENCE_PREFIX) ? flat.slice(3) : flat).slice(
+    0,
+    LICENCE_KEY_LENGTH,
+  );
+  const groups = body.match(new RegExp(`.{1,${LICENCE_GROUP}}`, 'g')) ?? [];
+  return [LICENCE_PREFIX, ...groups].join('-');
+}
+
+/**
+ * False for one character typed into a key that's already complete: formatting would push
+ * the last character off the end, and deleting the stray one wouldn't bring it back. A
+ * paste over the key (any other change) is always taken.
+ */
+export function acceptsLicenceKeyEdit(previous: string, raw: string): boolean {
+  const flat = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '').length;
+  const complete = LICENCE_PREFIX.length + LICENCE_KEY_LENGTH;
+  return !(flat(previous) === complete && flat(raw) === complete + 1);
+}
+
+/**
+ * Where the cursor goes after `formatLicenceKey` turned `raw` into `formatted`: after the
+ * same characters it was after (dashes don't count), so typing or deleting in the middle
+ * doesn't throw it to the end.
+ */
+export function licenceKeyCaret(raw: string, caret: number, formatted: string): number {
+  const significant = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  let before = significant(raw.slice(0, caret)).length;
+  // The prefix was added for them: count it as typed.
+  const flat = significant(raw);
+  if (formatted.startsWith(`${LICENCE_PREFIX}-`) && !flat.startsWith(LICENCE_PREFIX)) {
+    before += LICENCE_PREFIX.length;
+  }
+  let seen = 0;
+  for (let i = 0; i < formatted.length; i++) {
+    if (seen >= before) return i;
+    if (/[A-Z0-9]/.test(formatted[i]!)) seen++;
+  }
+  return formatted.length;
+}
+
 /** The key's last four characters, shown in the Connected state. The PC never keeps the key. */
 export function licenceHintOf(input: string): string {
   return normaliseLicenceKey(input).slice(-4);
