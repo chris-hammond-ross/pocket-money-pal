@@ -133,17 +133,22 @@ export class Relay {
       this.options.onChange?.(this.status());
       return;
     }
-    this.client = new TunnelClient({
+    const client: TunnelClient = new TunnelClient({
       app: this.options.app,
       relayUrl,
       record,
       appVersion: this.options.appVersion,
       log: this.options.log,
-      onChange: (status) => this.options.onChange?.(status),
+      // Only the client running now speaks: one that was stopped or replaced still reports
+      // "off" as its socket closes, which is stale (and may come after the server closed).
+      onChange: (status) => {
+        if (this.client === client) this.options.onChange?.(status);
+      },
       timing: this.options.timing,
       random: this.options.random,
     });
-    this.client.start();
+    this.client = client;
+    client.start();
   }
 
   async stop(): Promise<void> {

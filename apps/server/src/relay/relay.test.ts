@@ -194,6 +194,30 @@ describe('connecting', () => {
     app.relay.reload();
     expect(app.relay.tunnel).toBe(before);
   });
+
+  it('says nothing more about a client it has stopped or replaced', async () => {
+    await start();
+    const states: string[] = [];
+    vi.spyOn(app.hub, 'broadcast').mockImplementation((event) => {
+      if (event.type === 'relay.changed') states.push(event.relay.state);
+    });
+    const old = app.relay.tunnel!;
+    clearRelayRecord(db);
+    app.relay.reload();
+    await vi.waitFor(() => expect(old.status.state).toBe('off'));
+    // One "off" from the reload; the old client's own "off" (as its socket closes) is stale.
+    expect(states).toEqual(['off']);
+
+    setRelayRecord(db, relay.record);
+    app.relay.reload();
+    await vi.waitFor(() => expect(app.relay.status().state).toBe('connected'));
+    const current = app.relay.tunnel!;
+    states.length = 0;
+    // Stopping (the server closing) announces nothing: the database may already be gone.
+    await app.relay.stop();
+    expect(current.status.state).toBe('off');
+    expect(states).toEqual([]);
+  });
 });
 
 describe('requests through the tunnel', () => {
