@@ -23,6 +23,7 @@ const listeners = new Set<() => void>();
 const SYNCED_KEY = 'pmp-pc-synced-at';
 
 function setReachable(next: boolean) {
+  if (next) remoteEnded = false;
   if (next === reachable) return;
   reachable = next;
   clearTimeout(offTimer);
@@ -52,6 +53,20 @@ export function noteReachable(date: string | null): void {
 /** A request or the WebSocket couldn't reach the PC. */
 export function noteUnreachable(): void {
   setReachable(false);
+}
+
+/** The relay said this family's remote access has ended (`503 remote-ended`, ADR 0025). */
+let remoteEnded = false;
+
+export function noteRemoteEnded(ended: boolean): void {
+  if (ended === remoteEnded) return;
+  remoteEnded = ended;
+  listeners.forEach((l) => l());
+}
+
+/** "Remote access has ended" rather than "the PC is off", for the screens that say so. */
+export function useRemoteEnded(): boolean {
+  return useSyncExternalStore(subscribe, () => remoteEnded);
 }
 
 export function isReachable(): boolean {

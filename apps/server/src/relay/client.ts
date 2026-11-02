@@ -120,6 +120,11 @@ export class TunnelClient {
     return this.session?.size ?? 0;
   }
 
+  /** HTTP requests in flight on the live connection, to drain before letting go of it. */
+  get openHttpStreams(): number {
+    return this.session?.httpSize ?? 0;
+  }
+
   start(): void {
     this.connect();
   }

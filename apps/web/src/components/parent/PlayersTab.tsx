@@ -15,24 +15,31 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { api } from '../../lib/api';
 import { formatMinutesAgo } from '../../lib/format';
-import { installHintDismissed, isSecure, isStandalone, useInstallPrompt } from '../../lib/pwa';
+import {
+  installHintDismissed,
+  isSecure,
+  isStandalone,
+  moveHintDismissed,
+  useInstallPrompt,
+} from '../../lib/pwa';
 import { pairUrl, phoneBaseUrls, useQrSvg } from '../../lib/qr';
 import { sound } from '../../lib/sounds';
 import { ArcadeButton, CloseButton, DashedButton, PixelLabel, Sheet } from '../arcade';
 import { Flame, flameColours } from '../Flame';
 import { PlayerEditor } from '../PlayerEditor';
 import { problemText, useParentUi, usePlayers } from './context';
+import { MOVE_LABEL, MoveButton, useMoveTarget } from './MoveToSecure';
 import classes from './parent.module.css';
 
-/** Where the plain-HTTP hint sends a parent: the install guide's Tailscale section. */
+/** For hands-on families (their own HTTPS, ADR 0021): the install guide's secure-access section. */
 export const SECURE_ACCESS_GUIDE =
   'https://github.com/chris-hammond-ross/pocket-money-pal/blob/main/installation.md#secure-access-with-tailscale';
 
 /**
  * The Players tab (spec 003): player cards (with their streak and a sick-day button, spec
- * 005) and the player editor, game masters, paired phones and bonus points, and (over
- * plain HTTP) "🔒 Switch to secure app". Over HTTPS it offers "📲 Install"; over plain HTTP, a one-time hint. The family's
- * settings live on the Setup tab.
+ * 005) and the player editor, game masters, paired phones and bonus points, and (when this
+ * phone isn't on the PC's secure address) the move button. Over HTTPS it offers "📲 Install";
+ * over plain HTTP, a one-time hint. The family's settings live on the Setup tab.
  */
 export function PlayersTab() {
   const [inviting, setInviting] = useState(false);
@@ -63,15 +70,45 @@ export function PlayersTab() {
 }
 
 // ---------------------------------------------------------------------------
-// Installing (ADR 0002, ADR 0009)
+// Installing (ADR 0002, ADR 0009) and moving to the secure address (ADR 0025)
 
 /**
- * Over HTTPS, "📲 Install" when Chrome offers it. Over plain HTTP, a one-time dismissible
- * hint, with "🔒 Switch to secure app" when the server knows its HTTPS address.
+ * Not on the PC's secure address: "🔒 Move to the app" (the relay) or "🔒 Switch to secure
+ * app" (a hands-on HTTPS address). On it, or any HTTPS address, "📲 Install" when Chrome
+ * offers it. Over plain HTTP with nowhere to move, a one-time hint to turn on remote access.
  */
 function InstallCard() {
   const install = useInstallPrompt();
+  const { needed, isRelay } = useMoveTarget();
   const [dismissed, setDismissed] = useState(() => installHintDismissed()[0]);
+  const [moveDismissed, setMoveDismissed] = useState(() => moveHintDismissed()[0]);
+
+  if (needed) {
+    if (moveDismissed) return null;
+    return (
+      <div className={classes.hintCard}>
+        <span className={classes.rowIcon}>🔒</span>
+        <div className={classes.grow}>
+          <b>{isRelay ? 'Move to the app' : 'Switch to the secure app'}</b>
+          <small>
+            {isRelay
+              ? 'Remote access is on. Move this phone to its address to install the app, get notifications and use it away from home.'
+              : 'The family PC has a secure address. Move this phone to it to install the app and get notifications.'}
+          </small>
+          <MoveButton
+            label={isRelay ? '🔒 Move to the app' : '🔒 Switch to secure app'}
+            className={classes.secureButton}
+          />
+        </div>
+        <CloseButton
+          onClick={() => {
+            moveHintDismissed()[1]();
+            setMoveDismissed(true);
+          }}
+        />
+      </div>
+    );
+  }
 
   if (isSecure()) {
     if (!install || isStandalone()) return null;
@@ -103,12 +140,12 @@ function InstallCard() {
       <div className={classes.grow}>
         <b>Install as an app</b>
         <small>
-          Set up secure access (Tailscale) to install this as an app and get notifications.{' '}
+          Turn on remote access on the ⚙️ Setup tab to install this as an app and get notifications.
+          Using your own HTTPS address instead?{' '}
           <a href={SECURE_ACCESS_GUIDE} target="_blank" rel="noreferrer">
-            How?
+            How
           </a>
         </small>
-        <SwitchToSecure />
       </div>
       <CloseButton
         onClick={() => {
@@ -120,39 +157,17 @@ function InstallCard() {
   );
 }
 
-/**
- * "🔒 Switch to secure app" (ADR 0009): over plain HTTP, when the server knows its HTTPS
- * address. A move code opens the pair screen there, and pairing with it unpairs this tab.
- */
-function SwitchToSecure({ label }: { label?: string }) {
-  const ui = useParentUi();
-  const secure = isSecure();
-  const access = useQuery({ queryKey: ['access'], queryFn: api.access, enabled: !secure });
-  const secureUrl = access.data?.secureUrl;
-  const move = useMutation({
-    mutationFn: () => api.invite(true),
-    onSuccess: (invite) => {
-      if (secureUrl) location.href = pairUrl(secureUrl, invite.code);
-    },
-    onError: (err) =>
-      ui.notify({ icon: '⚠️', title: 'Couldn’t switch', body: problemText(err), tone: 'error' }),
-  });
-  if (secure || !secureUrl) return null;
+/** "THIS PHONE": the move button again, whenever this phone isn't on the secure address. */
+function SwitchToSecure({ label }: { label: string }) {
+  const { needed, isRelay } = useMoveTarget();
+  if (!needed) return null;
   return (
     <>
-      {label && <PixelLabel>{label}</PixelLabel>}
-      <ArcadeButton
-        tone="ghost"
-        size="small"
+      <PixelLabel>{label}</PixelLabel>
+      <MoveButton
+        label={isRelay ? MOVE_LABEL : '🔒 Switch to secure app'}
         className={classes.secureButton}
-        disabled={move.isPending}
-        onClick={() => {
-          sound.tap();
-          move.mutate();
-        }}
-      >
-        🔒 Switch to secure app
-      </ArcadeButton>
+      />
     </>
   );
 }
@@ -537,7 +552,8 @@ function InviteSheet({ onClose }: { onClose: () => void }) {
       ) : (
         <>
           <p className={classes.centre}>
-            On the other phone, open the camera and scan this. Use the home Wi-Fi.
+            On the other phone, open the camera and scan this.
+            {data?.secureUrl ? ' It works from anywhere.' : ' Use the home Wi-Fi.'}
           </p>
           <div className={classes.qrBox} style={{ opacity: expired ? 0.2 : 1 }}>
             {/* The SVG is generated locally from our own URL. */}
@@ -548,7 +564,7 @@ function InviteSheet({ onClose }: { onClose: () => void }) {
             {expired
               ? 'This code has expired.'
               : data
-                ? `Works once, for ${Math.floor(left / 60_000)}:${String(Math.floor((left % 60_000) / 1000)).padStart(2, '0')} more`
+                ? `This code expires in ${Math.floor(left / 60_000)}:${String(Math.floor((left % 60_000) / 1000)).padStart(2, '0')}`
                 : '…'}
           </p>
         </>

@@ -25,6 +25,7 @@ import {
   playerCardSchema,
   playerListSchema,
   pushKeySchema,
+  relayInfoSchema,
   removedPlayerSchema,
   savingsBookSchema,
   setupDraftResponseSchema,
@@ -60,7 +61,7 @@ import {
   type SurpriseTaskInput,
   type SurpriseTaskPatch,
 } from '@pmp/shared';
-import { noteReachable, noteUnreachable } from './offline';
+import { noteReachable, noteRemoteEnded, noteUnreachable } from './offline';
 import { setupTokenHeaders } from './setup-token';
 
 /** A failed API call, keeping the status and the server's `error` code. */
@@ -101,7 +102,14 @@ async function request(path: string, init?: RequestInit): Promise<unknown> {
   } catch {
     throw offline();
   }
-  if (GATEWAY_STATUSES.includes(res.status)) throw offline();
+  if (GATEWAY_STATUSES.includes(res.status)) {
+    // The relay's licence has ended: still "can't reach", but said differently (ADR 0025).
+    if (res.status === 503) {
+      const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
+      noteRemoteEnded(body?.error === 'remote-ended');
+    }
+    throw offline();
+  }
   noteReachable(res.headers.get('date'));
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
@@ -336,4 +344,15 @@ export const api = {
   deletePushSubscription: () => request('/api/devices/me/push-subscription', { method: 'DELETE' }),
   testPush: (delaySeconds = 0) =>
     request('/api/devices/me/push-test', json('POST', { delaySeconds })),
+
+  // Remote access (spec 008)
+  relay: async () => relayInfoSchema.parse(await request('/api/relay')),
+  connectRelay: async (licenceKey: string, takeOver = false) =>
+    relayInfoSchema.parse(
+      await request('/api/relay', json('POST', { licenceKey, ...(takeOver && { takeOver }) })),
+    ),
+  retryRelay: async () =>
+    relayInfoSchema.parse(await request('/api/relay/retry', { method: 'POST' })),
+  disconnectRelay: async () =>
+    relayInfoSchema.parse(await request('/api/relay', { method: 'DELETE' })),
 };

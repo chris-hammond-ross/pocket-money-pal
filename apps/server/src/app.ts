@@ -11,6 +11,7 @@ import type { ServerClock } from './clock';
 import type { Db } from './db/client';
 import { createImageFetcher, GoalImages, type ImageFetcher } from './goal-image';
 import { ClaimNotifier, ensureVapidKeys, webPushSender, type PushSender } from './push';
+import { lanAddresses } from './net';
 import { getSettings } from './repo/settings';
 import { backupRoutes } from './routes/backup';
 import { choreRoutes } from './routes/chores';
@@ -22,6 +23,7 @@ import { moneyRoutes } from './routes/money';
 import { pauseRoutes } from './routes/pause';
 import { playerRoutes } from './routes/players';
 import { pushRoutes } from './routes/push';
+import { relayRoutes } from './routes/relay';
 import { resetRoutes } from './routes/reset';
 import { setupRoutes } from './routes/setup';
 import { surpriseRoutes } from './routes/surprises';
@@ -129,7 +131,18 @@ export async function buildApp({
     appVersion: VERSION,
     log: app.log,
     timing: relayTiming,
-    onChange: (status: RelayStatus) => app.log.debug({ relay: status }, 'Relay status'),
+    lanUrl: () => {
+      if (publicUrl) return publicUrl;
+      const address = app.server.address();
+      const host = lanAddresses()[0];
+      return host && address && typeof address === 'object'
+        ? `http://${host}:${address.port}`
+        : null;
+    },
+    onChange: (status: RelayStatus) => {
+      app.log.debug({ relay: status }, 'Relay status');
+      hub.broadcast({ type: 'relay.changed', relay: relay.info() });
+    },
   });
   app.decorate('relay', relay);
   // Connects once the app is ready to answer, and lets go when it closes.
@@ -171,6 +184,7 @@ export async function buildApp({
     vapidPublicKey: () => vapid().publicKey,
     secureUrl: secure,
   });
+  await app.register(relayRoutes, { db, now });
   await app.register(resetRoutes, { db, now, images, onScheduleChanged });
   await app.register(backupRoutes, {
     db,

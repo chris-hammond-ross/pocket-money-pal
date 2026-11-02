@@ -11,6 +11,7 @@ import { useMuted } from '../../lib/parent-prefs';
 import { askedPush, enablePush, pushState, registerServiceWorker, resyncPush } from '../../lib/pwa';
 import { preloadSounds, sound } from '../../lib/sounds';
 import { ArcadeButton, Sheet } from '../arcade';
+import { movedHere } from './MoveToSecure';
 import { NewQuestPicker } from './NewQuestPicker';
 import { NeedsPc, OfflineBar, OutboxSheet, useOutboxSending } from './Outbox';
 import { DayTab } from './DayTab';
@@ -423,7 +424,8 @@ function PushOptIn() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
-    if (askedPush()[0]) return;
+    // Just moved here: the after-move sheet offers notifications instead (ADR 0025).
+    if (askedPush()[0] || movedHere()) return;
     const timer = setTimeout(() => {
       void pushState().then((state) => setOpen(state === 'off'));
     }, 1500);

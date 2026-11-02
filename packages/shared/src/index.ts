@@ -13,6 +13,7 @@ export * from './pairing';
 export * from './pause';
 export * from './payday';
 export * from './planner';
+export * from './remote';
 export * from './players';
 export * from './savings';
 export * from './schemas';

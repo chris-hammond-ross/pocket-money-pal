@@ -35,7 +35,10 @@ const FAMILY_QUERIES = [
 const DEVICE_QUERIES = ['device-me', 'devices', 'pc-invite', 'game-masters'];
 
 /** Events that aren't about the family's data, so the kiosk board needn't refetch. */
-const PLUMBING_EVENTS: ServerEvent['type'][] = ['hello', 'presence', 'ping'];
+const PLUMBING_EVENTS: ServerEvent['type'][] = ['hello', 'presence', 'ping', 'relay.changed'];
+
+/** Queries about remote access (spec 008): refetched on `relay.changed`. */
+const RELAY_QUERIES = ['relay', 'access'];
 
 export type ConnectionStatus = 'connecting' | 'open' | 'closed';
 
@@ -88,6 +91,9 @@ export function LiveEventsProvider({ children }: { children: ReactNode }) {
         if (event.type === 'hello' || event.type === 'presence') setClients(event.clients);
         if (event.type === 'settings.updated')
           void queryClient.invalidateQueries({ queryKey: ['settings'] });
+        if (event.type === 'relay.changed') {
+          for (const key of RELAY_QUERIES) void queryClient.invalidateQueries({ queryKey: [key] });
+        }
         if (event.type === 'devices.changed') {
           // Pairing changed: a revoked phone finds out here, and the PC's card may go.
           for (const key of DEVICE_QUERIES) void queryClient.invalidateQueries({ queryKey: [key] });

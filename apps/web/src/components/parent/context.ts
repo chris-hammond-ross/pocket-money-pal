@@ -76,5 +76,5 @@ export function problemText(err: unknown): string {
       return 'This needs the family PC to be on. Quests and holidays can be planned offline.';
     }
   }
-  return 'Can’t reach the family PC. Check you’re on the home Wi-Fi.';
+  return 'Can’t reach the family PC. Check it’s on, and that this phone is online.';
 }

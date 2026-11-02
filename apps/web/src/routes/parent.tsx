@@ -6,7 +6,7 @@ import type { Banner } from '../components/parent/context';
 import { PairScreen } from '../components/parent/PairScreen';
 import { ParentShell } from '../components/parent/ParentShell';
 import { api } from '../lib/api';
-import { forgetParentData } from '../lib/offline';
+import { forgetParentData, useRemoteEnded } from '../lib/offline';
 import { clearOutbox } from '../lib/outbox';
 
 /**
@@ -74,17 +74,20 @@ function retryWhileUnreachable(query: { state: { status: string } }): number | f
 }
 
 /**
- * The phone couldn't reach the server (the PC is off or restarting, or the phone isn't on
- * the home Wi-Fi or Tailscale). Said plainly, never a blank screen; it carries on trying.
+ * The phone couldn't reach the server (the PC is off or restarting, the phone isn't on the
+ * home Wi-Fi for a LAN address, or the family's remote access has ended). Said plainly,
+ * never a blank screen; it carries on trying.
  */
 function Unreachable({ onRetry }: { onRetry: () => void }) {
+  const ended = useRemoteEnded();
   return (
     <div style={{ maxWidth: 420, margin: '20vh auto 0', padding: 24, textAlign: 'center' }}>
       <div style={{ fontSize: 48 }}>🐷</div>
-      <h2>Can’t reach the family PC</h2>
+      <h2>{ended ? 'Remote access has ended' : 'Can’t reach the family PC'}</h2>
       <p style={{ opacity: 0.8 }}>
-        Check the PC is on, and that this phone is on the home Wi-Fi (or Tailscale). This screen
-        keeps trying by itself.
+        {ended
+          ? 'Ask the person who set it up. On the home Wi-Fi, the PC’s home address still works.'
+          : 'Check the PC is on, and that this phone is online (on the home Wi-Fi, for a home address). This screen keeps trying by itself.'}
       </p>
       <ArcadeButton onClick={onRetry}>Try again</ArcadeButton>
     </div>

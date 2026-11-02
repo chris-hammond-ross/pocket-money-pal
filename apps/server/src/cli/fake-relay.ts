@@ -18,7 +18,8 @@ relay.on('pc-gone', () => console.log('PC disconnected.'));
 console.log(`Fake relay on ${relay.url}
 
 1. Start a server pointed at it:   PMP_RELAY_URL=${relay.url}
-2. Register it:                    npm run relay:set -w @pmp/server -- ${relay.kioskId} ${relay.secret} ${relay.familyUrl}
+2. On a paired phone, Setup → Remote access, enter the licence key ${relay.licenceKey}
+   (or: npm run relay:set -w @pmp/server -- ${relay.kioskId} ${relay.secret} ${relay.familyUrl})
 3. On this PC, open                ${relay.familyUrl}/parent
    (it counts as remote: pair it with a code from a paired phone or the kiosk)
 `);

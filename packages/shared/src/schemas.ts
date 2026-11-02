@@ -431,6 +431,8 @@ export const setupKioskInfoSchema = z.object({
   hosts: z.array(z.string()),
   /** `PMP_PUBLIC_URL`, when set, replaces the guessed address. */
   publicUrl: z.string().nullable(),
+  /** The relay address while remote access is on: the QR code leads with it (ADR 0025). */
+  secureUrl: z.string().nullable().default(null),
 });
 export type SetupKioskInfo = z.infer<typeof setupKioskInfoSchema>;
 
@@ -540,6 +542,8 @@ export const pairingInviteSchema = z.object({
   /** The PC's likely home-network addresses, best first (see setupKioskInfoSchema). */
   hosts: z.array(z.string()),
   publicUrl: z.string().nullable(),
+  /** The relay address while remote access is on: the QR code leads with it (ADR 0025). */
+  secureUrl: z.string().nullable().default(null),
 });
 export type PairingInvite = z.infer<typeof pairingInviteSchema>;
 

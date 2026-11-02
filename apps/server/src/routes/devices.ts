@@ -51,6 +51,8 @@ export async function deviceRoutes(
     ...code,
     hosts: lanAddresses(),
     publicUrl,
+    // The relay only: a hands-on HTTPS address may need a VPN on the new phone (ADR 0025).
+    secureUrl: app.relay.url(),
   });
 
   /** Which parent this device is paired to. 401 when it isn't (or was revoked). */

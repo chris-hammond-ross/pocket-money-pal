@@ -41,7 +41,7 @@ export function KioskTitleScreen() {
           )}
         </div>
         <p className={classes.steps}>
-          Scan with your phone’s camera. Use the home Wi-Fi.
+          Scan with your phone’s camera.{info.data?.secureUrl ? '' : ' Use the home Wi-Fi.'}
           <br />
           It takes about 3 minutes.
         </p>

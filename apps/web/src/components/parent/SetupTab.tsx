@@ -19,11 +19,13 @@ import { ArcadeButton, CloseButton, PixelLabel, RateSlider, Sheet } from '../arc
 import { downloadBackup, RestoreBackup } from './BackupRestore';
 import { problemText, useParentUi } from './context';
 import classes from './parent.module.css';
+import { RemoteAccess } from './RemoteAccess';
 
 /**
  * The Setup tab: the app's version, then the family's settings: the loot rate (currency and
  * what a point is worth), notifications (this phone's, and quiet hours), sounds (the
- * kiosk's volume and this phone's sounds), data (backup and restore, ADR 0020) and the factory reset (ADR 0014).
+ * kiosk's volume and this phone's sounds), remote access (spec 008), data (backup and
+ * restore, ADR 0020) and the factory reset (ADR 0014).
  */
 export function SetupTab() {
   return (
@@ -41,6 +43,9 @@ export function SetupTab() {
       <PixelLabel>SOUNDS</PixelLabel>
       <KioskVolume />
       <PhoneSounds />
+
+      <PixelLabel>REMOTE ACCESS</PixelLabel>
+      <RemoteAccess />
 
       <PixelLabel>DATA</PixelLabel>
       <Backup />
@@ -156,7 +161,10 @@ function PushRow() {
         <span className={classes.rowIcon}>🔕</span>
         <div className={classes.grow}>
           <b>Notifications</b>
-          <small>They need secure access (Tailscale). The tray still shows every claim.</small>
+          <small>
+            They need remote access (below), or your own HTTPS address. The tray still shows every
+            claim.
+          </small>
         </div>
       </div>
     );

@@ -11,6 +11,7 @@ import { api, ApiError } from '../../lib/api';
 import { celebrate } from '../../lib/confetti';
 import { sound } from '../../lib/sounds';
 import { ArcadeButton } from '../arcade';
+import { markMoved } from './MoveToSecure';
 import classes from './parent.module.css';
 
 function codeProblem(err: unknown): string {
@@ -47,6 +48,8 @@ export function PairScreen({ onPaired }: { onPaired?: (me: DeviceMe) => void }) 
     mutationFn: ({ code, parentId }: { code: string; parentId: number }) =>
       api.pair(code, parentId),
     onSuccess: (me) => {
+      // This phone moved here from another address: the Day tab says what's left to do.
+      if (params.get('moved') === '1') markMoved();
       sound.fanfare();
       celebrate({ count: 140, y: 0.5 });
       onPaired?.(me);

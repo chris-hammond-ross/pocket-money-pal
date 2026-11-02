@@ -7,7 +7,7 @@ import {
 } from '@pmp/shared';
 import { useEffect, useRef } from 'react';
 import { clockTimeAt, formatDate } from '../../lib/format';
-import { useFamilyPc } from '../../lib/offline';
+import { useFamilyPc, useRemoteEnded } from '../../lib/offline';
 import {
   cancelQueued,
   dismissResult,
@@ -120,11 +120,15 @@ export function useOutboxSending(
 /** The slim bar above the tabs: the PC is off, changes are waiting, or need a look. */
 export function OfflineBar({ onOpen }: { onOpen: () => void }) {
   const pc = useFamilyPc();
+  const ended = useRemoteEnded();
   const { queue, results } = useOutbox();
   const look = results.filter((r) => outboxOutcome(r) !== 'sent').length;
   let text: string | null = null;
   let tone: 'off' | 'sending' | 'look' = 'off';
-  if (pc === 'off') {
+  if (pc === 'off' && ended) {
+    // The relay said the licence ended (ADR 0025): not the PC's fault.
+    text = '🌍 Remote access has ended · ask the person who set it up';
+  } else if (pc === 'off') {
     text = `🌙 Family PC is off · ${
       queue.length > 0
         ? `${plural(queue.length, 'change', 'changes')} waiting`

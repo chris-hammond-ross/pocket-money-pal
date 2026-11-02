@@ -57,6 +57,9 @@ export const ACTIVITY_TYPES = [
   // Backup and restore (ADR 0020)
   'backup.exported',
   'backup.restored',
+  // Remote access (spec 008)
+  'relay.connected',
+  'relay.disconnected',
   // System
   'day.scheduled',
 ] as const;

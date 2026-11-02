@@ -7,6 +7,7 @@ import {
   streakReportSchema,
   surpriseRunSchema,
 } from './schemas';
+import { relayInfoSchema } from './remote';
 
 /**
  * Events the server pushes to every connected client over the WebSocket.
@@ -71,6 +72,8 @@ export const serverEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('child.adjusted'), adjustment: adjustmentSchema }),
   /** A device was paired or revoked. A revoked phone finds out by re-checking itself. */
   z.object({ type: z.literal('devices.changed') }),
+  /** Remote access connected, dropped, came back or was turned off (spec 008). */
+  z.object({ type: z.literal('relay.changed'), relay: relayInfoSchema }),
   /** A payday ran (spec 004): every kiosk plays the show. */
   z.object({ type: z.literal('payday.done'), paydayId: z.number().int() }),
   /** A payday slot passed in "When I press start" mode: phones highlight the button. */

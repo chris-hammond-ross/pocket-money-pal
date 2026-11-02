@@ -69,7 +69,12 @@ export async function setupRoutes(
   app.get('/api/setup/kiosk', async (req, reply) => {
     if (requestOrigin(req) !== 'pc') return reply.code(403).send({ error: 'pc-only' });
     if (!isSetupNeeded(db)) return reply.code(409).send({ error: 'setup-done' });
-    const info: SetupKioskInfo = { token: getSetupToken(db), hosts: lanAddresses(), publicUrl };
+    const info: SetupKioskInfo = {
+      token: getSetupToken(db),
+      hosts: lanAddresses(),
+      publicUrl,
+      secureUrl: app.relay.url(),
+    };
     return info;
   });
 

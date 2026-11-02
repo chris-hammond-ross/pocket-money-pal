@@ -55,6 +55,7 @@ export function captureInstallPrompt(): void {
   });
   window.addEventListener('appinstalled', () => {
     installPrompt = null;
+    installedHere()[1]();
     installListeners.forEach((l) => l());
   });
 }
@@ -157,6 +158,8 @@ export async function resyncPush(): Promise<void> {
 
 const ASKED_PUSH_KEY = 'pmp.parent.askedPush';
 const HINT_KEY = 'pmp.parent.installHintDismissed';
+const INSTALLED_KEY = 'pmp.parent.installed';
+const MOVE_HINT_KEY = 'pmp.parent.moveHintDismissed';
 
 function flag(key: string): [boolean, () => void] {
   let value = false;
@@ -181,3 +184,12 @@ function flag(key: string): [boolean, () => void] {
 export const askedPush = () => flag(ASKED_PUSH_KEY);
 /** The plain-HTTP install hint is dismissed once per phone. */
 export const installHintDismissed = () => flag(HINT_KEY);
+/** The "Move to the app" hint is dismissed once per phone (and address). */
+export const moveHintDismissed = () => flag(MOVE_HINT_KEY);
+/** This address was installed as an app (from this tab, so it isn't standalone itself). */
+export const installedHere = () => flag(INSTALLED_KEY);
+
+/** Installed as an app here: opened from it, or installed from this tab. */
+export function isInstalled(): boolean {
+  return isStandalone() || installedHere()[0];
+}

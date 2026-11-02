@@ -12,6 +12,7 @@ import type { Duplex } from 'node:stream';
 import {
   decodeTunnelFrame,
   encodeTunnelFrame,
+  normaliseLicenceKey,
   TunnelReceiveWindow,
   TunnelSendWindow,
   TUNNEL_CHUNK_BYTES,
@@ -37,6 +38,8 @@ export interface FakeRelayOptions {
   /** 0 (the default) picks a free port. */
   port?: number;
   host?: string;
+  /** The licence `/register` accepts. */
+  licenceKey?: string;
 }
 
 interface PhoneRequest {
@@ -94,6 +97,15 @@ export class FakeRelay extends EventEmitter {
   /** The PC's last `hello`. */
   hello: TunnelFrameOf<'hello'> | null = null;
   pings = 0;
+  /** The licence `/register` accepts. */
+  readonly licenceKey: string;
+  /** Another PC has the licence: `/register` answers 409 unless it takes over. */
+  inUse = false;
+  /** Answer `/register` with this instead (`{ status, error }`, or `null` for no JSON). */
+  registerAnswer: { status: number; error: string | null } | null = null;
+  /** The bodies `/register` was sent, and the `/unregister` calls that were let through. */
+  readonly registered: { licenceKey: string; takeOver?: boolean; version: string | null }[] = [];
+  unregistered = 0;
 
   private readonly server = createServer((req, res) => this.phoneRequest(req, res));
   private readonly pcServer = new WebSocketServer({
@@ -113,6 +125,7 @@ export class FakeRelay extends EventEmitter {
     super();
     this.kioskId = options.kioskId ?? 'fakefamily';
     this.secret = options.secret ?? 'fake-relay-secret';
+    this.licenceKey = options.licenceKey ?? 'PMP-FAKE2-FAKE3-FAKE4-FAKE5';
     this.port = options.port ?? 0;
     this.server.on('upgrade', (req, socket, head) => this.upgrade(req, socket, head));
     this.server.on('connection', (socket) => {
@@ -339,6 +352,55 @@ export class FakeRelay extends EventEmitter {
     }
   }
 
+  /** `POST /register`, as ADR 0024 describes it. The address and secret stay the same. */
+  private async register(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(chunk as Buffer);
+    const answer = (status: number, body: object): void => {
+      res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body));
+    };
+    let body: { licenceKey?: unknown; takeOver?: unknown } = {};
+    try {
+      body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as typeof body;
+    } catch {
+      return answer(400, { error: 'bad-request' });
+    }
+    const licenceKey = typeof body.licenceKey === 'string' ? body.licenceKey : '';
+    const takeOver = body.takeOver === true;
+    const version = req.headers[TUNNEL_VERSION_HEADER];
+    this.registered.push({
+      licenceKey,
+      ...(takeOver && { takeOver }),
+      version: typeof version === 'string' ? version : null,
+    });
+    if (this.registerAnswer) {
+      const { status, error } = this.registerAnswer;
+      if (error === null) return void res.writeHead(status).end('not json');
+      return answer(status, { error });
+    }
+    if (normaliseLicenceKey(licenceKey) !== normaliseLicenceKey(this.licenceKey)) {
+      return answer(404, { error: 'unknown-licence' });
+    }
+    if (this.inUse && !takeOver) return answer(409, { error: 'licence-in-use' });
+    this.inUse = true;
+    return answer(200, { kioskId: this.kioskId, secret: this.secret, url: this.familyUrl });
+  }
+
+  /** `POST /unregister` with the PC's upgrade headers: the licence is free again. */
+  private unregister(req: IncomingMessage, res: ServerResponse): void {
+    const ok =
+      req.headers.authorization === `Bearer ${this.secret}` &&
+      req.headers[TUNNEL_KIOSK_HEADER] === this.kioskId;
+    if (!ok) {
+      res.writeHead(401, { 'content-type': 'application/json' }).end('{"error":"bad-secret"}');
+      return;
+    }
+    this.unregistered++;
+    this.inUse = false;
+    this.pc?.close(4401, 'Unregistered');
+    res.writeHead(204).end();
+  }
+
   private finishRequest(id: number): void {
     const r = this.requests.get(id);
     this.requests.delete(id);
@@ -347,6 +409,10 @@ export class FakeRelay extends EventEmitter {
   }
 
   private async phoneRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    // The relay's own routes (the real one only has them on its apex).
+    const path = new URL(req.url ?? '/', 'http://relay').pathname;
+    if (req.method === 'POST' && path === '/register') return this.register(req, res);
+    if (req.method === 'POST' && path === '/unregister') return this.unregister(req, res);
     if (!this.connected) {
       const page = !req.url?.startsWith('/api');
       res.writeHead(503, { 'content-type': page ? 'text/html' : 'application/json' });

@@ -1188,3 +1188,100 @@
     color: var(--pmp-gold);
   }
 }
+
+/* After moving to the secure address (ADR 0025): two steps, ticked off as they're done */
+.moveSteps {
+  margin: 12px 0 2px;
+  font-size: 17px;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  display: grid;
+  gap: 10px;
+
+  & li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 56px;
+    padding: 8px 12px;
+    background: var(--pmp-panel);
+    border-radius: 12px;
+    counter-increment: step;
+  }
+
+  /* The flex rows hide the list's own numbers, so draw them. */
+  & li::before {
+    content: counter(step) '.';
+    flex: none;
+    width: 1.2em;
+    color: var(--pmp-gold);
+    font-weight: 700;
+  }
+
+  & li > span:first-of-type {
+    flex: 1;
+  }
+
+  & li[data-done] > span:first-child {
+    color: var(--pmp-dim);
+    text-decoration: line-through;
+  }
+
+  & li > span:last-child:not(:first-child) {
+    color: var(--pmp-bonus);
+    font-weight: 700;
+  }
+
+  & .pill {
+    min-height: 36px;
+    padding: 4px 12px;
+  }
+}
+
+/* Setup tab, REMOTE ACCESS (spec 008) */
+.remoteCard {
+  background: var(--pmp-panel);
+  border-radius: 12px;
+  padding: 12px;
+
+  & > p {
+    margin: 0 0 10px;
+    color: var(--pmp-dim);
+    font-size: 14px;
+  }
+
+  & a {
+    color: var(--pmp-gold);
+  }
+}
+
+.remoteHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.remoteState {
+  white-space: nowrap;
+}
+
+.licenceInput {
+  font-size: 14px;
+  letter-spacing: 0.06em;
+}
+
+.remoteActions {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+
+.remoteCard > .remoteActions:last-child {
+  margin-bottom: 0;
+}

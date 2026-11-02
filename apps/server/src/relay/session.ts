@@ -355,6 +355,13 @@ export class TunnelSession {
     return this.streams.size;
   }
 
+  /** HTTP requests in flight (a phone's WebSocket stays open, so it isn't counted). */
+  get httpSize(): number {
+    let n = 0;
+    for (const stream of this.streams.values()) if (stream instanceof HttpStream) n++;
+    return n;
+  }
+
   send(frame: TunnelFrame): void {
     if (!this.closed) this.options.send(encodeTunnelFrame(frame));
   }
