@@ -23,7 +23,7 @@
     "PRICE_CENTS": 2500,
     "CURRENCY": "aud",
     // Session 9.6 sets the live key (pk_live_…) before the first production deploy.
-    "STRIPE_PUBLISHABLE_KEY": "pk_live_not_set_yet",
+    "STRIPE_PUBLISHABLE_KEY": "pk_live_51UYlTmDYiQFHNs5ZNGH2MHDSSyZQDASzkZ2etY5jB8kOGh69UyX1ez3LVcIQEIC4oJTD3bfFAX55tgfgl716xp7c0028enkAnm",
   },
   "services": [{ "binding": "RELAY", "service": "pmp-relay", "entrypoint": "RelayRpc" }],
   // The checkout funnel (worker/funnel.ts): funnel id and step only.
