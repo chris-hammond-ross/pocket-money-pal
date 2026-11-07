@@ -17,7 +17,7 @@
     <article class="lp-doc" id="${d.id}">
       <header>
         <h2>${d.long}</h2>
-        <div class="lp-meta"><span>Last updated ${LEGAL.updated}</span><span class="lp-draft">DRAFT WORDING</span></div>
+        <div class="lp-meta"><span>Last updated ${LEGAL.updated}</span></div>
         <p class="lp-intro">${d.intro}</p>
       </header>
       ${d.sections.map((s, i) => `

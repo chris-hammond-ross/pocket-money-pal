@@ -1,6 +1,4 @@
-// Round 07 · DRAFT terms and privacy policy wording, shared by all three options so they're comparable.
-// NOT legal advice and not final: written from what the site already promises, to give the display
-// prototypes realistic length and structure. Needs checking (ideally by an Australian lawyer) before launch.
+// Terms and privacy policy wording for the legal page.
 //
 // Each section has:
 //   id     anchor (unique across both documents)
@@ -11,7 +9,7 @@
 // Tokens: {{hello}} / {{support}} → the emails; [[text]] → a "to decide" placeholder.
 (function () {
   const LEGAL = {
-    updated: '7 November 2026 (draft)',
+    updated: '7 November 2026',
 
     terms: {
       id: 'terms',
