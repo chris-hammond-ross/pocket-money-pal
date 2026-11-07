@@ -6,3 +6,9 @@ coverage
 apps/server/drizzle
 apps/desktop/.stage
 package-lock.json
+apps/site/public/*
+!apps/site/public/assets/
+apps/site/public/assets/*
+!apps/site/public/assets/checkout.js
+.wrangler
+apps/site/worker-configuration.d.ts

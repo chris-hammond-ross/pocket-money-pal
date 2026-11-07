@@ -36,3 +36,13 @@ jobs:
         run: npm run desktop:release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # A copy without the version in its name, so the landing site's /download page can always link
+      # releases/latest/download/Pocket-Money-Pal-Setup.exe. The updater still reads latest.yml and the
+      # versioned file, which stay as they are.
+      - name: Upload the installer under a fixed name
+        shell: bash
+        run: |
+          cp "apps/desktop/release/Pocket-Money-Pal-Setup-${GITHUB_REF_NAME#v}.exe" Pocket-Money-Pal-Setup.exe
+          gh release upload "$GITHUB_REF_NAME" Pocket-Money-Pal-Setup.exe --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,17 @@
+{
+  "name": "@pmp/site",
+  "version": "0.2.5",
+  "private": true,
+  "description": "The landing site (pocketmoneypal.com) and its checkout: static assets plus a small Worker.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --env staging",
+    "types": "wrangler types --env-interface Env",
+    "typecheck": "tsc --noEmit",
+    "deploy:staging": "wrangler deploy --env staging",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "wrangler": "^4.158.0"
+  }
+}

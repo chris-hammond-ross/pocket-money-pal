@@ -1,0 +1,1 @@
+try { const to = sessionStorage.getItem('pmp-fade'); if (to !== null) { sessionStorage.removeItem('pmp-fade'); document.documentElement.classList.add('pg-in'); document.documentElement.dataset.pgTo = to; } } catch {}

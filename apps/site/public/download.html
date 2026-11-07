@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Download · Pocket Money Pal</title>
+<link rel="canonical" href="https://pocketmoneypal.com/download" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/favicon.png" type="image/png" sizes="192x192" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<!--
+  Ported from prototypes/landing-site/complete/download.html (session 9.5b) by the production rule in
+  prototypes/landing-site/README.md: markup, CSS, copy and timings are the prototype's, byte for byte.
+  Production changes only: inline scripts moved to /assets/*.js (CSP), ../_shared → /assets, canvas-confetti
+  self-hosted, head tags (icons, description, social), buy buttons scroll to #pricing (data-buy, no onclick),
+  page links → / and /legal. Change the look in the prototype's complete page first, then port it again.
+-->
+<link rel="stylesheet" href="/assets/brand.css" />
+<!-- Page fade: arriving from the other page starts invisible; the script at the end of the body fades it in. -->
+<script src="/assets/fade-in.js"></script>
+<style>
+  body { background: radial-gradient(900px 500px at 70% 0%, var(--glow) 0%, var(--bg) 70%) no-repeat var(--bg); color: var(--text); min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; }
+
+  /* Nav: legal.html's, without the document links. */
+  .nav { display: flex; align-items: center; gap: 28px; max-width: 1240px; margin: 0 auto; padding: 18px var(--gutter); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.2rem; color: var(--text); text-decoration: none; }
+  .brand img { width: 36px; }
+  .nav .home { margin-left: auto; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  @media (max-width: 420px) { .nav { gap: 12px; } .brand { font-size: 1.05rem; } .brand img { width: 30px; } .nav .home { padding: 7px 12px; font-size: .9rem; } }
+  /* The hero's pixel night sky, behind the whole page (fixed, so it stays put while the page scrolls). */
+  body { isolation: isolate; }
+  .lp-sky { position: fixed; inset: 0; z-index: -1; width: 100%; height: 100%; pointer-events: none; }
+
+  /* Body: one centred column. */
+  .dl-main { flex: 1; width: 100%; max-width: 680px; margin: 0 auto; padding: clamp(24px, 6vw, 64px) var(--gutter) 72px; }
+  .dl-view[hidden] { display: none; }
+  .dl-k { font-family: var(--font-pixel); font-size: 10px; letter-spacing: 1px; color: var(--gold); line-height: 1.6; }
+  .dl-main h1 { font-size: clamp(2rem, 5vw, 2.8rem); line-height: 1.1; margin: 10px 0 14px; text-wrap: balance; }
+  .dl-main h1 .g { color: var(--gold); }
+  .dl-lead { color: #c9ccf2; font-size: 1.12rem; line-height: 1.55; margin: 0 0 26px; }
+
+  /* The gold card holding the main action (the checkout card's look). */
+  .dl-card { background: var(--panel); border: 2px solid var(--gold); border-radius: 24px; padding: 24px; box-shadow: 0 0 50px rgba(255, 212, 59, .08); }
+  .dl-btn { display: block; width: 100%; text-align: center; text-decoration: none; background: var(--gold); color: #2a2000; border: 0; border-radius: 16px; padding: 15px 20px; font: inherit; font-size: 1.25rem; font-weight: 700; box-shadow: 0 5px 0 var(--gold-shadow); transition: transform .1s, box-shadow .1s; cursor: pointer; }
+  .dl-btn small { display: block; font-size: .85rem; font-weight: 500; opacity: .75; margin-top: 2px; }
+  .dl-btn:hover { transform: translateY(-2px); }
+  .dl-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--gold-shadow); }
+  .dl-note { margin: 16px 0 0; font-size: .9rem; color: var(--dim); text-align: center; }
+
+  /* What happens next: the success card's numbered steps. */
+  .dl-next { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .dl-next b.t { font-family: var(--font-pixel); font-size: 10px; letter-spacing: 1px; color: var(--dim); font-weight: 400; }
+  .dl-next ol { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; counter-reset: s; }
+  .dl-next li { counter-increment: s; display: flex; gap: 12px; background: var(--bg); border-radius: 14px; padding: 12px 14px; line-height: 1.45; }
+  .dl-next li::before { content: '0' counter(s); font-family: var(--font-pixel); font-size: 11px; color: var(--gold); padding-top: 4px; }
+  .dl-next li small { display: block; color: var(--dim); }
+
+  /* Not on Windows: the address, big, with copy and email-it-to-me. */
+  .dl-addr { display: block; background: var(--bg); border: 1px dashed var(--line); border-radius: 14px; padding: 16px; font-size: clamp(1.15rem, 4.6vw, 1.5rem); font-weight: 600; letter-spacing: .01em; text-align: center; }
+  .dl-addr span { color: var(--dim); font-weight: 500; }
+  .dl-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .dl-two .dl-btn { font-size: 1.05rem; padding: 13px 14px; }
+  .dl-ghost { background: var(--panel2); color: var(--text); box-shadow: 0 5px 0 #15163a; border: 1px solid var(--line); }
+  .dl-ghost:active { box-shadow: 0 2px 0 #15163a; }
+  @media (max-width: 420px) { .dl-two { grid-template-columns: 1fr; } }
+  .dl-why { margin: 22px 0 0; padding-top: 20px; border-top: 1px solid var(--line); color: #c9ccf2; line-height: 1.55; }
+  .dl-os { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .dl-os span { font-size: .88rem; padding: 4px 10px; border-radius: 99px; color: var(--dim); border: 1px dashed var(--line); }
+  .dl-os .now { color: #06331d; background: var(--bonus); border: 1px solid var(--bonus); font-weight: 600; }
+
+  .dl-swap { margin: 18px 0 0; text-align: center; font-size: .95rem; color: var(--dim); }
+  .dl-swap button { background: none; border: 0; padding: 0; font: inherit; color: var(--dim); text-decoration: underline; cursor: pointer; }
+  .dl-swap button:hover { color: var(--text); }
+  .dl-help { margin: 28px 0 0; text-align: center; color: var(--dim); }
+  .dl-help a { color: #c9ccf2; }
+
+  .lp-foot { border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+  .lp-foot div { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; max-width: 1240px; margin: 0 auto; padding: 20px var(--gutter) 28px; color: var(--dim); font-size: .9rem; }
+  .lp-foot a { color: #c9ccf2; }
+  .lp-foot img { display: inline-block; width: 1.4em; height: 1.4em; vertical-align: -.35em; margin-left: .3em; }
+  .lp-foot .home { margin-left: auto; }
+
+  /* Page fade (legal.html's). */
+  html { background: var(--bg); }
+  html.pg-in body { opacity: 0; }
+  html.pg-in.pg-go body { opacity: 1; }
+  @media (prefers-reduced-motion: no-preference) {
+    html.pg-go body { animation: pg-in .4s ease-out both; }
+    body.pg-out { animation: pg-out .2s ease-in forwards; }
+  }
+  @keyframes pg-in { from { opacity: 0; } }
+  @keyframes pg-out { to { opacity: 0; } }
+</style>
+</head>
+<body>
+<canvas class="lp-sky" id="lpSky" aria-hidden="true"></canvas>
+
+<div class="lp-top">
+  <nav class="nav">
+    <a class="brand" href="/" data-page><img src="/assets/img/pig.svg" alt="" />Pocket Money Pal</a>
+    <a class="home" href="/" data-page>← Back to home</a>
+  </nav>
+</div>
+
+<main class="dl-main">
+
+  <!-- On Windows -->
+  <section class="dl-view" id="dlWin" hidden>
+    <div class="dl-k">DOWNLOAD · WINDOWS</div>
+    <h1>Put Pocket Money Pal on <span class="g">your family's computer.</span></h1>
+    <p class="dl-lead">Download it on the computer the kids will use, then run it. It takes a minute or two.</p>
+    <div class="dl-card">
+      <a class="dl-btn" id="dlGet" href="https://github.com/chris-hammond-ross/pocket-money-pal/releases/latest/download/Pocket-Money-Pal-Setup.exe">⬇ Download for Windows<small>Free updates, for life</small></a>
+      <div class="dl-next">
+        <b class="t">WHAT HAPPENS NEXT</b>
+        <ol>
+          <li><div><b>Run it</b><small>If Windows says it "protected your PC", click More info, then Run anyway. When it asks about Network Command Shell, choose Yes.</small></div></li>
+          <li><div><b>Pair your phone</b><small>The kids' screen opens with a code. Point your phone's camera at it.</small></div></li>
+          <li><div><b>Use your phone away from home</b><small>On your phone, go to Setup → Remote access and enter the key from your email.</small></div></li>
+        </ol>
+      </div>
+    </div>
+    <p class="dl-swap">Not on the family computer? <button type="button" data-show="dlOther">Send yourself the link</button></p>
+  </section>
+
+  <!-- On a phone, a tablet or a Mac -->
+  <section class="dl-view" id="dlOther" hidden>
+    <div class="dl-k">DOWNLOAD</div>
+    <h1>Open this page on your <span class="g">family's Windows computer.</span></h1>
+    <p class="dl-lead">Pocket Money Pal goes on the computer the kids will use. Your phone comes next: you'll pair it once it's installed.</p>
+    <div class="dl-card">
+      <div class="dl-addr" id="dlAddr">pocketmoneypal.com<wbr /><span>/download</span></div>
+      <div class="dl-two">
+        <button type="button" class="dl-btn dl-ghost" id="dlCopy">Copy the link</button>
+        <a class="dl-btn dl-ghost" id="dlMail" href="mailto:?subject=Pocket%20Money%20Pal%20download&amp;body=Open%20this%20on%20the%20family%20computer%3A%20https%3A%2F%2Fpocketmoneypal.com%2Fdownload">✉️ Email it to me</a>
+      </div>
+      <p class="dl-why">It runs on Windows for now. A family computer with a second monitor works brilliantly.</p>
+      <div class="dl-os"><span class="now">✓ Windows</span><span>Mac · soon</span><span>Linux · soon</span><span>Tablets · soon</span></div>
+    </div>
+    <p class="dl-swap">On Windows already? <button type="button" data-show="dlWin">Show the download</button></p>
+  </section>
+
+  <p class="dl-help">Stuck? Email <a class="dl-support" href="mailto:support@pocketmoneypal.com">support@pocketmoneypal.com</a> and we'll help.</p>
+</main>
+
+<footer class="lp-foot"><div>
+  <span>© <span id="lpYear">2026</span> Pocket Money Pal</span>
+  <span>Made with ❤️ in <img src="/assets/img/flag-au.svg" alt="Australia" title="Australia" /></span>
+  <a href="/legal" data-page>Terms and privacy</a>
+  <a class="home" href="/" data-page>← Back to home</a>
+</div></footer>
+
+<script src="/assets/site.js"></script>
+<script src="/assets/download.js"></script>
+</body>
+</html>

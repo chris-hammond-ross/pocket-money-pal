@@ -10,8 +10,13 @@ export default tseslint.config(
       '**/dist/**',
       '**/release/**',
       '**/.stage/**',
+      '**/.wrangler/**',
       'apps/server/drizzle/**',
       'prototypes/**',
+      // The landing page is ported verbatim from its prototype (apps/site/README.md); only new code is linted.
+      'apps/site/public/**',
+      '!apps/site/public/assets/checkout.js',
+      'apps/site/worker-configuration.d.ts',
     ],
   },
   js.configs.recommended,
@@ -25,6 +30,10 @@ export default tseslint.config(
   {
     files: ['apps/web/public/sw.js'],
     languageOptions: { globals: { ...globals.serviceworker } },
+  },
+  {
+    files: ['apps/site/public/**/*.js'],
+    languageOptions: { globals: { ...globals.browser } },
   },
   {
     files: ['apps/web/**/*.{ts,tsx}'],

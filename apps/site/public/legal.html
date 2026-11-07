@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The small print · Pocket Money Pal</title>
+<link rel="canonical" href="https://pocketmoneypal.com/legal" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/favicon.png" type="image/png" sizes="192x192" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<!--
+  Ported from prototypes/landing-site/complete/legal.html (session 9.5b) by the production rule in
+  prototypes/landing-site/README.md: markup, CSS, copy and timings are the prototype's, byte for byte.
+  Production changes only: inline scripts moved to /assets/*.js (CSP), ../_shared → /assets, canvas-confetti
+  self-hosted, head tags (icons, description, social), buy buttons scroll to #pricing (data-buy, no onclick),
+  page links → / and /legal. Change the look in the prototype's complete page first, then port it again.
+-->
+<link rel="stylesheet" href="/assets/brand.css" />
+<!-- Page fade: arriving from the other page (index ↔ legal) starts invisible; the script at the end of the body
+     puts it in place and fades it in. pmp-fade holds where to land (an element id, or '' for the top). -->
+<script src="/assets/fade-in.js"></script>
+<style>
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+  body { background: radial-gradient(900px 500px at 70% 0%, var(--glow) 0%, var(--bg) 70%) no-repeat var(--bg); color: var(--text); }
+
+  /* Nav: the landing page's, with the links swapped for the two documents. */
+  .nav { display: flex; align-items: center; gap: 28px; max-width: 1240px; margin: 0 auto; padding: 18px var(--gutter); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.2rem; color: var(--text); text-decoration: none; }
+  .brand img { width: 36px; }
+  .nav .links { display: flex; gap: 22px; margin-left: auto; }
+  .nav .links a { color: var(--dim); text-decoration: none; font-weight: 500; }
+  .nav .links a:hover { color: var(--text); }
+  .nav .home { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font-weight: 600; text-decoration: none; }
+  .nav .home { white-space: nowrap; }
+  @media (max-width: 760px) { .nav .links { display: none; } .nav .home { margin-left: auto; } }
+  @media (max-width: 420px) { .nav { gap: 12px; } .brand { font-size: 1.05rem; } .brand img { width: 30px; } .nav .home { padding: 7px 12px; font-size: .9rem; } }
+
+  /* The hero's pixel night sky, behind the nav only. */
+  .lp-top { position: relative; isolation: isolate; }
+  .lp-sky { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; pointer-events: none; -webkit-mask-image: linear-gradient(#000 60%, transparent); mask-image: linear-gradient(#000 60%, transparent); }
+
+  /* Body: sticky contents + the documents. */
+  .lp-main { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: clamp(28px, 4vw, 56px); max-width: 1240px; margin: 0 auto; padding: clamp(24px, 5vw, 56px) var(--gutter) 80px; }
+  .lp-toc { position: sticky; top: 20px; align-self: start; max-height: calc(100vh - 40px); overflow-y: auto; padding-right: 6px; }
+  .lp-toc .t { font-family: var(--font-pixel); font-size: 10px; letter-spacing: 1px; color: var(--bonus); margin: 6px 0 10px; }
+  .lp-toc ol { list-style: none; margin: 0 0 24px; padding: 0; border-left: 2px solid var(--line); }
+  .lp-toc a { display: block; padding: 6px 0 6px 14px; margin-left: -2px; border-left: 2px solid transparent; color: var(--dim); text-decoration: none; font-size: .95rem; line-height: 1.3; transition: color .15s, border-color .15s; }
+  .lp-toc a:hover { color: var(--text); }
+  .lp-toc a.on { color: var(--gold); border-left-color: var(--gold); }
+  .lp-toc a.doc { color: var(--text); font-weight: 600; }
+  .lp-toc a.doc.on { color: var(--gold); }
+
+  .lp-doc { scroll-margin-top: 20px; }
+  .lp-doc + .lp-doc { margin-top: 72px; padding-top: 48px; border-top: 1px solid var(--line); }
+  .lp-doc > header { margin-bottom: 18px; }
+  .lp-doc h2 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.4rem); }
+  .lp-meta { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; color: var(--dim); font-size: .9rem; margin-top: 6px; }
+  .lp-draft { border: 1px dashed var(--due); color: var(--due); border-radius: 8px; padding: 1px 8px; font-size: .8rem; }
+  .lp-intro { color: #c9ccf2; font-size: 1.12rem; line-height: 1.55; margin: 14px 0 0; max-width: 40em; }
+
+  .lp-sec { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 18px 32px; padding: 26px 0; border-top: 1px solid color-mix(in srgb, var(--line) 55%, transparent); scroll-margin-top: 20px; }
+  .lp-sec h3 { grid-column: 1 / -1; margin: 0; font-size: 1.25rem; display: flex; align-items: baseline; gap: 12px; }
+  .lp-sec h3 .n { font-family: var(--font-pixel); font-size: 10px; color: var(--gold); font-weight: 400; }
+  .lp-sec h3 .anchor { flex: none; white-space: nowrap; margin-left: auto; background: none; border: 0; color: var(--dim); font-size: .85rem; opacity: 0; transition: opacity .15s; }
+  .lp-sec:hover h3 .anchor, .lp-sec h3 .anchor:focus { opacity: 1; }
+  .lp-sec h3 .anchor:hover { color: var(--gold); }
+  .lp-words p, .lp-words li { color: #c9ccf2; line-height: 1.7; }
+  .lp-words p { margin: 0 0 12px; }
+  .lp-words a { color: var(--gold); }
+  .lp-plain { align-self: start; background: color-mix(in srgb, var(--bonus) 9%, var(--bg)); border: 1px solid color-mix(in srgb, var(--bonus) 28%, transparent); border-radius: 16px; padding: 14px 16px; line-height: 1.5; }
+  .lp-plain .k { display: block; font-family: var(--font-pixel); font-size: 9px; letter-spacing: 1px; color: var(--bonus); margin-bottom: 8px; }
+  .lp-tbc { background: none; color: var(--due); border-bottom: 1px dashed var(--due); padding: 0 1px; }
+  .lp-sec.flash .lp-plain { animation: lp-flash 1.4s ease-out; }
+  @keyframes lp-flash { 0%, 30% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--bonus) 25%, transparent); } }
+
+  .lp-tools { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+  .lp-tools button, .lp-tools a { background: var(--panel2); color: #c9ccf2; border: 1px solid var(--line); border-radius: 99px; padding: 8px 16px; text-decoration: none; font-size: .95rem; }
+  .lp-tools button:hover, .lp-tools a:hover { color: var(--text); border-color: var(--dim); }
+
+  .lp-foot { border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+  .lp-foot div { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; max-width: 1240px; margin: 0 auto; padding: 20px var(--gutter) 28px; color: var(--dim); font-size: .9rem; }
+  .lp-foot a { color: #c9ccf2; }
+  .lp-foot img { display: inline-block; width: 1.4em; height: 1.4em; vertical-align: -.35em; margin-left: .3em; }
+  .lp-foot .home { margin-left: auto; }
+
+  /* Mobile contents: a sticky "On this page" bar that opens the list. */
+  .lp-mtoc { display: none; }
+  @media (max-width: 900px) {
+    .lp-main { grid-template-columns: minmax(0, 1fr); }
+    .lp-toc { display: none; }
+    .lp-mtoc { display: block; position: sticky; top: 0; z-index: 5; margin: 0 calc(var(--gutter) * -1) 10px; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+    .lp-mtoc summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 12px var(--gutter); cursor: pointer; font-weight: 600; }
+    .lp-mtoc summary::-webkit-details-marker { display: none; }
+    .lp-mtoc summary .k { font-family: var(--font-pixel); font-size: 9px; color: var(--bonus); }
+    .lp-mtoc summary .cur { flex: 1; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lp-mtoc summary::after { content: '▾'; color: var(--dim); transition: transform .2s; }
+    .lp-mtoc[open] summary::after { transform: rotate(180deg); }
+    .lp-mtoc .list { max-height: 60vh; overflow-y: auto; padding: 0 var(--gutter) 14px; }
+    .lp-mtoc .list ol { list-style: none; margin: 0 0 10px; padding: 0; }
+    .lp-mtoc .list a { display: block; padding: 8px 0; color: var(--dim); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent); }
+    .lp-mtoc .list a.doc { color: var(--text); font-weight: 600; }
+    .lp-mtoc .list a.on { color: var(--gold); }
+  }
+  @media (max-width: 700px) {
+    .lp-sec { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .lp-plain { order: -1; grid-row: 2; }
+    .lp-sec h3 .anchor { opacity: 1; }
+  }
+
+/* Page fade between the landing page and the small print (no white flash: the gap between pages is navy). */
+  html { background: var(--bg); }
+  html.pg-in body { opacity: 0; }        /* arriving: hidden until it's in place… */
+  html.pg-in.pg-go body { opacity: 1; }  /* …then shown (faded, below) */
+  @media (prefers-reduced-motion: no-preference) {
+    html.pg-go body { animation: pg-in .4s ease-out both; }
+    body.pg-out { animation: pg-out .2s ease-in forwards; }
+  }
+  @keyframes pg-in { from { opacity: 0; } }
+  @keyframes pg-out { to { opacity: 0; } }
+
+  @media print {
+    .proto-banner, .nav, .lp-sky, .lp-toc, .lp-mtoc, .lp-tools, .lp-foot .home { display: none !important; }
+    body { background: #fff; color: #000; }
+    .lp-top { background: none; }
+    .lp-main { display: block; }
+    .lp-words p, .lp-words li, .lp-intro { color: #222; }
+    .lp-plain { background: #f2f7f3; border-color: #cfe5d6; color: #000; }
+  }
+</style>
+</head>
+<body>
+
+<div class="lp-top">
+  <canvas class="lp-sky" id="lpSky" aria-hidden="true"></canvas>
+  <nav class="nav">
+    <a class="brand" href="/" data-page><img src="/assets/img/pig.svg" alt="" />Pocket Money Pal</a>
+    <div class="links"><a href="#terms">Terms</a><a href="#privacy-policy">Privacy policy</a></div>
+    <a class="home" href="/#ft" data-page>← Back to home</a>
+  </nav>
+</div>
+
+<main class="lp-main">
+  <aside class="lp-toc" id="lpToc" aria-label="Contents"></aside>
+  <div>
+    <details class="lp-mtoc" id="lpMtoc"><summary><span class="k">ON THIS PAGE</span><span class="cur" id="lpCur">Terms</span></summary><div class="list" id="lpMlist"></div></details>
+    <div id="lpDocs"></div>
+  </div>
+</main>
+
+<footer class="lp-foot"><div>
+  <span>© <span id="lpYear">2026</span> Pocket Money Pal</span>
+  <span>Made with ❤️ in <img src="/assets/img/flag-au.svg" alt="Australia" title="Australia" /></span>
+  <span>Questions? <a id="lpMail" href="#"></a></span>
+  <a class="home" href="/#ft" data-page>← Back to home</a>
+</div></footer>
+
+<script src="/assets/site.js"></script>
+<script src="/assets/legal-content.js"></script>
+<script src="/assets/legal.js"></script>
+</body>
+</html>

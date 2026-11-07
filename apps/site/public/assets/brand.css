@@ -1,0 +1,78 @@
+/* Brand tokens for the landing-site prototypes: the app's arcade palette (apps/web/src/theme.ts). */
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Press+Start+2P&display=swap');
+
+:root {
+  --bg: #0f1024;
+  --glow: #2b2d6e;
+  --panel: #1a1b3a;
+  --panel2: #23244d;
+  --line: #3a3c7a;
+  --text: #eef0ff;
+  --dim: #8f93c7;
+  --gold: #ffd43b;
+  --gold-shadow: #b8941f;
+  --bonus: #37e28c;
+  --bonus-shadow: #1f9e5f;
+  --due: #ffc93c;
+  --late: #ff4d6d;
+  --surprise: #9d6bff;
+  --billy: #228be6;
+  --alice: #e64980;
+  --font-text: Fredoka, 'Segoe UI', system-ui, sans-serif;
+  --font-pixel: 'Press Start 2P', ui-monospace, monospace;
+  --gutter: clamp(16px, 5vw, 48px);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-text);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+/* The prototype banner every option starts with. Click to collapse. */
+.proto-banner {
+  position: relative;
+  z-index: 1000;
+  background: #fffbe6;
+  color: #3b3200;
+  font: 14px/1.45 system-ui, sans-serif;
+  padding: 10px var(--gutter);
+  border-bottom: 2px solid #f0d000;
+  cursor: pointer;
+}
+.proto-banner b {
+  font-weight: 700;
+}
+.proto-banner.closed > :not(:first-child) {
+  display: none;
+}
+.proto-banner p {
+  margin: 4px 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

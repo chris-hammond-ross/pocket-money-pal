@@ -1,13 +1,58 @@
-// The landing site: a static-assets-only Worker (no script). Deployed by Workers Builds
-// from this folder on every push to main that touches apps/site/ (see README.md).
+// The landing site: static assets in public/ plus a small Worker (worker/index.ts) for the checkout.
+// Production (pocketmoneypal.com) is deployed by hand until launch (session 9.6); staging
+// (staging.pocketmoneypal.com, Stripe test mode) by `npm run deploy:staging -w @pmp/site` or Workers Builds.
+// See README.md. Secret: STRIPE_SECRET_KEY (a restricted key: PaymentIntents write), per environment.
 {
-  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "pocketmoneypal",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-10-28",
+  // No invocation logs: /api/order's URL carries the client secret. Console lines carry ids, never emails.
+  "observability": { "enabled": true, "logs": { "invocation_logs": false } },
   "assets": {
     "directory": "./public",
+    "binding": "ASSETS",
     // Missing paths get public/404.html with a 404 status.
     "not_found_handling": "404-page",
+    // The landing page gets the live offer in its head; /api/* is the checkout.
+    "run_worker_first": ["/", "/api/*"],
   },
   "routes": [{ "pattern": "pocketmoneypal.com", "custom_domain": true }],
+  "vars": {
+    "ENVIRONMENT": "production",
+    "PRICE_CENTS": 2500,
+    "CURRENCY": "aud",
+    // Session 9.6 sets the live key (pk_live_…) before the first production deploy.
+    "STRIPE_PUBLISHABLE_KEY": "pk_live_not_set_yet",
+  },
+  "services": [{ "binding": "RELAY", "service": "pmp-relay", "entrypoint": "RelayRpc" }],
+  "secrets": { "required": ["STRIPE_SECRET_KEY"] },
+  "env": {
+    "staging": {
+      "routes": [{ "pattern": "staging.pocketmoneypal.com", "custom_domain": true }],
+      "assets": {
+        "directory": "./public",
+        "binding": "ASSETS",
+        "not_found_handling": "404-page",
+        // Everything through the Worker, so it can add X-Robots-Tag: noindex.
+        "run_worker_first": true,
+      },
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "PRICE_CENTS": 2500,
+        "CURRENCY": "aud",
+        "STRIPE_PUBLISHABLE_KEY": "pk_test_51UYlVuDZH60SUOrlhanwtId3AHjIoIAIliw66fuQXGwNCSXWGID2fTraGMnCFbaRH2fzTeAAXp97KmtHE5vnYZb400GTSW8eG7",
+      },
+      // remote: `wrangler dev` talks to the deployed staging relay (there's no local one).
+      "services": [
+        {
+          "binding": "RELAY",
+          "service": "pmp-relay-staging",
+          "entrypoint": "RelayRpc",
+          "remote": true,
+        },
+      ],
+      "secrets": { "required": ["STRIPE_SECRET_KEY"] },
+    },
+  },
 }

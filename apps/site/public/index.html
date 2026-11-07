@@ -1,241 +1,819 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Pocket Money Pal: chores and pocket money, as a game</title>
-    <meta
-      name="description"
-      content="Pocket Money Pal turns chores and pocket money into a game for kids. A screen on the family PC shows today's quests, parents approve from their phones, and payday fills the savings jars."
-    />
-    <meta name="theme-color" content="#0f1024" />
-    <link rel="canonical" href="https://pocketmoneypal.com/" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="icon" href="/favicon.png" type="image/png" sizes="192x192" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pocket Money Pal · Make chores a game. Make saving a habit.</title>
+<meta
+  name="description"
+  content="Pocket Money Pal turns chores and pocket money into a game for kids. A screen on the family PC shows today's quests, parents approve from their phones, and payday fills the savings jars."
+/>
+<meta name="theme-color" content="#0f1024" />
+<link rel="canonical" href="https://pocketmoneypal.com/" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/favicon.png" type="image/png" sizes="192x192" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://pocketmoneypal.com/" />
+<meta property="og:title" content="Pocket Money Pal" />
+<meta property="og:description" content="Make chores a game. Make saving a habit." />
+<meta property="og:image" content="https://pocketmoneypal.com/assets/img/kiosk.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<!--
+  Ported from prototypes/landing-site/complete/index.html (session 9.5b) by the production rule in
+  prototypes/landing-site/README.md: markup, CSS, copy and timings are the prototype's, byte for byte.
+  Production changes only: inline scripts moved to /assets/*.js (CSP), ../_shared → /assets, canvas-confetti
+  self-hosted, head tags (icons, description, social), buy buttons scroll to #pricing (data-buy, no onclick),
+  page links → / and /legal. Change the look in the prototype's complete page first, then port it again.
+-->
+<link rel="stylesheet" href="/assets/brand.css" />
+<!-- Page fade: arriving from the other page (index ↔ legal) starts invisible; the script at the end of the body
+     puts it in place and fades it in. pmp-fade holds where to land (an element id, or '' for the top). -->
+<script src="/assets/fade-in.js"></script>
+<style>
+  /* ===================== 01 · Hero (01-hero/a2) ===================== */
+  /* Nav links glide to their section instead of jumping (left instant for people who turn motion off). */
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+  body {
+    background: radial-gradient(1100px 650px at 75% 0%, var(--glow) 0%, var(--bg) 70%) no-repeat var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
 
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://pocketmoneypal.com/" />
-    <meta property="og:title" content="Pocket Money Pal" />
-    <meta property="og:description" content="Chores and pocket money, as a game for kids." />
-    <meta property="og:image" content="https://pocketmoneypal.com/img/kiosk.png" />
-    <meta name="twitter:card" content="summary_large_image" />
+  /* Nav */
+  .nav { display: flex; align-items: center; gap: 28px; max-width: 1240px; margin: 0 auto; padding: 18px var(--gutter); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.2rem; color: var(--text); text-decoration: none; }
+  .brand img { width: 36px; }
+  .nav .links { display: flex; gap: 22px; margin-left: auto; }
+  .nav .links a { color: var(--dim); text-decoration: none; font-weight: 500; }
+  .nav .links a:hover { color: var(--text); }
+  .nav .cta-small { background: var(--gold); color: #2a2000; border: 0; border-radius: 999px; padding: 8px 16px; font-weight: 700; box-shadow: 0 3px 0 var(--gold-shadow); }
+  @media (max-width: 760px) { .nav .links { display: none; } .nav .cta-small { margin-left: auto; } }
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Press+Start+2P&display=swap"
-    />
-    <link rel="stylesheet" href="/styles.css" />
-  </head>
-  <body>
-    <header class="nav">
-      <a class="brand" href="/">
-        <img src="/pig.svg" alt="" width="32" height="32" />
-        <span>Pocket Money Pal</span>
-      </a>
-      <nav>
-        <a href="#features">Features</a>
-        <a href="#get-it">Get it</a>
-        <a href="#faq">FAQ</a>
-      </nav>
-    </header>
+  /* Hero */
+  .hero { position: relative; display: grid; grid-template-columns: 1.15fr 1fr; gap: clamp(28px, 5vw, 64px); align-items: center; max-width: 1240px; margin: 0 auto; padding: clamp(24px, 6vw, 72px) var(--gutter) 80px; }
+  .hero > * { min-width: 0; }
+  /* Desktop: the copy column is as tall as the demo, its blocks spread from the demo's top edge to its bottom. */
+  @media (min-width: 901px) {
+    .hero { align-items: stretch; }
+    .copy { display: flex; flex-direction: column; justify-content: space-between; }
+    .copy > :first-child { padding-top: 40px; } /* optical nudge: line up with the demo's content, not its border */
+    .copy h1 { margin-bottom: 0; }
+    .copy .lead { margin: 0; }
+  }
+  @media (max-width: 900px) { .hero { grid-template-columns: minmax(0, 1fr); } .toy-wrap { margin-top: 28px; } }
 
-    <main>
-      <section class="hero">
-        <p class="eyebrow">Chores · Points · Pocket money</p>
-        <h1>Make chores a game your kids actually want to play.</h1>
-        <p class="lead">
-          A screen on the family PC shows each child's quests for the day. Kids tap a quest when
-          it's done, you approve it from your phone, and once a week their points become pocket
-          money they save in jars for the things they want.
-        </p>
-        <div class="cta">
-          <a class="button primary" href="#get-it">Get Pocket Money Pal</a>
-          <a class="button ghost" href="#features">See what it does</a>
+  .kicker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-family: var(--font-pixel); font-size: 11px; color: var(--bonus); letter-spacing: 1px; line-height: 1; }
+  .kicker .arr { width: 10px; height: 10px; flex: none; margin-top: -2px; }
+  @media (max-width: 480px) { .kicker { font-size: 9px; gap: 6px 9px; letter-spacing: .5px; } .kicker .arr { width: 8px; height: 8px; margin-top: -1px; } }
+  h1 .nw { white-space: nowrap; }
+  h1 { font-size: clamp(2.2rem, 4.2vw, 3.3rem); line-height: 1.06; margin: 14px 0 18px; letter-spacing: -0.5px; }
+  h1 .game { color: var(--gold); }
+  h1 .habit { color: var(--bonus); }
+  .lead { font-size: clamp(1.1rem, 1.7vw, 1.3rem); line-height: 1.55; color: #c9ccf2; margin: 0 0 28px; }
+  .lead b { color: var(--text); font-weight: 600; }
+
+  /* Buy block */
+  .buy { display: grid; gap: 14px; }
+  .btn-gold { width: 100%; background: var(--gold); color: #2a2000; border: 0; border-radius: 18px; padding: 18px 30px; font-size: 1.3rem; font-weight: 700; box-shadow: 0 6px 0 var(--gold-shadow), 0 14px 40px rgba(255, 212, 59, .25); transition: transform .1s, box-shadow .1s; }
+  .btn-gold:hover { transform: translateY(-2px); }
+  .btn-gold:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--gold-shadow); }
+  .btn-gold small { display: block; font-size: .85rem; font-weight: 500; opacity: .75; }
+  .spots { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px 12px; text-align: center; }
+  .spots .bar { height: 12px; border-radius: 99px; background: #4a4d94; overflow: hidden; }
+  .spots .bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--bonus), var(--gold)); }
+  .spots p { margin: 10px 0 0; font-size: 1rem; color: var(--dim); }
+  .spots p b { color: var(--gold); }
+
+  /* Demo */
+  .toy-wrap { position: relative; }
+  .burst { position: absolute; top: -22px; right: -20px; z-index: 10; width: 75px; height: 75px; transform: rotate(14deg); pointer-events: none; filter: drop-shadow(0 6px 0 var(--gold-shadow)) drop-shadow(0 12px 18px rgba(0, 0, 0, .45)); }
+  .burst svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .burst span { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 700; font-size: 1.1rem; color: #2a2000; letter-spacing: -.3px; }
+  @media (max-width: 900px) { .burst { right: -8px; } }
+  .toy { position: relative; background: var(--panel); border: 2px solid color-mix(in srgb, var(--billy) 60%, transparent); border-radius: 26px; padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr); box-shadow: 0 0 0 6px rgba(34, 139, 230, .08), 0 30px 80px rgba(0, 0, 0, .45); transition: border-color .3s, box-shadow .3s; }
+  .toy.parent { border-color: color-mix(in srgb, var(--gold) 60%, transparent); box-shadow: 0 0 0 6px rgba(255, 212, 59, .07), 0 30px 80px rgba(0, 0, 0, .45); }
+  /* Both views share one grid cell, so the card is always as tall as the taller one. */
+  .view { grid-area: 1 / 1; visibility: hidden; min-width: 0; }
+  .view.show { visibility: visible; animation: viewIn .35s ease-out; }
+  @keyframes viewIn { from { opacity: 0; transform: translateY(8px); } }
+
+  .switch { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 16px; background: rgba(255, 255, 255, .03); color: var(--text); border: 2px solid var(--line); border-radius: 14px; padding: 12px; font-weight: 600; font-size: 1rem; transition: border-color .2s, background .2s; }
+  .switch:hover { border-color: var(--dim); background: rgba(255, 255, 255, .03); }
+
+  /* Kids' view */
+  .toy-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .avatar { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 32px; background: radial-gradient(circle at 35% 30%, #4dabf7, var(--billy)); box-shadow: 0 0 0 3px rgba(34, 139, 230, .35); flex: none; }
+  .toy-head .who b { display: block; font-size: 1.4rem; }
+  .toy-head .who small { font-family: var(--font-pixel); font-size: 9px; color: var(--gold); }
+  .pts { margin-left: auto; margin-right: 46px; background: #15163a; border: 1px solid var(--line); border-radius: 14px; padding: 6px 14px; text-align: center; min-width: 92px; }
+  .pts b { font-size: 1.6rem; color: var(--gold); }
+  .pts small { display: block; font-size: .7rem; color: var(--dim); margin-top: -4px; }
+  .bump { animation: bump .35s; }
+  @keyframes bump { 40% { transform: scale(1.18); } }
+
+  .quests { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .quest { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; background: var(--panel2); border: 2px solid transparent; border-radius: 16px; padding: 12px 14px; color: var(--text); transition: transform .12s, border-color .2s, background .3s; }
+  .quest:hover:not(:disabled) { border-color: var(--gold); transform: translateX(3px); }
+  .quest .ico { font-size: 26px; width: 44px; height: 44px; display: grid; place-items: center; background: var(--bg); border-radius: 12px; }
+  .quest .t { flex: 1; min-width: 0; }
+  .quest .t b { display: block; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .quest .t small { display: block; color: var(--bonus); font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .quest .p { margin-left: auto; font-weight: 700; font-size: 1.25rem; color: var(--gold); }
+  .quest.hint { animation: hint 1.6s ease-in-out infinite; }
+  @keyframes hint { 50% { border-color: var(--gold); box-shadow: 0 0 22px rgba(255, 212, 59, .25); } }
+  .quest.claimed { background: repeating-linear-gradient(-45deg, var(--panel2) 0 12px, #2a2b58 12px 24px); }
+  .quest.claimed .t small { color: var(--due); }
+  .quest.done { opacity: .55; }
+  .quest.done .ico { background: var(--bonus); }
+  .quest.done .t small { color: var(--dim); }
+
+  .goal { margin-top: 14px; display: flex; align-items: center; gap: 14px; background: var(--bg); border-radius: 16px; padding: 12px 14px; }
+  .jar { position: relative; width: 52px; height: 62px; border: 3px solid #c5c8ef; border-top-width: 6px; border-radius: 10px 10px 16px 16px; overflow: hidden; flex: none; }
+  .jar i { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(#ffe066, #f0b62a); transition: height .9s cubic-bezier(.2, .9, .3, 1.2); }
+  .jar span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 22px; }
+  .goal .gt { flex: 1; min-width: 0; }
+  .goal .gt > b { display: block; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .goal .gbar { height: 10px; background: var(--panel2); border-radius: 99px; overflow: hidden; margin: 6px 0 4px; }
+  .goal .gbar i { display: block; height: 100%; background: var(--gold); transition: width .9s cubic-bezier(.2, .9, .3, 1.2); }
+  .goal .gt small { color: var(--dim); }
+  .goal .gt small b { color: var(--gold); font-size: inherit; }
+
+  /* Payday and Play again take turns in one fixed slot, so the card never changes height. */
+  .slot { display: grid; align-items: center; height: 62px; margin-top: 12px; }
+  .slot > * { grid-area: 1 / 1; }
+  .payday { display: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; border: 0; border-radius: 16px; padding: 14px; font-weight: 700; font-size: 1.1rem; background: var(--bonus); color: #04301a; box-shadow: 0 5px 0 var(--bonus-shadow); animation: pulse 1s infinite; }
+  .payday.show { display: block; }
+  @keyframes pulse { 50% { transform: scale(1.02); } }
+  .again { display: none; margin: 0 auto; background: none; border: 0; color: var(--dim); text-decoration: underline; }
+  .again.show { display: block; }
+
+  /* Mum's phone notification (kids' view) */
+  .note { position: absolute; right: -14px; bottom: 150px; width: 250px; background: #f5f6ff; color: #1a1b3a; border-radius: 18px; padding: 10px 12px; display: flex; gap: 10px; align-items: center; box-shadow: 0 16px 40px rgba(0, 0, 0, .5); transform: translateX(30px) scale(.9); opacity: 0; transition: all .35s cubic-bezier(.2, .9, .3, 1.3); pointer-events: none; z-index: 5; }
+  .note.show { transform: none; opacity: 1; }
+  .note .ph { font-size: 22px; }
+  .note b { display: block; font-size: .9rem; }
+  .note small { font-size: .8rem; color: #555a8a; }
+  .note .ok { margin-left: auto; background: var(--bonus); color: #04301a; font-weight: 700; border-radius: 10px; padding: 4px 8px; font-size: .8rem; }
+  @media (max-width: 900px) { .note { right: 8px; bottom: auto; top: -20px; } }
+
+  /* Parent view */
+  .p-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-right: 46px; }
+  .p-head b { font-size: 1.3rem; }
+  .p-head small { display: block; color: var(--dim); font-size: .85rem; }
+  .p-head .ph-ico { font-size: 28px; }
+  .kids { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .kid { display: flex; align-items: center; gap: 10px; background: var(--panel2); border-radius: 14px; padding: 8px 10px; }
+  .kid .av { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; flex: none; }
+  .kid b { font-size: 1rem; }
+  .kid .kp { margin-left: auto; font-weight: 700; color: var(--gold); font-size: 1.15rem; }
+  .kid .kp small { font-weight: 500; color: var(--dim); font-size: .7rem; display: block; text-align: right; margin-top: -3px; white-space: nowrap; }
+  .kid { min-width: 0; }
+  .kid b { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .tray { background: #15163a; border-top: 3px solid var(--gold); border-radius: 18px; padding: 12px; }
+  .tray-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .tray-head .count { width: 30px; height: 30px; border-radius: 50%; background: var(--gold); color: #2a2000; font-weight: 700; display: grid; place-items: center; transition: transform .2s; }
+  .tray-head b { font-size: 1.1rem; }
+  .tray-head .sum { margin-left: auto; color: var(--gold); font-weight: 700; }
+  /* The claims list and "All caught up" share one cell, held at the full list's height. */
+  .stack { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .stack > * { grid-area: 1 / 1; }
+  .claims { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-content: start; }
+  .claim { position: relative; display: flex; align-items: center; gap: 10px; background: var(--panel2); border-radius: 14px; padding: 10px; touch-action: pan-y; user-select: none; cursor: grab; transition: transform .25s, opacity .25s, background .2s; }
+  .claim.dragging { transition: none; cursor: grabbing; }
+  .claim .av { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; flex: none; }
+  .claim .ct { min-width: 0; flex: 1; }
+  .claim .ct b { display: block; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .claim .ct small { display: block; color: var(--dim); font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .claim .cp { font-weight: 700; color: var(--gold); font-size: 1.1rem; }
+  .claim .acts { display: flex; gap: 6px; }
+  .claim .acts button { width: 36px; height: 36px; border-radius: 10px; border: 0; font-size: 1rem; font-weight: 700; }
+  .claim .acts .no { background: #3a2a44; color: #ff8fa3; }
+  .claim .acts .yes { background: var(--bonus); color: #04301a; }
+  .claim.ok { background: rgba(55, 226, 140, .25); }
+  .claim.back { background: rgba(255, 77, 109, .25); }
+  .claim.gone-r { transform: translateX(110%); opacity: 0; }
+  .claim.gone-l { transform: translateX(-110%); opacity: 0; }
+  .swipe-hint { text-align: center; color: var(--dim); font-size: .82rem; margin: 10px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .swipe-hint .short { display: none; }
+  /* Small phones: drop the extras so names and buttons keep their room. */
+  @media (max-width: 480px) {
+    .swipe-hint .long { display: none; }
+    .swipe-hint .short { display: inline; }
+    .claim .av { display: none; }
+    .claim .acts button { width: 32px; height: 32px; }
+    .kid { gap: 8px; padding: 8px; }
+    .kid .av { width: 30px; height: 30px; font-size: 18px; }
+    .kid .kp small { display: none; }
+    .p-head { padding-right: 56px; }
+  }
+  .all { width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 10px; border: 0; border-radius: 14px; padding: 13px; font-weight: 700; font-size: 1.05rem; background: var(--bonus); color: #04301a; box-shadow: 0 5px 0 var(--bonus-shadow); }
+  .caught { visibility: hidden; align-self: center; text-align: center; }
+  .caught.show { visibility: visible; animation: viewIn .35s ease-out; }
+  .caught b { display: block; font-size: 1.2rem; }
+  .caught small { color: var(--dim); }
+  .sent { text-align: center; color: #ff8fa3; font-size: .85rem; height: 1.3em; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .fly { position: fixed; left: 0; top: 0; z-index: 50; pointer-events: none; font-weight: 700; color: var(--gold); font-size: 1.4rem; text-shadow: 0 2px 0 rgba(0, 0, 0, .4); }
+
+  .mute { position: fixed; right: 16px; bottom: 16px; background: var(--panel2); color: var(--dim); border: 1px solid var(--line); border-radius: 99px; padding: 8px 12px; font-size: .85rem; }
+
+  /* Pixel night sky: behind the nav and hero only, fading out at the bottom. */
+  .top-area { position: relative; isolation: isolate; }
+  /* Desktop: nav + hero fill the first screen, the hero centred in what's left, so "How it works" starts below the fold.
+     A screen too short for the hero just lets it grow, as before. Phones and tablets keep the natural flow. */
+  @media (min-width: 901px) {
+    .top-area { display: flex; flex-direction: column; min-height: 100vh; min-height: 100svh; }
+    .nav, .hero { width: 100%; }
+    .hero { flex: 1; align-content: center; }
+  }
+  .sky { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; pointer-events: none; -webkit-mask-image: linear-gradient(#000 72%, transparent); mask-image: linear-gradient(#000 72%, transparent); }
+
+  /* ===================== 02 · How it works (02-how-it-works/d) ===================== */
+  .wrap { max-width: 1140px; margin: 0 auto; padding: clamp(56px, 9vw, 100px) var(--gutter); }
+
+  h2 { text-align: center; font-family: var(--font-pixel); font-weight: 400; font-size: clamp(16px, 2.2vw, 24px); letter-spacing: 2px; color: var(--bonus); margin: 0 0 clamp(26px, 4vw, 40px); }
+
+  /* Step tiles (C's pipeline, now tabs) */
+  .tiles { display: flex; justify-content: space-between; align-items: stretch; margin-bottom: clamp(26px, 4vw, 44px); }
+  .tile { flex: 0 1 172px; background: var(--panel); color: var(--text); border: 2px solid var(--line); border-radius: 20px; padding: 14px 12px 12px; text-align: center; opacity: .8; transition: opacity .2s, border-color .2s, transform .2s, box-shadow .2s, background .2s; }
+  .tile:hover { opacity: .9; }
+  .tile .e { display: block; font-size: 38px; line-height: 1; transition: transform .3s; }
+  .tile b { display: block; font-size: 1.12rem; margin: 9px 0 3px; }
+  .tile b span { display: inline; font-size: inherit; color: inherit; }
+  .tile b .short { display: none; }
+  .tile > span:not(.e) { display: block; font-size: .88rem; line-height: 1.35; color: #c9ccf2; }
+  .tile[aria-selected="true"] { opacity: 1; border-color: var(--tc); background: color-mix(in srgb, var(--tc) 10%, var(--panel)); transform: translateY(-4px); box-shadow: 0 6px 0 color-mix(in srgb, var(--tc) 45%, transparent), 0 18px 40px rgba(0, 0, 0, .35); }
+  .tile[aria-selected="true"] .e { transform: scale(1.12); }
+  .tile[aria-selected="true"] b { color: var(--tc); }
+  .arrow { flex: none; width: 30px; display: grid; place-items: center; color: var(--line); }
+  .arrow svg { width: 14px; height: 14px; }
+
+  /* Stage: kids' screen on the left, phone on the right, standing on a desk line. */
+  .stage { position: relative; display: flex; justify-content: center; align-items: flex-end; gap: 4%; aspect-ratio: 1100 / 560; padding-bottom: 14px; }
+  .stage::after { content: ''; position: absolute; left: 6%; right: 6%; bottom: 0; height: 14px; border-radius: 50%; background: radial-gradient(closest-side, rgba(43, 45, 110, .9), transparent); }
+  .device { position: relative; flex: none; transition: width .6s cubic-bezier(.4, 0, .2, 1), filter .6s, opacity .6s; }
+  .device.dim { filter: brightness(.38) saturate(.5); opacity: .8; }
+  .device .who { position: absolute; left: 0; right: 0; top: -26px; text-align: center; font-family: var(--font-pixel); font-size: 9px; letter-spacing: 1px; color: var(--dim); white-space: nowrap; transition: opacity .4s; }
+  .device.dim .who { opacity: 0; }
+  .monitor { width: var(--mw); }
+  .monitor .screen { position: relative; z-index: 1; background: #000; border: 8px solid #1c1d3a; border-radius: 14px; box-shadow: 0 0 0 2px var(--line), 0 26px 70px rgba(0, 0, 0, .5); overflow: hidden; aspect-ratio: 16 / 9; }
+  .monitor .neck { width: 16%; height: 22px; margin: 2px auto 0; background: linear-gradient(#26285a, #1c1d3a); }
+  .monitor .foot { width: 32%; height: 8px; margin: 0 auto; border-radius: 8px 8px 3px 3px; background: #26285a; }
+  .phone { width: var(--pw); }
+  .phone .screen { aspect-ratio: 780 / 1688; background: #000; border: 7px solid #1c1d3a; border-radius: 28px; box-shadow: 0 0 0 2px var(--line), 0 26px 70px rgba(0, 0, 0, .5); overflow: hidden; }
+  .screen img { width: 100%; height: 100%; object-fit: cover; object-position: top; transition: opacity .18s; }
+  .screen img.fade { opacity: 0; }
+  .device:not(.dim) .screen { box-shadow: 0 0 0 2px var(--fc, var(--line)), 0 0 40px color-mix(in srgb, var(--fc, transparent) 25%, transparent), 0 26px 70px rgba(0, 0, 0, .5); }
+
+  /* Phones only: a switch between the two screens (only one is shown at a time). */
+  .view-switch { display: none; }
+
+  /* Device sizes per focus, as % of the stage width. */
+  .stage[data-focus="phone"] { --mw: 46%; --pw: 22%; }
+  .stage[data-focus="monitor"] { --mw: 70%; --pw: 13%; }
+  .stage[data-focus="both"] { --mw: 56%; --pw: 19%; }
+
+  /* Description under the stage */
+  /* The demo box: the screens on top, the step's text and its example side by side below. */
+  .demo { background: rgba(255, 255, 255, .025); border-radius: 28px; padding: clamp(40px, 5vw, 56px) clamp(16px, 3vw, 36px) clamp(18px, 3vw, 32px); }
+  .desc { margin-top: clamp(26px, 4vw, 40px); }
+  .text { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(18px, 3vw, 36px); align-items: center; }
+  .text { animation: textIn .4s ease-out; }
+  @keyframes textIn { from { opacity: 0; transform: translateY(8px); } }
+  .text .n { font-family: var(--font-pixel); font-size: 10px; color: var(--dim); letter-spacing: 1px; }
+  .text h3 { font-size: clamp(1.6rem, 2.6vw, 2.1rem); line-height: 1.15; margin: 10px 0 12px; }
+  .text p { font-size: 1.1rem; line-height: 1.6; color: #c9ccf2; margin: 0; }
+  .text p b { color: var(--text); font-weight: 600; }
+  /* The example box: chips (when a step has them) and the text for the chosen one. */
+  .example { background: rgba(255, 255, 255, .035); border-radius: 20px; padding: clamp(14px, 2vw, 20px) clamp(16px, 2.4vw, 24px); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+  .chip { display: flex; align-items: center; background: var(--panel2); color: var(--text); border: 2px solid transparent; border-radius: 12px; padding: 6px 11px; font-weight: 600; font-size: .9rem; gap: 6px; transition: border-color .15s, background .15s; }
+  .chip:hover { border-color: var(--line); }
+  .chip.on { border-color: var(--gold); background: #2d2c4a; }
+  .text .example p { margin: 0; }
+  .chip-text { min-height: 3.2em; }
+
+  /* Tablets and phones */
+  @media (max-width: 900px) {
+    .tile > span:not(.e) { display: none; }
+    .tile { padding: 10px 6px; border-radius: 16px; }
+    .tile .e { font-size: 30px; }
+    .tile b { font-size: .95rem; }
+    .text { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .arrow { display: none; }
+    .tiles { gap: 6px; }
+    .tile { flex: 1 1 0; min-width: 0; padding: 9px 2px 8px; }
+    .tile .e { font-size: 26px; }
+    .tile b { font-size: .72rem; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tile[aria-selected="true"] { transform: translateY(-3px); }
+    .tile b .long { display: none; }
+    .tile b .short { display: inline; }
+    /* One screen at a time, picked with the switch. Fixed height so swapping never moves the page. */
+    .demo { padding-top: 16px; }
+    .view-switch { display: flex; gap: 4px; background: var(--bg); border-radius: 14px; padding: 4px; margin-bottom: 16px; }
+    .view-switch button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background: none; color: var(--dim); border: 0; border-radius: 10px; padding: 9px 6px; font-weight: 600; font-size: .92rem; transition: background .2s, color .2s; }
+    .view-switch button[aria-pressed="true"] { background: var(--panel2); color: var(--text); box-shadow: inset 0 0 0 2px var(--fc, var(--line)); }
+    .stage, .stage[data-focus] { aspect-ratio: auto; height: 380px; align-items: center; --mw: 100%; --pw: 46%; }
+    .stage::after { display: none; }
+    .stage[data-show="phone"] .monitor, .stage[data-show="monitor"] .phone { display: none; }
+    .device { animation: showIn .35s ease-out; }
+    @keyframes showIn { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+    .monitor .screen { border-width: 5px; border-radius: 9px; }
+    .monitor .neck { height: 14px; }
+    .phone .screen { border-width: 5px; border-radius: 18px; }
+    .device .who { display: none; }
+  }
+
+  /* ===================== 03 · Privacy (03-privacy/c4) ===================== */
+  #privacy h2 { text-align: center; font-family: var(--font-pixel); font-weight: 400; font-size: clamp(16px, 2.2vw, 24px); letter-spacing: 2px; color: var(--bonus); margin: 0 0 18px; }
+  /* Desktop: the section fills a screen, its content centred, so scrolling to it frames it on its own.
+     A screen too short for the content just lets it grow. Phones and tablets keep the natural flow. */
+  @media (min-width: 901px) {
+    #privacy { box-sizing: border-box; min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; justify-content: center; }
+  }
+  .sub { text-align: center; font-size: 1.12rem; line-height: 1.55; color: #c9ccf2; margin: 0 auto clamp(56px, 7vw, 76px); max-width: 36em; }
+
+  /* The five rules */
+  .board { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+  .rule { border-radius: 20px; padding: 18px 16px; background: color-mix(in srgb, var(--cc) 10%, var(--panel)); border: 2px solid var(--cc); padding-bottom: 64px; }
+  .rule { position: relative; z-index: 1; }
+  .rule h3 { color: var(--cc); font-size: 1.05rem; line-height: 1.25; margin: 0 0 8px; }
+  .rule p { margin: 0; color: #dcdef8; line-height: 1.5; font-size: .96rem; }
+
+  /* Many apps vs us */
+  .vs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-top: clamp(30px, 4vw, 48px); }
+  .side { border-radius: 20px; padding: 18px 20px; }
+  .side h3 { margin: 0 0 10px; font-size: 1.1rem; }
+  .side ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+  .side li { display: flex; gap: 10px; line-height: 1.4; }
+  .them { background: rgba(255, 255, 255, .025); color: var(--dim); }
+  .them h3 { color: var(--dim); }
+  .us { background: color-mix(in srgb, var(--bonus) 8%, var(--panel)); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--bonus) 40%, transparent); }
+  .us h3 { display: flex; align-items: center; gap: 8px; }
+  .us h3 img { width: 24px; }
+
+  /* The peeker: behind the cards (z-index 0), moved with transforms from JS. 84 × 71 (0.98px per SVG unit). */
+  .spy { position: absolute; left: 0; top: 0; z-index: 0; width: 84px; height: 71px; pointer-events: none; transform-origin: 50% 100%; }
+  .spy svg { display: block; width: 100%; height: 100%; overflow: visible; transition: transform .15s; }
+  .spy.right svg { transform: scaleX(-1); }
+  .spy .eyes { transition: transform .25s; }
+  .spy.glance .eyes { transform: translateX(-3px); }
+  @media (max-width: 900px) {
+    .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .rule:last-child { grid-column: 1 / -1; }
+  }
+  @media (max-width: 600px) {
+    .board, .vs { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  /* ===================== 04 · Lifetime access (04-offer-checkout/d) ===================== */
+  #pricing h2 { text-align: center; font-family: var(--font-pixel); font-weight: 400; font-size: clamp(16px, 2.2vw, 24px); letter-spacing: 2px; color: var(--bonus); margin: 0 0 18px; }
+  /* Desktop: the section fills a screen, its content centred, like Privacy. A screen too short for it just lets it grow. */
+  @media (min-width: 901px) {
+    #pricing { box-sizing: border-box; min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; justify-content: center; }
+  }
+  .of-sub { text-align: center; font-size: 1.12rem; line-height: 1.55; color: #c9ccf2; margin: 0 auto clamp(40px, 6vw, 64px); max-width: 36em; }
+
+  .of-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 64px); align-items: center; }
+  @media (max-width: 900px) { .of-grid { grid-template-columns: minmax(0, 1fr); } }
+
+  /* Left: what you get (from A) */
+  .of-copy h3 { font-size: clamp(1.7rem, 3vw, 2.3rem); line-height: 1.1; margin: 0 0 14px; }
+  .of-copy h3 .g { color: var(--gold); }
+  .of-copy > p { color: #c9ccf2; line-height: 1.55; font-size: 1.08rem; margin: 0 0 22px; }
+  .of-list { list-style: none; margin: 0 0 26px; padding: 0; display: grid; gap: 12px; }
+  .of-list li { display: flex; gap: 12px; align-items: flex-start; line-height: 1.45; }
+  .of-list .e { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--panel2); font-size: 1.1rem; }
+  .of-list b { display: block; }
+  .of-list small { color: var(--dim); font-size: .95rem; }
+  .of-need { background: rgba(255, 255, 255, .03); border-radius: 16px; padding: 14px 16px; }
+  .of-need b { font-family: var(--font-pixel); font-size: 10px; letter-spacing: 1px; color: var(--dim); font-weight: 400; }
+  .of-need p { margin: 8px 0 0; line-height: 1.5; color: #dcdef8; }
+  /* Which computers the kids' screen runs on: available now vs coming */
+  .of-os { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .of-os span { font-size: .88rem; padding: 4px 10px; border-radius: 99px; color: var(--dim); border: 1px dashed var(--line); }
+  .of-os .now { color: #06331d; background: var(--bonus); border: 1px solid var(--bonus); font-weight: 600; }
+
+  /* Right: the offer card (from B) with the checkout inside */
+  .of-card { background: var(--panel); border: 2px solid var(--gold); border-radius: 24px; padding: 24px; box-shadow: 0 0 50px rgba(255, 212, 59, .08); }
+  .of-card .k { font-family: var(--font-pixel); font-size: 10px; letter-spacing: 1px; color: var(--gold); line-height: 1.6; }
+  .of-price { display: flex; align-items: baseline; gap: 10px; margin: 14px 0 2px; }
+  .of-price b { font-size: 3.6rem; line-height: 1; }
+  .of-price span { color: var(--dim); font-size: 1.1rem; }
+  .of-tag { margin: 0 0 18px; color: #c9ccf2; }
+  .of-bar { height: 12px; border-radius: 99px; background: #4a4d94; overflow: hidden; }
+  .of-bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--bonus), var(--gold)); }
+  .of-left { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: .95rem; color: var(--dim); margin: 8px 0 0; }
+  .of-left b { color: var(--gold); }
+
+  /* The checkout form: stand-in for Stripe's embedded payment form, themed dark */
+  .of-co { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .of-wallets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .of-wallets button { background: #000; color: #fff; border: 1px solid #2b2c55; border-radius: 10px; padding: 11px; font-weight: 600; font-size: .98rem; }
+  .of-or { display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: .85rem; margin: 14px 0 4px; }
+  .of-or::before, .of-or::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
+  .of-co label { display: block; font-size: .85rem; color: var(--dim); margin: 10px 0 5px; }
+  .of-co input { width: 100%; font: inherit; font-size: 1rem; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; }
+  .of-co input::placeholder { color: #5a5d99; }
+  .of-co input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(255, 212, 59, .15); }
+  .of-co input.bad { border-color: var(--late); }
+  .of-cardnum { border-radius: 10px 10px 0 0 !important; }
+  .of-two { display: grid; grid-template-columns: 1fr 1fr; }
+  .of-two input { border-top: 0; border-radius: 0 0 0 10px; }
+  .of-two input + input { border-left: 0; border-radius: 0 0 10px 0; }
+  .of-pay { margin-top: 18px; width: 100%; background: var(--gold); color: #2a2000; border: 0; border-radius: 16px; padding: 15px 20px; font-size: 1.15rem; font-weight: 700; box-shadow: 0 5px 0 var(--gold-shadow); transition: transform .1s; }
+  .of-pay:hover { transform: translateY(-2px); }
+  .of-pay:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--gold-shadow); }
+  .of-pay:disabled { opacity: .7; cursor: progress; transform: none; }
+  .of-safe { margin: 20px 0 0; font-size: .85rem; color: var(--dim); text-align: center; }
+  .of-diy { text-align: center; margin: 14px 0 0; font-size: .95rem; color: var(--dim); }
+  .of-diy a { color: var(--dim); text-decoration: underline; }
+
+  /* After paying: replaces the form inside the card */
+  .of-done { display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .of-done.show { display: block; animation: of-in .4s ease-out; }
+  .of-done .badge { font-family: var(--font-pixel); font-size: 10px; color: var(--bonus); letter-spacing: 1px; }
+  .of-done h4 { font-size: 1.6rem; margin: 8px 0 4px; }
+  .of-done > p { margin: 0 0 14px; color: #c9ccf2; line-height: 1.5; }
+  .of-done ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; counter-reset: s; }
+  .of-done li { counter-increment: s; display: flex; gap: 12px; background: var(--bg); border-radius: 14px; padding: 12px 14px; line-height: 1.45; }
+  .of-done li::before { content: '0' counter(s); font-family: var(--font-pixel); font-size: 11px; color: var(--gold); padding-top: 4px; }
+  .of-done li small { display: block; color: var(--dim); }
+  .of-done > p.of-help { margin: 14px 0 0; font-size: .9rem; color: var(--dim); }
+  .of-help a { color: #c9ccf2; }
+  @keyframes of-in { from { opacity: 0; transform: translateY(8px); } }
+
+  /* Sold out: every early-bird spot is taken. The bar is full and a note replaces the checkout. */
+  .of-sold { display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .of-card.sold .of-co, .of-card.sold .of-next { display: none; }
+  .of-card.sold .of-sold { display: block; }
+  .of-sold .badge { font-family: var(--font-pixel); font-size: 10px; color: var(--gold); letter-spacing: 1px; }
+  .of-sold h4 { font-size: 1.4rem; line-height: 1.25; margin: 8px 0 6px; }
+  .of-sold p { margin: 0; color: #c9ccf2; line-height: 1.5; }
+  .of-sold a { color: var(--gold); }
+
+  /* ===================== 06 · Footer (06-footer/a2) ===================== */
+  .ft { position: relative; isolation: isolate; background: radial-gradient(1100px 650px at 25% 100%, var(--glow) 0%, transparent 70%) no-repeat; padding-top: clamp(90px, 14vw, 170px); }
+  .ft-sky { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; pointer-events: none; -webkit-mask-image: linear-gradient(transparent, #000 28%); mask-image: linear-gradient(transparent, #000 28%); }
+  .ft-in { max-width: 1240px; margin: 0 auto; padding: 0 var(--gutter); }
+
+  /* The encore */
+  .ft-encore { text-align: center; padding-bottom: clamp(70px, 10vw, 120px); }
+  .ft-pig { width: 64px; margin: 0 auto 18px; }
+  .ft-encore h2 { margin: 0; font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.12; font-weight: 700; font-family: var(--font-text); letter-spacing: normal; color: var(--text); }
+  .ft-encore h2 .nw { white-space: nowrap; }
+  .ft-encore .game { color: var(--gold); }
+  .ft-encore .habit { color: var(--bonus); }
+  .ft-encore p { color: #c9ccf2; font-size: 1.12rem; margin: 16px auto 0; max-width: 30em; line-height: 1.5; }
+
+  /* Columns */
+  .ft-cols { display: grid; grid-template-columns: 1.4fr 1fr 1.3fr 1fr; gap: 32px; padding: 36px 0; border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+  .ft-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.15rem; color: var(--text); text-decoration: none; }
+  .ft-brand img { width: 32px; }
+  .ft-cols .ft-about { color: var(--dim); line-height: 1.5; margin: 12px 0 0; max-width: 22em; }
+  .ft-cols h3 { font-family: var(--font-pixel); font-weight: 400; font-size: 10px; letter-spacing: 1px; color: var(--bonus); margin: 6px 0 14px; }
+  .ft-cols ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .ft-cols a { color: #c9ccf2; text-decoration: none; }
+  .ft-cols a:hover { color: var(--text); text-decoration: underline; }
+  .ft-cols li small { display: block; color: var(--dim); font-size: .82rem; }
+
+  /* Bottom bar */
+  .ft-bar { display: flex; align-items: center; gap: 10px 18px; flex-wrap: wrap; padding: 20px 0 28px; border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); color: var(--dim); font-size: .9rem; }
+  .ft-bar .ft-dot { opacity: .5; }
+  .ft-flag { display: inline-block; width: 1.4em; height: 1.4em; vertical-align: -0.35em; margin-left: .3em; }
+  .ft-top { margin-left: auto; background: none; border: 1px solid var(--line); color: #c9ccf2; border-radius: 99px; padding: 6px 14px; }
+  .ft-top:hover { color: var(--text); border-color: var(--dim); }
+
+  /* Desktop: the footer fills the screen, same as the sections above. Columns and bottom bar stay at the very bottom;
+     the pig, headline and tagline sit centred in the space above them. */
+  @media (min-width: 901px) {
+    .ft { box-sizing: border-box; min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; padding-top: 0; }
+    .ft-in { flex: 1; display: flex; flex-direction: column; width: 100%; }
+    .ft-encore { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 48px 0; }
+  }
+  @media (max-width: 900px) { .ft-cols { grid-template-columns: 1fr 1fr; } .ft-cols > :first-child { grid-column: 1 / -1; } }
+  @media (max-width: 520px) {
+    .ft-cols { grid-template-columns: 1fr; gap: 26px; }
+    .ft-bar { flex-direction: column; align-items: flex-start; padding-bottom: 76px; } /* clear the sound button */
+    .ft-top { margin-left: 0; }
+    .ft-bar .ft-dot { display: none; }
+  }
+
+  /* ===================== 07 · Small print (07-legal/b2): the checkout's line; the documents are legal.html ===================== */
+  .lg-agree { margin: 8px 0 0; font-size: .8rem; color: var(--dim); text-align: center; }
+  .lg-agree a { color: #c9ccf2; }
+
+  /* Page fade between the landing page and the small print (no white flash: the gap between pages is navy). */
+  html { background: var(--bg); }
+  html.pg-in body { opacity: 0; }        /* arriving: hidden until it's in place… */
+  html.pg-in.pg-go body { opacity: 1; }  /* …then shown (faded, below) */
+  @media (prefers-reduced-motion: no-preference) {
+    html.pg-go body { animation: pg-in .4s ease-out both; }
+    body.pg-out { animation: pg-out .2s ease-in forwards; }
+  }
+  @keyframes pg-in { from { opacity: 0; } }
+  @keyframes pg-out { to { opacity: 0; } }
+</style>
+</head>
+<body>
+<!-- ===================== 01 · Hero ===================== -->
+<div class="top-area">
+<canvas class="sky" id="sky" aria-hidden="true"></canvas>
+<nav class="nav">
+  <a class="brand" href="#"><img src="/assets/img/pig.svg" alt="" />Pocket Money Pal</a>
+  <div class="links"><a href="#how">How it works</a><a href="#privacy">Privacy</a><a href="#pricing">Pricing</a></div>
+  <button class="cta-small" data-buy>Get it</button>
+</nav>
+
+<header class="hero">
+
+  <div class="copy">
+    <div>
+    <div class="kicker"><span>CHORES</span><svg class="arr" viewBox="0 0 10 10" aria-hidden="true"><path d="M0 4h6V1l4 4-4 4V6H0z" fill="currentColor"/></svg><span>QUESTS</span><svg class="arr" viewBox="0 0 10 10" aria-hidden="true"><path d="M0 4h6V1l4 4-4 4V6H0z" fill="currentColor"/></svg><span>POCKET MONEY</span></div>
+    <h1><span class="nw">Make chores</span> <span class="nw game">a game.</span><br /><span class="nw">Make saving</span> <span class="nw habit">a habit.</span></h1>
+    </div>
+    <p class="lead">
+      Pocket Money Pal turns everyday jobs into <b>quests</b>. Kids earn <b>points</b> for every one
+      they finish, points become <b>pocket money</b>, and they save it towards something they really want.
+    </p>
+
+    <div class="buy">
+      <button class="btn-gold" data-buy>
+        Get lifetime access · <span class="price"></span>
+        <small>Pay once, yours for life</small>
+      </button>
+      <div class="spots">
+        <div class="bar"><i id="spotsBar"></i></div>
+        <p>Lifetime access: <b id="spotsLeft"></b> of <span class="total"></span> spots left</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="toy-wrap">
+    <div class="burst" aria-hidden="true"><svg viewBox="0 0 100 100"><polygon points="50.0,0.0 57.1,9.6 67.1,3.0 70.5,14.5 82.1,11.7 81.4,23.6 93.3,25.0 88.5,36.0 99.2,41.3 91.0,50.0 99.2,58.7 88.5,64.0 93.3,75.0 81.4,76.4 82.1,88.3 70.5,85.5 67.1,97.0 57.1,90.4 50.0,100.0 42.9,90.4 32.9,97.0 29.5,85.5 17.9,88.3 18.6,76.4 6.7,75.0 11.5,64.0 0.8,58.7 9.0,50.0 0.8,41.3 11.5,36.0 6.7,25.0 18.6,23.6 17.9,11.7 29.5,14.5 32.9,3.0 42.9,9.6" fill="#ffd43b" /></svg><span>Try it!</span></div>
+    <div class="toy" id="toy">
+
+      <!-- Kids' screen -->
+      <div class="view show" id="kidView">
+        <div class="toy-head">
+          <div class="avatar" id="avatar"></div>
+          <div class="who"><b id="kidName"></b><small>LEVEL 6</small></div>
+          <div class="pts" id="pts"><span>⭐ </span><b id="ptsNum">0</b><small>points today</small></div>
         </div>
-        <figure class="hero-shots">
-          <img
-            class="shot-kiosk"
-            src="/img/kiosk.png"
-            width="1920"
-            height="1080"
-            alt="The kids' screen: a column per child with today's quests and their time windows"
-          />
-          <img
-            class="shot-phone"
-            src="/img/phone-tray.png"
-            width="780"
-            height="1688"
-            alt="A parent's phone approving finished chores"
-          />
-        </figure>
-      </section>
-
-      <section id="features" class="features">
-        <h2>Everything a family needs, nothing it doesn't</h2>
-        <div class="grid">
-          <article>
-            <h3>⭐ Quests with deadlines</h3>
-            <p>
-              Each chore has a time window: an early bonus, on time, or late. A countdown shows
-              what's next, with levels and daily streaks to keep kids going.
-            </p>
-          </article>
-          <article>
-            <h3>📱 Approve from your phone</h3>
-            <p>
-              Swipe to approve a finished chore, or send it back with a note. Plan quests, times and
-              points from the phone, starting from a library of common chores.
-            </p>
-          </article>
-          <article>
-            <h3>🐷 Payday and savings jars</h3>
-            <p>
-              A weekly payday turns points into money. Kids pour it into savings jars for the things
-              they want, and you can send gifts and record spending.
-            </p>
-          </article>
-          <article>
-            <h3>🎁 Surprise quests</h3>
-            <p>
-              Pop a surprise quest onto the kids' screen for them to race for, or take on together.
-            </p>
-          </article>
-          <article>
-            <h3>🎉 Sounds and celebrations</h3>
-            <p>
-              Claims, approvals, level-ups and payday all get their moment, with quiet hours for the
-              evenings.
-            </p>
-          </article>
-          <article>
-            <h3>🏖️ Holidays and sick days</h3>
-            <p>Pause for a holiday or mark a sick day, so time off never breaks a streak.</p>
-          </article>
+        <ul class="quests" id="quests"></ul>
+        <div class="goal">
+          <div class="jar"><i id="jarFill"></i><span id="goalEmoji"></span></div>
+          <div class="gt">
+            <b id="goalName"></b>
+            <div class="gbar"><i id="goalBar"></i></div>
+            <small><b id="saved"></b> saved of <span id="target"></span></small>
+          </div>
         </div>
-        <div class="gallery">
-          <img
-            src="/img/kiosk-savings.png"
-            width="1920"
-            height="1080"
-            loading="lazy"
-            alt="Savings jars on the kids' screen"
-          />
-          <img
-            src="/img/kiosk-surprise.png"
-            width="1920"
-            height="1080"
-            loading="lazy"
-            alt="A surprise quest popping up on the kids' screen"
-          />
-          <img
-            class="tall"
-            src="/img/phone-week.png"
-            width="780"
-            height="1688"
-            loading="lazy"
-            alt="Planning the week's quests on a parent's phone"
-          />
+        <div class="slot">
+          <button class="payday" id="payday"></button>
+          <button class="again" id="again">↺ Play again</button>
         </div>
-      </section>
+        <div class="note" id="note"><span class="ph">📱</span><div><b>Mum approved</b><small id="noteText"></small></div><span class="ok">✓</span></div>
+      </div>
 
-      <section class="privacy">
-        <h2>Your family's data stays at home</h2>
-        <p>
-          Everything lives on your own PC: no accounts, no tracking, no cloud database. The kids'
-          screen and your phones talk to it over your home Wi-Fi.
-        </p>
-      </section>
-
-      <section id="get-it" class="get-it">
-        <h2>Two ways to run it</h2>
-        <div class="plans">
-          <article class="plan featured">
-            <p class="badge">Coming soon</p>
-            <h3>Hands-off</h3>
-            <p class="plan-lead">The easy way. Install it on the family PC and you're done.</p>
-            <ul>
-              <li>Install the parent app on your phone, with notifications when a chore is done</li>
-              <li>Approve and plan from anywhere, not just on the home Wi-Fi</li>
-              <li>Plan quests even while the PC is off</li>
-              <li>No extra accounts, router settings or networking to set up</li>
-            </ul>
-            <p class="plan-note">
-              Your family's data still stays on your PC. Want to know when it launches? Email
-              <a href="mailto:hello@pocketmoneypal.com">hello@pocketmoneypal.com</a>.
-            </p>
-          </article>
-          <article class="plan">
-            <h3>Hands-on</h3>
-            <p class="plan-lead">Free and open source, for people who like to tinker.</p>
-            <ul>
-              <li>Runs entirely on your home network</li>
-              <li>Phones use it in the browser on the home Wi-Fi</li>
-              <li>
-                For the installable app and remote access, bring your own HTTPS (Tailscale, your own
-                domain, or a reverse proxy)
-              </li>
-            </ul>
-            <div class="plan-actions">
-              <a
-                class="button primary small"
-                href="https://github.com/chris-hammond-ross/pocket-money-pal/releases/latest"
-                >Download for Windows</a
-              >
-              <a
-                class="button ghost small"
-                href="https://github.com/chris-hammond-ross/pocket-money-pal/blob/main/installation.md"
-                >Installation guide</a
-              >
-            </div>
-          </article>
+      <!-- Parent's phone -->
+      <div class="view" id="parentView">
+        <div class="p-head">
+          <div><b>Hi Mum 👋</b><small>Here's how today's going</small></div>
+          <span class="ph-ico">📱</span>
         </div>
-      </section>
+        <div class="kids" id="kids"></div>
+        <div class="tray">
+          <div class="tray-head"><span class="count" id="count"></span><b>to check</b><span class="sum" id="sum"></span></div>
+          <div class="stack" id="stack">
+          <div class="claims" id="claims"></div>
+          <div class="caught" id="caught"><b>All caught up! 🎉</b><small>Points are on their way to the kids' screen.</small><br /><button class="again show" id="againP">↺ Play again</button></div>
+          </div>
+          <div class="sent" id="sent"></div>
+          <div id="trayFoot">
+            <p class="swipe-hint"><span class="long">👉 swipe right to approve · swipe left to send back 👈</span><span class="short">👉 swipe to approve or send back 👈</span></p>
+            <button class="all" id="all"></button>
+          </div>
+        </div>
+      </div>
+      <button class="switch" id="switch"></button>
+    </div>
+  </div>
+</header>
+</div>
 
-      <section id="faq" class="faq">
-        <h2>Questions</h2>
-        <details>
-          <summary>What do I need?</summary>
-          <p>
-            A Windows 10 or 11 PC for the kids' screen (a second monitor works well), and parents'
-            phones with a modern browser.
-          </p>
-        </details>
-        <details>
-          <summary>Where is our data kept?</summary>
-          <p>
-            On your PC, in one folder. Nothing is stored on our servers. With hands-off, your
-            phone's requests pass through our relay to reach your PC, but the relay doesn't keep any
-            of your family's data.
-          </p>
-        </details>
-        <details>
-          <summary>Is it really free?</summary>
-          <p>
-            Yes. The app is open source and the hands-on way costs nothing. Hands-off will be a paid
-            option, because it runs a service on our side.
-          </p>
-        </details>
-        <details>
-          <summary>Does it work with Home Assistant?</summary>
-          <p>Not yet. A Home Assistant integration is on the roadmap.</p>
-        </details>
-      </section>
-    </main>
+<button class="mute" id="mute">🔊 Sound on</button>
 
-    <footer class="footer">
-      <p>
-        <a href="https://github.com/chris-hammond-ross/pocket-money-pal">GitHub</a> ·
-        <a href="https://github.com/chris-hammond-ross/pocket-money-pal/blob/main/user-guide.md"
-          >User guide</a
-        >
-        · <a href="mailto:hello@pocketmoneypal.com">hello@pocketmoneypal.com</a>
-      </p>
-      <p class="credit">
-        Pig icon from <a href="https://github.com/jdecked/twemoji">Twemoji</a>, CC BY 4.0.
-      </p>
-    </footer>
-  </body>
+<!-- ===================== 02 · How it works ===================== -->
+<section class="wrap" id="how">
+  <h2>HOW IT WORKS</h2>
+
+  <div class="tiles" id="tiles" role="tablist" aria-label="How it works, step by step"></div>
+
+  <div class="demo">
+  <div class="view-switch" id="viewSwitch" role="group" aria-label="Which screen to show">
+    <button data-show="monitor" aria-pressed="true">🖥️ Kids' screen</button>
+    <button data-show="phone" aria-pressed="false">📱 Your phone</button>
+  </div>
+  <div class="stage" id="stage" data-focus="phone">
+    <div class="device monitor" id="monitor"><span class="who">THE KIDS' SCREEN</span><div class="screen"><img id="monImg" alt="" /></div><div class="neck"></div><div class="foot"></div></div>
+    <div class="device phone" id="phone"><span class="who">YOUR PHONE</span><div class="screen"><img id="phoneImg" alt="" /></div></div>
+  </div>
+
+  <div class="desc">
+    <div class="text" id="text" role="tabpanel"></div>
+  </div>
+  </div>
+</section>
+
+<section class="wrap" id="privacy">
+  <h2>PRIVACY</h2>
+  <p class="sub">Your kids' chores, points and pocket money are your family's business.</p>
+
+  <div class="board" id="board">
+    <div class="spy" id="spy" hidden aria-hidden="true">
+      <svg viewBox="0 0 86 72">
+        <path d="M6 42.5 L20 37 L57 29 L66 37 L62 72 L12 72 L14 47 Z" fill="#4a4c9a" />
+        <path d="M21 27 V38 C22 42 25 45 31 47 L54 40 L57 27 Z" fill="#15163a" />
+        <path d="M6 42.5 L20 37 L21.5 46 L14 47 Z" fill="#5d60b8" />
+        <path d="M12 72 C20 58 30 50 45 45 C52 42 58 39 65 37 C66.5 41 66 45 64 51 C62 58 59 65 56 72 Z" fill="#5d60b8" />
+        <g class="eyes" fill="#fff">
+          <path d="M21 30 H30 C30 33 29 35 26.5 35 H23 C21.5 35 21 33.5 21 30 Z" />
+          <path d="M32 30 H41 C41 32.5 40 34 37.5 34 H34.5 C33 34 32 32.5 32 30 Z" />
+          <path d="M29.5 30 H32.5 V31.2 H29.5 Z" />
+        </g>
+        <path d="M19 24 C22 17 25 11 28 7 C31 8 33 9 36 9.5 C41 10 45 9 49 8 C51 7.5 53 7 55 6.5 C57 10 58 14 58 19 Z" fill="#34367a" />
+        <path d="M12 26.5 C11 25 13 24.5 16 24 C30 21.5 45 19 58 18.5 C63 18.5 67 18.5 70 19 C71.5 20 71.5 21.5 70 22 C55 25 35 27 15 27.8 C13 27.8 12 27.4 12 26.5 Z" fill="#34367a" />
+      </svg>
+    </div>
+    <div class="rule" style="--cc:var(--bonus)">
+      <h3>🏠 It stays at home</h3>
+      <p>Everything about your kids (names, chores, points, money, jars) lives on your family's computer. Not with us.</p>
+    </div>
+    <div class="rule" style="--cc:var(--gold)">
+      <h3>🧾 We keep almost nothing</h3>
+      <p>Just your email and that you bought it. When you check from work, we pass messages straight on to home and never keep a copy.</p>
+    </div>
+    <div class="rule" style="--cc:var(--late)">
+      <h3>🚫 No ads. No tracking.</h3>
+      <p>Nobody watches what your kids tap, and nothing is ever sold. You pay once, so there's no reason to.</p>
+    </div>
+    <div class="rule" style="--cc:#74c0fc">
+      <h3>🧒 No kids' accounts</h3>
+      <p>No emails or passwords for children. They tap their name on the family computer, and that's all.</p>
+    </div>
+    <div class="rule" style="--cc:var(--surprise)">
+      <h3>🔌 Works without us</h3>
+      <p>If we ever disappeared, it keeps working at home. Back it up or delete it whenever you like: it's yours.</p>
+    </div>
+  </div>
+
+  <div class="vs">
+    <div class="side them">
+      <h3>Other family apps</h3>
+      <ul>
+        <li>☁️ Your kids' details kept on the company's computers, far away</li>
+        <li>🧒 Each child needs an account and a password</li>
+        <li>📢 Often paid for with ads, or a monthly fee</li>
+      </ul>
+    </div>
+    <div class="side us">
+      <h3><img src="/assets/img/pig.svg" alt="" />Pocket Money Pal</h3>
+      <ul>
+        <li>🏠 Kept on your family's computer, at home</li>
+        <li>👆 Kids just tap their name</li>
+        <li>💳 Pay once. No ads, ever.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 04 · Lifetime access ===================== -->
+<section class="wrap" id="pricing">
+  <h2>LIFETIME ACCESS</h2>
+  <p class="of-sub">For the first <span class="of-total"></span> families only: pay once, and it's yours for life.</p>
+
+  <div class="of-grid">
+    <div class="of-copy">
+      <h3>One price. <span class="g">No monthly fee.</span></h3>
+      <p>Pay <b class="of-p"></b> once and your family keeps Pocket Money Pal for good, with everything in it.</p>
+      <ul class="of-list">
+        <li><span class="e">🖥️</span><div><b>The kids' screen</b><small>On your family's computer, for every child in the house.</small></div></li>
+        <li><span class="e">📱</span><div><b>The app on every grown-up's phone</b><small>Approve chores and pay pocket money from the sofa, or from work.</small></div></li>
+        <li><span class="e">✨</span><div><b>Every update, for free</b><small>New quests, sounds and features as they arrive. You never pay again.</small></div></li>
+      </ul>
+      <div class="of-need">
+        <b>WHAT YOU NEED</b>
+        <p>A computer for the kids' screen (a family computer with a second monitor works brilliantly), and a phone for each grown-up.</p>
+        <div class="of-os">
+          <span class="now">✓ Windows</span><span>Mac · soon</span><span>Linux · soon</span><span>Tablets · soon</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="of-card">
+        <div class="k">EARLY BIRD · FIRST <span class="of-total"></span> FAMILIES</div>
+        <div class="of-price"><b class="of-p"></b><span>once</span></div>
+        <p class="of-tag">Pay once, yours for life. No monthly fee, ever.</p>
+        <div class="of-bar"><i id="ofBar"></i></div>
+        <div class="of-left"><span><b id="ofLeft"></b> spots left</span><span class="of-next">You'd be family #<span class="of-n"></span></span></div>
+
+        <form class="of-co" id="ofCo" novalidate>
+          <div id="ofExpress"></div>
+          <div class="of-or">or pay with card</div>
+          <label for="ofEmail">Email</label>
+          <input id="ofEmail" type="email" placeholder="you@example.com" autocomplete="email" />
+          <div id="ofPayment"></div>
+          <button class="of-pay" id="ofPay" type="submit">Pay <span class="of-p"></span> · yours for life</button>
+          <p class="of-safe">🔒 Payments secured by Stripe</p>
+          <p class="lg-agree">By paying you agree to our <a href="/legal" target="_blank">Terms</a> and <a href="/legal" target="_blank">Privacy policy</a>.</p>
+        </form>
+
+        <div class="of-sold" id="ofSold">
+          <div class="badge">SOLD OUT</div>
+          <h4>All <span class="of-total"></span> early-bird spots are taken.</h4>
+          <p>Email <a class="of-hello" href="mailto:hello@pocketmoneypal.com">hello@pocketmoneypal.com</a> to hear when we open again.</p>
+        </div>
+
+        <div class="of-done" id="ofDone" aria-live="polite">
+          <div class="badge">QUEST COMPLETE</div>
+          <h4 id="ofDoneTitle">You're family #<span class="of-n"></span>! 🎉</h4>
+          <p id="ofDoneLine">We've emailed your key and download link to <b id="ofEmailDone"></b>.</p>
+          <ol>
+            <li><div><b>Download it on your family's computer</b><small>Open the email there and tap the link, or go to pocketmoneypal.com/download.</small></div></li>
+            <li><div><b>Pair your phone</b><small>Point your phone's camera at the code on the screen.</small></div></li>
+            <li><div><b>Add your kids and their quests</b><small>Set up the week once; it repeats by itself.</small></div></li>
+          </ol>
+          <p class="of-help">Nothing after 10 minutes? Check your spam folder, or email <a class="of-support" href="mailto:support@pocketmoneypal.com">support@pocketmoneypal.com</a>.</p>
+        </div>
+      </div>
+      <p class="of-diy" id="ofDiy">Rather run it yourself? <a href="https://github.com/chris-hammond-ross/pocket-money-pal" target="_blank" rel="noopener">It's free, if you're experienced running servers</a></p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 06 · Footer ===================== -->
+<footer class="ft" id="ft">
+  <canvas class="ft-sky" id="ftSky" aria-hidden="true"></canvas>
+  <div class="ft-in">
+
+    <div class="ft-encore">
+      <img class="ft-pig" src="/assets/img/pig.svg" alt="" />
+      <h2><span class="nw">Make chores</span> <span class="nw game">a game.</span><br /><span class="nw">Make saving</span> <span class="nw habit">a habit.</span></h2>
+      <p>Jobs get done, savings grow, and nobody has to nag.</p>
+    </div>
+
+    <div class="ft-cols">
+      <div>
+        <a class="ft-brand" href="#top"><img src="/assets/img/pig.svg" alt="" />Pocket Money Pal</a>
+        <p class="ft-about">Chores become quests, quests earn points, and points become pocket money kids save for things they love.</p>
+      </div>
+      <div>
+        <h3>THE APP</h3>
+        <ul>
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#privacy">Privacy</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a class="ft-diy" href="#" target="_blank" rel="noopener">Set it up yourself</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>TALK TO US</h3>
+        <ul>
+          <li><a class="ft-hello" href="#"></a><small>Questions, ideas, or just to say hi</small></li>
+          <li><a class="ft-support" href="#"></a><small>Help with your family's setup</small></li>
+        </ul>
+      </div>
+      <div>
+        <h3>SMALL PRINT</h3>
+        <ul>
+          <li><a href="/legal" data-page>Terms</a></li>
+          <li><a href="/legal" data-page>Privacy policy</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="ft-bar">
+      <span>© <span class="ft-year">2026</span> Pocket Money Pal</span>
+      <span class="ft-dot">·</span>
+      <span>Made with ❤️ in <img class="ft-flag" src="/assets/img/flag-au.svg" alt="Australia" title="Australia" /></span>
+      <button class="ft-top" id="ftTop">↑ Back to top</button>
+    </div>
+
+  </div>
+</footer>
+
+<script src="/assets/demo-data.js"></script>
+<script src="/assets/site.js"></script>
+<script src="/assets/confetti.browser.min.js"></script>
+<script src="/assets/index.js"></script>
+<script src="/assets/checkout.js"></script>
+</body>
 </html>
