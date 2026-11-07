@@ -26,6 +26,8 @@
     "STRIPE_PUBLISHABLE_KEY": "pk_live_not_set_yet",
   },
   "services": [{ "binding": "RELAY", "service": "pmp-relay", "entrypoint": "RelayRpc" }],
+  // The checkout funnel (worker/funnel.ts): funnel id and step only.
+  "analytics_engine_datasets": [{ "binding": "EVENTS", "dataset": "pmp_site_events" }],
   "secrets": { "required": ["STRIPE_SECRET_KEY"] },
   "env": {
     "staging": {
@@ -52,6 +54,7 @@
           "remote": true,
         },
       ],
+      "analytics_engine_datasets": [{ "binding": "EVENTS", "dataset": "pmp_site_events_staging" }],
       "secrets": { "required": ["STRIPE_SECRET_KEY"] },
     },
   },

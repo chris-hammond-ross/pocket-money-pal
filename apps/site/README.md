@@ -14,15 +14,21 @@ The promotional site and its checkout: static pages in `public/`, plus a small C
 | `worker/index.ts`                                  | The Worker's entry. Only handlers may be exported from it, so the routes are in `worker/app.ts`.                                                                                       |
 | `worker/app.ts`                                    | `GET /` (adds the live offer to the page's head), `GET /api/offer`, `POST /api/checkout`, `GET /api/order`                                                                             |
 | `worker/stripe.ts`, `validate.ts`, `offer.ts`      | Stripe over `fetch` (no SDK), input checks, and the offer and relay binding                                                                                                            |
+| `worker/funnel.ts`                                 | The checkout funnel's Analytics Engine data points (`EVENTS`): a random per-page-view id and the step, nothing else                                                                    |
 
 The ported files in `public/` are excluded from ESLint and Prettier so they stay byte-for-byte; `checkout.js` and `worker/` aren't.
 
 ## How the checkout works
 
-1. The Worker asks the relay (`RELAY` service binding → `RelayRpc`, private repo) for the spots, and puts the offer in the page as `<meta name="pmp-offer">`.
+1. The Worker asks the relay (`RELAY` service binding → `RelayRpc`) for the spots, and puts the offer in the page as `<meta name="pmp-offer">`.
 2. When the pricing section nears the screen, `checkout.js` loads Stripe.js and mounts the Elements (deferred mode, `allowedPaymentMethodTypes: ['card']`).
 3. On Pay, `POST /api/checkout` creates the PaymentIntent (A$25, `allowed_payment_method_types[]=card`, metadata `product`, `email`, `environment`, `country`), and the browser confirms it.
 4. Stripe's webhook goes to the relay, which makes the licence and emails the key. The success card polls `/api/order` for the family number.
+
+## Analytics
+
+- **Web Analytics** (cookieless) is injected by Cloudflare on the zone, not written into the pages. The CSP in `_headers` allows `static.cloudflareinsights.com` (script) and `cloudflareinsights.com` (connect).
+- **The checkout funnel:** `checkout.js` makes a `crypto.randomUUID()` when the page opens, kept in memory only, and reports `visit` (on load), `offer` (the card in view) and `paid` (after Stripe confirms) to `POST /api/event`. The Worker writes `checkout` itself when it makes the PaymentIntent, and copies the id onto its metadata (`funnel`). `paid` is written only once Stripe says that PaymentIntent succeeded with this id. Datasets `pmp_site_events` and `pmp_site_events_staging` (binding `EVENTS`). The privacy policy's "This website" section describes this: change both together.
 
 ## Environments
 

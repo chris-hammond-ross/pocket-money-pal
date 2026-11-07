@@ -301,3 +301,131 @@ describe('the landing page', () => {
     expect(res.headers.get('x-robots-tag')).toBeNull();
   });
 });
+
+describe('the checkout funnel', () => {
+  const FID = '0b6c6a2e-6c1f-4d7a-9a41-2f0d5e7c9b10';
+  const eventsEnv = () => {
+    const writeDataPoint = vi.fn();
+    return { ...makeEnv({ EVENTS: { writeDataPoint } }), writeDataPoint };
+  };
+  const eventRequest = (body: unknown, headers: Record<string, string> = { origin: ORIGIN }) =>
+    new Request(ORIGIN + '/api/event', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...headers },
+      body: typeof body === 'string' ? body : JSON.stringify(body),
+    });
+  const point = (step: string) => ({ indexes: [FID], blobs: [step], doubles: [1] });
+
+  it('writes visit and offer with the funnel id and the step only', async () => {
+    const { env, writeDataPoint } = eventsEnv();
+    for (const step of ['visit', 'offer']) {
+      const res = await handle(eventRequest({ step, funnelId: FID }), env);
+      expect(res.status).toBe(204);
+    }
+    expect(writeDataPoint.mock.calls).toEqual([[point('visit')], [point('offer')]]);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("refuses another site's page, unknown steps, bad ids and a step only the Worker writes", async () => {
+    const { env, writeDataPoint } = eventsEnv();
+    const statuses = await Promise.all(
+      [
+        eventRequest({ step: 'visit', funnelId: FID }, { origin: 'https://evil.example' }),
+        eventRequest({ step: 'visit', funnelId: FID }, {}),
+        eventRequest({ step: 'checkout', funnelId: FID }),
+        eventRequest({ step: 'bought', funnelId: FID }),
+        eventRequest({ step: 'visit', funnelId: 'not-a-uuid' }),
+        eventRequest({ step: 'visit', funnelId: FID.toUpperCase() }),
+        eventRequest('{nope'),
+        eventRequest('x'.repeat(2000)),
+      ].map(async (r) => (await handle(r, env)).status),
+    );
+    expect(statuses).toEqual([403, 403, 400, 400, 400, 400, 400, 413]);
+    expect(writeDataPoint).not.toHaveBeenCalled();
+    const get = await handle(new Request(ORIGIN + '/api/event'), env);
+    expect(get.status).toBe(405);
+  });
+
+  it('puts the funnel id on the PaymentIntent and writes checkout once it exists', async () => {
+    const { env, writeDataPoint } = eventsEnv();
+    fetchSpy.mockResolvedValue(
+      stripeOk({ id: 'pi_1', client_secret: 'pi_1_secret_a', status: 'requires_payment_method' }),
+    );
+    const res = await handle(
+      checkoutRequest({ email: 'mum@example.com', idempotencyKey: KEY, funnelId: FID }),
+      env,
+    );
+    expect(res.status).toBe(200);
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(new URLSearchParams(init.body as string).get('metadata[funnel]')).toBe(FID);
+    expect(writeDataPoint.mock.calls).toEqual([[point('checkout')]]);
+  });
+
+  it('writes no checkout step without a funnel id, or when Stripe fails', async () => {
+    const { env, writeDataPoint } = eventsEnv();
+    fetchSpy.mockResolvedValueOnce(
+      stripeOk({ id: 'pi_1', client_secret: 'pi_1_secret_a', status: 'requires_payment_method' }),
+    );
+    await handle(checkoutRequest({ email: 'mum@example.com', idempotencyKey: KEY }), env);
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: { type: 'api_error' } }), { status: 500 }),
+    );
+    const failed = await handle(
+      checkoutRequest({ email: 'mum@example.com', idempotencyKey: KEY, funnelId: FID }),
+      env,
+    );
+    expect(failed.status).toBe(502);
+    expect(writeDataPoint).not.toHaveBeenCalled();
+  });
+
+  it('writes paid only for a succeeded payment carrying this funnel id and secret', async () => {
+    const intent = (over: Record<string, unknown> = {}) =>
+      stripeOk({
+        id: 'pi_9',
+        client_secret: 'pi_9_secret_z',
+        status: 'succeeded',
+        receipt_email: 'mum@example.com',
+        metadata: { funnel: FID },
+        ...over,
+      });
+    const paid = { step: 'paid', funnelId: FID, pi: 'pi_9', secret: 'pi_9_secret_z' };
+    const { env, writeDataPoint } = eventsEnv();
+
+    fetchSpy.mockResolvedValueOnce(intent());
+    expect((await handle(eventRequest(paid), env)).status).toBe(204);
+    const [url] = fetchSpy.mock.calls[0] as [string];
+    expect(url).toBe('https://api.stripe.com/v1/payment_intents/pi_9');
+    expect(writeDataPoint.mock.calls).toEqual([[point('paid')]]);
+
+    writeDataPoint.mockClear();
+    for (const over of [
+      { status: 'processing' },
+      { metadata: { funnel: '11111111-1111-4111-8111-111111111111' } },
+      { metadata: {} },
+      { client_secret: 'pi_9_secret_other' },
+    ]) {
+      fetchSpy.mockResolvedValueOnce(intent(over));
+      expect((await handle(eventRequest(paid), env)).status).toBe(204);
+    }
+    fetchSpy.mockRejectedValueOnce(new Error('down'));
+    expect((await handle(eventRequest(paid), env)).status).toBe(204);
+    expect(writeDataPoint).not.toHaveBeenCalled();
+
+    const noSecret = await handle(eventRequest({ ...paid, secret: 'pi_8_secret_z' }), env);
+    expect(noSecret.status).toBe(400);
+  });
+
+  it("never fails a request when the dataset isn't bound or the write throws", async () => {
+    const { env } = makeEnv();
+    expect((await handle(eventRequest({ step: 'visit', funnelId: FID }), env)).status).toBe(204);
+    const throwing = makeEnv({
+      EVENTS: {
+        writeDataPoint: () => {
+          throw new TypeError('full');
+        },
+      },
+    });
+    const res = await handle(eventRequest({ step: 'offer', funnelId: FID }), throwing.env);
+    expect(res.status).toBe(204);
+  });
+});

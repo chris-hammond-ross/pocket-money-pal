@@ -79,6 +79,7 @@ export interface PaymentIntent {
   client_secret: string | null;
   status: string;
   receipt_email: string | null;
+  metadata?: Record<string, string>;
 }
 
 export interface NewPaymentIntent {
@@ -90,6 +91,8 @@ export interface NewPaymentIntent {
   /** Two-letter country from Cloudflare (`request.cf.country`), if known. */
   country: string | null;
   idempotencyKey: string;
+  /** The page's funnel id (funnel.ts), if it sent one: lets the `paid` step be checked against this payment. */
+  funnelId?: string | null;
 }
 
 /** Creates the lifetime-access PaymentIntent. The relay's webhook keys everything off this metadata. */
@@ -109,6 +112,7 @@ export function createPaymentIntent(key: string, p: NewPaymentIntent): Promise<P
         email: p.email,
         environment: p.environment,
         country: p.country,
+        funnel: p.funnelId ?? null,
       },
     },
     p.idempotencyKey,

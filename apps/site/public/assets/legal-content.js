@@ -11,7 +11,7 @@
 // Tokens: {{hello}} / {{support}} → the emails; [[text]] → a "to decide" placeholder.
 (function () {
   const LEGAL = {
-    updated: '5 November 2026 (draft)',
+    updated: '7 November 2026 (draft)',
 
     terms: {
       id: 'terms',
@@ -110,8 +110,8 @@
         },
         {
           id: 'p-site', title: 'This website', q: 'Do you track me on this website?',
-          plain: 'No cookies, no analytics, no tracking.',
-          body: '<p>This website doesn\'t use cookies, analytics or tracking. Like any website, our hosting provider handles your IP address briefly to deliver the pages to you; we don\'t use it to identify or follow you.</p>',
+          plain: 'No cookies and no ad tracking. We count visits without knowing who you are.',
+          body: '<p>This website doesn\'t use cookies or advertising trackers. We use Cloudflare Web Analytics, which counts page visits without cookies and without identifying you, and we count how many visitors reach each step of buying (seeing the offer, starting to pay, paying) using a random number that\'s forgotten when you close the page. Neither records your name, email or IP address. Like any website, our hosting provider handles your IP address briefly to deliver the pages to you.</p>',
         },
         {
           id: 'p-long', title: 'How long we keep it', q: 'How long do you keep my details?',

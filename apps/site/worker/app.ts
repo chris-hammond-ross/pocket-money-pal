@@ -5,11 +5,13 @@
  *   GET  /api/offer     the same offer as JSON
  *   POST /api/checkout  { email, idempotencyKey } → { clientSecret } for a new lifetime-access PaymentIntent
  *   GET  /api/order     ?pi=&secret= → the order's state once paid: family number, where the key was emailed
+ *   POST /api/event     { step, funnelId, pi?, secret? } → 204: one checkout-funnel step (funnel.ts)
  *
- * Licences are the relay's business (private repo): this Worker only creates PaymentIntents and asks the relay,
+ * Licences are the relay's business: this Worker only creates PaymentIntents and asks the relay,
  * over the RELAY service binding, for spot counts and order states. Stripe's webhook goes to the relay.
  * On staging every request comes through here (run_worker_first: true) so it can add X-Robots-Tag: noindex.
  */
+import { parseBrowserStep, parseFunnelId, recordStep } from './funnel';
 import { getOffer, offerMetaTag, relay } from './offer';
 import { createPaymentIntent, retrievePaymentIntent, StripeError } from './stripe';
 import {
@@ -77,6 +79,9 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
     case '/api/order':
       if (request.method !== 'GET') return json({ error: 'method' }, 405);
       return order(env, url);
+    case '/api/event':
+      if (request.method !== 'POST') return json({ error: 'method' }, 405);
+      return funnelEvent(request, env, url);
     default:
       return json({ error: 'not-found' }, 404);
   }
@@ -102,7 +107,7 @@ async function checkout(request: Request, env: Env, url: URL): Promise<Response>
   } catch {
     return json({ error: 'bad-request' }, 400);
   }
-  const input = (body ?? {}) as { email?: unknown; idempotencyKey?: unknown };
+  const input = (body ?? {}) as { email?: unknown; idempotencyKey?: unknown; funnelId?: unknown };
   const email = parseEmail(input.email);
   if (!email)
     return json({ error: 'email', message: "That email address doesn't look right." }, 400);
@@ -119,6 +124,7 @@ async function checkout(request: Request, env: Env, url: URL): Promise<Response>
   if (soldOut) return json({ error: 'sold-out' }, 409);
 
   const cf = (request as { cf?: { country?: unknown } }).cf;
+  const funnelId = parseFunnelId(input.funnelId);
   const country =
     typeof cf?.country === 'string' && /^[A-Z]{2}$/.test(cf.country) ? cf.country : null;
   try {
@@ -129,10 +135,12 @@ async function checkout(request: Request, env: Env, url: URL): Promise<Response>
       environment: env.ENVIRONMENT,
       country,
       idempotencyKey,
+      funnelId,
     });
     if (!pi.client_secret)
       throw new Error(`PaymentIntent ${pi.id} came back without a client secret`);
     console.log('checkout: created', pi.id);
+    if (funnelId) recordStep(env, 'checkout', funnelId);
     return json({ clientSecret: pi.client_secret });
   } catch (e) {
     logStripe('checkout: create failed', e);
@@ -168,6 +176,50 @@ async function order(env: Env, url: URL): Promise<Response> {
     console.error('order: relay order failed', e);
     return json({ state: 'pending', paid: true, emailedTo: intent.receipt_email });
   }
+}
+
+/**
+ * One funnel step from the page (funnel.ts). Same-origin only, like the checkout. `paid` is written only once Stripe
+ * says that PaymentIntent succeeded, the client secret matches, and the payment carries this funnel id, so a page
+ * can't make up purchases. A `paid` that doesn't check out (or Stripe not answering) is still 204, with nothing
+ * written: the page never waits on this or shows its result.
+ */
+async function funnelEvent(request: Request, env: Env, url: URL): Promise<Response> {
+  if (!isAllowedOrigin(request.headers.get('origin'), url)) return json({ error: 'origin' }, 403);
+  let input: { step?: unknown; funnelId?: unknown; pi?: unknown; secret?: unknown };
+  try {
+    const text = await request.text();
+    if (text.length > 1024) return json({ error: 'too-large' }, 413);
+    input = (JSON.parse(text) ?? {}) as typeof input;
+  } catch {
+    return json({ error: 'bad-request' }, 400);
+  }
+  const step = parseBrowserStep(input.step);
+  const funnelId = parseFunnelId(input.funnelId);
+  if (!step || !funnelId) return json({ error: 'bad-request' }, 400);
+  if (step !== 'paid') {
+    recordStep(env, step, funnelId);
+    return new Response(null, { status: 204 });
+  }
+
+  const pi = parsePaymentIntentId(input.pi);
+  const secret = pi && parseClientSecret(input.secret, pi);
+  if (!pi || !secret) return json({ error: 'bad-request' }, 400);
+  let intent;
+  try {
+    intent = await retrievePaymentIntent(env.STRIPE_SECRET_KEY, pi);
+  } catch (e) {
+    logStripe('event: retrieve failed', e);
+    return new Response(null, { status: 204 });
+  }
+  if (
+    intent.client_secret &&
+    sameSecret(intent.client_secret, secret) &&
+    intent.status === 'succeeded' &&
+    intent.metadata?.funnel === funnelId
+  )
+    recordStep(env, 'paid', funnelId);
+  return new Response(null, { status: 204 });
 }
 
 /** Stripe failures in the logs: status, type, code and message, with anything like an email masked. */

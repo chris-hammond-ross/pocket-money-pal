@@ -10,6 +10,9 @@
 //   (worker/stripe.ts). Since API 2026-09-30.endive, `paymentMethodTypes` throws.
 // - After paying, /api/order is polled for the family number (the relay's webhook makes the licence); after
 //   ~15 s the success card shows without it.
+// - Checkout funnel (worker/funnel.ts): `visit` on load, `offer` when the card is seen, `paid`
+//   after paying (the Worker writes `checkout` itself). They're joined by a random id made here and kept in memory
+//   only: no cookie, no storage, gone when the tab closes. Nothing else is sent with them.
 // The look of the card, the sold-out note and the success card belong to the page (OFFER_UI in assets/index.js).
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -49,6 +52,33 @@
   let elements = null;
   let busy = false;
   let attempt = null; // { email, token }
+
+  // ---- The checkout funnel ----
+  const funnelId = crypto.randomUUID();
+  const step = (name, extra) => {
+    try {
+      fetch('/api/event', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ step: name, funnelId, ...extra }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch {
+      // Counting is never worth an error.
+    }
+  };
+  step('visit');
+  const card = form.closest('.of-card') || form;
+  const seen = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        seen.disconnect();
+        step('offer');
+      }
+    },
+    { threshold: 0.4 },
+  );
+  seen.observe(card);
 
   // ---- The offer: normally in the page's head already; if the Worker couldn't add it, ask for it ----
   function showOffer() {
@@ -218,7 +248,7 @@
         res = await fetch('/api/checkout', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ email, idempotencyKey: attempt.token }),
+          body: JSON.stringify({ email, idempotencyKey: attempt.token, funnelId }),
         });
         body = await res.json();
       } catch {
@@ -249,6 +279,7 @@
         return;
       }
       attempt = null;
+      step('paid', { pi: paymentIntent.id, secret: body.clientSecret });
       await finish(paymentIntent.id, body.clientSecret, email);
     } catch (e) {
       console.error('Checkout failed:', e);
