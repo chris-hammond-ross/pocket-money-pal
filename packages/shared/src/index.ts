@@ -3,6 +3,7 @@ export * from './chores';
 export * from './claims';
 export * from './constants';
 export * from './events';
+export * from './install';
 export * from './kiosk';
 export * from './levels';
 export * from './library';

@@ -3,6 +3,7 @@
  * secure origins only, so over plain `http://<pc-ip>` none of this switches on and the page
  * is an ordinary tab. Nothing here may assume HTTPS.
  */
+import { installDeviceOf, type FinishSetupState } from '@pmp/shared';
 import { useEffect, useState } from 'react';
 import { api } from './api';
 
@@ -75,7 +76,9 @@ export function useInstallPrompt(): (() => Promise<boolean>) | null {
   return async () => {
     await prompt.prompt();
     const { outcome } = await prompt.userChoice;
-    if (outcome === 'accepted') installPrompt = null;
+    // An answered prompt can't be shown again: wait for Chrome to offer a new one.
+    if (installPrompt === prompt) installPrompt = null;
+    installListeners.forEach((l) => l());
     return outcome === 'accepted';
   };
 }
@@ -188,6 +191,53 @@ export const installHintDismissed = () => flag(HINT_KEY);
 export const moveHintDismissed = () => flag(MOVE_HINT_KEY);
 /** This address was installed as an app (from this tab, so it isn't standalone itself). */
 export const installedHere = () => flag(INSTALLED_KEY);
+
+// ---------------------------------------------------------------------------
+// Finish setting up (spec 009): install straight after pairing or moving
+
+const FINISH_SETUP_KEY = 'pmp.parent.finishSetup';
+/** The flag ADR 0025's after-move sheet used; a phone mid-move during the update still has it. */
+const OLD_AFTER_MOVE_KEY = 'pmp.parent.afterMove';
+
+/** Pairing (or a move) succeeded on this phone: the install screen comes next. */
+export function markFinishSetup(): void {
+  try {
+    localStorage.setItem(FINISH_SETUP_KEY, '1');
+  } catch {
+    // No storage: no install screen.
+  }
+}
+
+export function finishSetupPending(): boolean {
+  try {
+    return (
+      localStorage.getItem(FINISH_SETUP_KEY) === '1' ||
+      localStorage.getItem(OLD_AFTER_MOVE_KEY) === '1'
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function forgetFinishSetup(): void {
+  try {
+    localStorage.removeItem(FINISH_SETUP_KEY);
+    localStorage.removeItem(OLD_AFTER_MOVE_KEY);
+  } catch {
+    // As above.
+  }
+}
+
+/** The shared rule's inputs, read from this browser. */
+export function finishSetupState(): FinishSetupState {
+  return {
+    pending: finishSetupPending(),
+    secure: isSecure(),
+    standalone: isStandalone(),
+    installed: isInstalled(),
+    device: installDeviceOf(navigator.userAgent, navigator.maxTouchPoints),
+  };
+}
 
 /** Installed as an app here: opened from it, or installed from this tab. */
 export function isInstalled(): boolean {

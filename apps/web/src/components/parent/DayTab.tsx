@@ -7,7 +7,6 @@ import { useServerNow } from '../../lib/server-clock';
 import { sound } from '../../lib/sounds';
 import { DashedButton, DayAxis, PlayerBadge, WindowBar, type ClaimDot } from '../arcade';
 import { useParentUi } from './context';
-import { AfterMoveSheet } from './MoveToSecure';
 import holiday from './holiday.module.css';
 import outbox from './outbox.module.css';
 import classes from './parent.module.css';
@@ -47,7 +46,6 @@ export function DayTab({
 
   return (
     <>
-      <AfterMoveSheet />
       <div className={classes.days}>
         {weekDates(plan.today).map((d) => (
           <button

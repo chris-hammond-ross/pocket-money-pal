@@ -8,10 +8,19 @@ import { useFamilyPc } from '../../lib/offline';
 import { useRefetchAfterSend } from '../../lib/outbox';
 import { useLiveEvents } from '../../lib/live-events';
 import { useMuted } from '../../lib/parent-prefs';
-import { askedPush, enablePush, pushState, registerServiceWorker, resyncPush } from '../../lib/pwa';
+import {
+  askedPush,
+  enablePush,
+  finishSetupState,
+  isInstalled,
+  isStandalone,
+  pushState,
+  registerServiceWorker,
+  resyncPush,
+} from '../../lib/pwa';
 import { preloadSounds, sound } from '../../lib/sounds';
 import { ArcadeButton, Sheet } from '../arcade';
-import { movedHere } from './MoveToSecure';
+import { FinishSetup } from './FinishSetup';
 import { NewQuestPicker } from './NewQuestPicker';
 import { NeedsPc, OfflineBar, OutboxSheet, useOutboxSending } from './Outbox';
 import { DayTab } from './DayTab';
@@ -34,6 +43,8 @@ import { SurpriseSheet } from './Surprises';
 import { Tray } from './Tray';
 import { WeekTab } from './WeekTab';
 import {
+  asksPushHere,
+  finishSetupShows,
   formatMoney,
   surpriseBanner,
   type DayPlan,
@@ -338,6 +349,7 @@ export function ParentShell({ welcome }: { welcome: Banner | null }) {
       )}
       {outboxOpen && <OutboxSheet timezone={timezone} onClose={() => setOutboxOpen(false)} />}
       <PushOptIn />
+      <FinishSetup />
     </ParentUiContext.Provider>
   );
 }
@@ -417,15 +429,21 @@ function openTrayFromUrl(): boolean {
 
 /**
  * After pairing, over HTTPS: "Notify this phone about claimed chores?" once per phone
- * (spec 003). Either answer is final here; the Setup tab has the switch afterwards.
+ * (spec 003), and in the installed app rather than its browser tab (spec 009). Either answer is final here; the Setup tab has the switch afterwards.
  */
 function PushOptIn() {
   const ui = useParentUi();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
-    // Just moved here: the after-move sheet offers notifications instead (ADR 0025).
-    if (askedPush()[0] || movedHere()) return;
+    // Notifications are asked in the installed app, not under the install screen (spec 009).
+    const asks = asksPushHere({
+      asked: askedPush()[0],
+      finishSetupShowing: finishSetupShows(finishSetupState()),
+      standalone: isStandalone(),
+      installed: isInstalled(),
+    });
+    if (!asks) return;
     const timer = setTimeout(() => {
       void pushState().then((state) => setOpen(state === 'off'));
     }, 1500);

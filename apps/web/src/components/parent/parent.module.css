@@ -1189,54 +1189,243 @@
   }
 }
 
-/* After moving to the secure address (ADR 0025): two steps, ticked off as they're done */
-.moveSteps {
-  margin: 12px 0 2px;
-  font-size: 17px;
+/* Install the app, straight after pairing or moving (spec 009): full screen, one job */
+.finish {
+  position: fixed;
+  inset: 0;
+  z-index: 310; /* above the in-app banner, so "Paired as Mum" isn't said twice */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: calc(22px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));
+  background: radial-gradient(ellipse at 50% 0%, var(--pmp-glow) 0%, var(--pmp-bg) 62%);
+  color: var(--pmp-text);
+
+  & h1 {
+    margin: 0 0 8px;
+    font-size: 32px;
+    line-height: 1.15;
+  }
+
+  & p {
+    margin: 0;
+    max-width: 22em;
+    font-size: 18px;
+    line-height: 1.4;
+    color: #c5c8ef;
+  }
+
+  /* Room for the hand pointing at the browser's own button, below the steps. */
+  &[data-pointer='bottom-right'],
+  &[data-pointer='bottom-centre'] {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom));
+  }
+
+  &[data-centred] {
+    justify-content: center;
+  }
+}
+
+.finishPaired {
+  font-family: var(--pmp-font-pixel);
+  font-size: 10px;
+  color: var(--pmp-bonus);
+  background: color-mix(in srgb, var(--pmp-bonus) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pmp-bonus) 35%, transparent);
+  padding: 8px 12px;
+  border-radius: 99px;
+}
+
+.finishIcon {
+  flex: none;
+  width: 140px;
+  height: 140px;
+  margin: 40px 0 26px;
+  border-radius: 36px;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--pmp-gold) 55%, transparent),
+    0 18px 40px rgba(0, 0, 0, 0.5),
+    0 0 60px color-mix(in srgb, var(--pmp-gold) 20%, transparent);
+  animation: pmp-bob 2.6s ease-in-out infinite;
+
+  [data-ios] & {
+    width: 96px;
+    height: 96px;
+    margin: 26px 0 18px;
+    border-radius: 26px;
+  }
+}
+
+.finishGrow {
+  flex: 1;
+  min-height: 20px;
+}
+
+.finishButton {
+  width: 100%;
+  margin-bottom: 14px;
+  max-width: 420px;
+  font-size: 28px;
+  padding: 24px;
+
+  &[data-pulse] {
+    animation: pmp-finish-pulse 1.8s infinite;
+  }
+
+  &[data-wobble] {
+    animation:
+      pmp-finish-wobble 0.35s,
+      pmp-finish-pulse 1.8s 0.35s infinite;
+  }
+}
+
+@keyframes pmp-finish-pulse {
+  0% {
+    box-shadow:
+      0 4px 0 var(--pmp-gold-shadow),
+      0 0 0 0 color-mix(in srgb, var(--pmp-gold) 70%, transparent);
+  }
+  100% {
+    box-shadow:
+      0 4px 0 var(--pmp-gold-shadow),
+      0 0 0 18px transparent;
+  }
+}
+
+@keyframes pmp-finish-wobble {
+  25% {
+    transform: translateX(-8px);
+  }
+  75% {
+    transform: translateX(8px);
+  }
+}
+
+.finishSteps {
+  width: 100%;
+  max-width: 420px;
+  margin: 0;
   padding: 0;
   list-style: none;
   counter-reset: step;
   display: grid;
-  gap: 10px;
+  gap: 9px;
+  text-align: left;
 
   & li {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    min-height: 56px;
-    padding: 8px 12px;
+    gap: 12px;
+    min-height: 54px;
+    padding: 10px 14px;
     background: var(--pmp-panel);
-    border-radius: 12px;
+    border-radius: 16px;
+    font-size: 18px;
     counter-increment: step;
   }
 
-  /* The flex rows hide the list's own numbers, so draw them. */
   & li::before {
-    content: counter(step) '.';
+    content: counter(step);
+    width: 20px;
     flex: none;
-    width: 1.2em;
+    font-family: var(--pmp-font-pixel);
+    font-size: 12px;
     color: var(--pmp-gold);
-    font-weight: 700;
   }
 
-  & li > span:first-of-type {
-    flex: 1;
+  /* The browser's own label, looking like the button the parent will see. */
+  & b {
+    margin-left: auto;
+    padding: 5px 10px;
+    border-radius: 10px;
+    background: #2c2c2e;
+    color: #f2f2f7;
+    font:
+      600 15px -apple-system,
+      system-ui,
+      sans-serif;
+    white-space: nowrap;
   }
 
-  & li[data-done] > span:first-child {
+  & small {
+    flex: none;
     color: var(--pmp-dim);
-    text-decoration: line-through;
+    font-size: 15px;
+  }
+}
+
+.finishBar {
+  width: 100%;
+  max-width: 420px;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--pmp-track);
+  overflow: hidden;
+
+  & i {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--pmp-bonus), var(--pmp-gold));
+    animation: pmp-finish-fill 4s ease-out forwards;
+  }
+}
+
+@keyframes pmp-finish-fill {
+  from {
+    width: 0;
+  }
+  to {
+    width: 92%;
+  }
+}
+
+.finishPointer {
+  position: fixed;
+  font-size: 44px;
+  filter: drop-shadow(0 4px 10px #000);
+  animation: pmp-bob 1s ease-in-out infinite;
+  pointer-events: none;
+
+  [data-pointer='top-right'] & {
+    top: calc(4px + env(safe-area-inset-top));
+    right: 10px;
   }
 
-  & li > span:last-child:not(:first-child) {
-    color: var(--pmp-bonus);
-    font-weight: 700;
+  [data-pointer='bottom-right'] & {
+    bottom: calc(6px + env(safe-area-inset-bottom));
+    right: 14px;
   }
 
-  & .pill {
-    min-height: 36px;
-    padding: 4px 12px;
+  [data-pointer='bottom-centre'] & {
+    bottom: calc(6px + env(safe-area-inset-bottom));
+    left: calc(50% - 22px);
+  }
+}
+
+.finishRing {
+  width: 150px;
+  height: 150px;
+  margin-bottom: 26px;
+  border-radius: 50%;
+  border: 8px solid var(--pmp-bonus);
+  display: grid;
+  place-items: center;
+  font-size: 76px;
+  color: var(--pmp-bonus);
+  box-shadow: 0 0 60px color-mix(in srgb, var(--pmp-bonus) 35%, transparent);
+  animation: pmp-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.finishDone {
+  font-family: var(--pmp-font-pixel);
+  font-weight: 400;
+  color: var(--pmp-bonus);
+
+  .finish & {
+    font-size: 22px;
+    margin-bottom: 18px;
   }
 }
 
