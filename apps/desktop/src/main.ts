@@ -8,12 +8,14 @@ import {
   nativeImage,
   powerSaveBlocker,
   screen,
+  shell,
   Tray,
   utilityProcess,
   type UtilityProcess,
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { displayLabel, pickDisplay } from './displays';
+import { runStartupTask, startupMenu, UNREAD, type StartupTaskReading } from './startup-task';
 
 const PORT = Number(process.env.PMP_PORT ?? 4789);
 /** Set to use an already-running server (e.g. `npm run dev`) instead of the bundled one. */
@@ -29,6 +31,11 @@ const JUST_STARTED_MS = 2 * 60_000;
 const CHECK_EVERY_MS = 4 * 60 * 60_000;
 /** The registry value name for start-at-login, so the uninstaller can remove it. */
 const LOGIN_ITEM_NAME = 'Pocket Money Pal';
+/**
+ * Installed from the Microsoft Store (MSIX, ADR 0027). The Store updates it, and start at login
+ * is the manifest's startup task. Everything else is the same as the NSIS install.
+ */
+const STORE = process.windowsStore === true;
 
 const startedAt = Date.now();
 let server: UtilityProcess | null = null;
@@ -38,6 +45,15 @@ let baseUrl = '';
 let quitting = false;
 /** The version of an update that's downloaded and waiting to install. */
 let updateReady: string | null = null;
+/** Store build: the startup task's state, as last read from Windows. */
+let startupTask: StartupTaskReading = UNREAD;
+let startupTaskReadAt = 0;
+
+// The Store copy keeps its own data folder, apart from an NSIS install's. MSIX lets a packaged
+// app edit files that already exist in %APPDATA% but sends new ones to a private per-package
+// folder, so sharing the folder would split one database across two places. Families move with
+// backup and restore (ADR 0020). Set before the single-instance lock, which lives in this folder.
+if (STORE) app.setPath('userData', join(app.getPath('appData'), 'Pocket Money Pal (Store)'));
 
 // Sounds are part of the game; don't wait for a click before playing them.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -50,7 +66,7 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 async function start(): Promise<void> {
-  log(`starting v${app.getVersion()}`);
+  log(`starting v${app.getVersion()}${STORE ? ' (Microsoft Store)' : ''}`);
   baseUrl = EXTERNAL_URL ?? (await startServer());
   createTray();
   initLoginItem();
@@ -161,14 +177,24 @@ function createTray(): void {
   tray = new Tray(icon);
   tray.setToolTip('Pocket Money Pal');
   tray.on('click', () => void openWindow());
+  // Store build: the user can change the startup task in Windows, so re-read it when the mouse
+  // comes near the icon.
+  if (STORE) {
+    tray.on('mouse-move', () => {
+      if (Date.now() - startupTaskReadAt > 30_000) void readStartupTask();
+    });
+  }
   updateTrayMenu();
 }
 
 function updateTrayMenu(): void {
   if (!tray) return;
-  const startAtLogin = app.isPackaged
-    ? app.getLoginItemSettings().executableWillLaunchAtLogin
-    : false;
+  const startAtLogin = STORE
+    ? startupMenu(startupTask)
+    : {
+        checked: app.isPackaged && app.getLoginItemSettings().executableWillLaunchAtLogin,
+        enabled: app.isPackaged,
+      };
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: `Pocket Money Pal v${app.getVersion()}`, enabled: false },
@@ -183,9 +209,9 @@ function updateTrayMenu(): void {
       {
         label: 'Start when Windows starts',
         type: 'checkbox',
-        checked: startAtLogin,
-        enabled: app.isPackaged,
-        click: (item) => setStartAtLogin(item.checked),
+        checked: startAtLogin.checked,
+        enabled: startAtLogin.enabled,
+        click: (item) => (STORE ? void changeStartupTask() : setStartAtLogin(item.checked)),
       },
       { type: 'separator' },
       { label: 'Quit', click: () => app.quit() },
@@ -229,6 +255,7 @@ function restart(): void {
 
 // ---------------------------------------------------------------------------
 // Start at login: on by default, turned off from the tray. Only the installed app registers.
+// The NSIS install uses the Run key; the Store build, its manifest's startup task.
 
 interface Prefs {
   loginItemInitialised?: boolean;
@@ -254,6 +281,7 @@ function writePrefs(changes: Prefs): void {
 
 function initLoginItem(): void {
   if (!app.isPackaged) return;
+  if (STORE) return void initStartupTask();
   if (readPrefs().loginItemInitialised) return;
   setStartAtLogin(true);
   writePrefs({ loginItemInitialised: true });
@@ -265,11 +293,48 @@ function setStartAtLogin(on: boolean): void {
   updateTrayMenu();
 }
 
+/** Store build: Windows installs the startup task disabled, so ask for it once (on by default). */
+async function initStartupTask(): Promise<void> {
+  await readStartupTask();
+  if (startupTask.task === 'unknown' || readPrefs().loginItemInitialised) return;
+  if (startupTask.task === 'Disabled') await changeStartupTask();
+  writePrefs({ loginItemInitialised: true });
+}
+
+/** Store build: the tray checkbox was clicked (or first run turns it on). */
+async function changeStartupTask(): Promise<void> {
+  const action = startupMenu(startupTask).onClick;
+  if (action === 'open-settings') {
+    // Only the user may change it now, in Settings > Apps > Startup.
+    log('start at login: opening Settings');
+    await shell.openExternal('ms-settings:startupapps');
+  } else {
+    startupTask = await runStartupTask(action, log);
+    startupTaskReadAt = Date.now();
+    log(`start at login: ${describe(startupTask)}`);
+  }
+  updateTrayMenu();
+}
+
+async function readStartupTask(): Promise<void> {
+  startupTaskReadAt = Date.now();
+  const reading = await runStartupTask('read', log);
+  if (describe(reading) === describe(startupTask)) return;
+  startupTask = reading;
+  log(`start at login: ${describe(reading)}`);
+  updateTrayMenu();
+}
+
+function describe({ task, registry }: StartupTaskReading): string {
+  return `${task} (Windows: ${registry ?? 'none'})`;
+}
+
 // ---------------------------------------------------------------------------
 // Auto-update from GitHub Releases: download in the background, install overnight.
+// Not in the Store build: the Store updates it, and "Restart to update" never shows.
 
 function startUpdater(): void {
-  if (!app.isPackaged) return;
+  if (!app.isPackaged || STORE) return;
   autoUpdater.logger = { info: log, warn: log, error: log, debug: () => undefined };
   if (UPDATE_URL) autoUpdater.setFeedURL({ provider: 'generic', url: UPDATE_URL });
   autoUpdater.autoDownload = true;

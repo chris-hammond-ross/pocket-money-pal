@@ -13,7 +13,8 @@
     "dev": "npm run build && npm run stage && node scripts/launch.mjs",
     "dist": "npm run build && npm run stage && electron-builder --win --publish never",
     "typecheck": "tsc --noEmit",
-    "release": "npm run build && npm run stage && electron-builder --win --publish always"
+    "release": "npm run build && npm run stage && electron-builder --win --publish always",
+    "store": "npm run build && npm run stage && electron-builder --win appx --publish never"
   },
   "build": {
     "appId": "io.github.pocketmoneypal",
@@ -34,6 +35,10 @@
       {
         "from": ".stage/server/node_modules",
         "to": "server/node_modules"
+      },
+      {
+        "from": "dist/startup-task.exe",
+        "to": "startup-task.exe"
       }
     ],
     "npmRebuild": false,
@@ -46,6 +51,21 @@
       "allowToChangeInstallationDirectory": true,
       "include": "build/installer.nsh",
       "artifactName": "Pocket-Money-Pal-Setup-${version}.${ext}"
+    },
+    "appx": {
+      "identityName": "ChrisHammond-Ross.PocketMoneyPal",
+      "publisher": "CN=FC1F6890-7D89-499A-AB3A-A178B34B90A8",
+      "publisherDisplayName": "Chris Hammond-Ross",
+      "applicationId": "PocketMoneyPal",
+      "displayName": "Pocket Money Pal",
+      "backgroundColor": "#161525",
+      "languages": [
+        "en-AU"
+      ],
+      "customManifestPath": "appxmanifest.xml",
+      "minVersion": "10.0.18362.0",
+      "maxVersionTested": "10.0.26100.0",
+      "artifactName": "Pocket-Money-Pal-${version}.${ext}"
     },
     "publish": {
       "provider": "github",

@@ -20,6 +20,7 @@
     "desktop:dev": "npm run build && npm run dev -w @pmp/desktop",
     "desktop:dist": "npm run build && npm run dist -w @pmp/desktop",
     "desktop:release": "npm run build && npm run release -w @pmp/desktop",
+    "desktop:store": "npm run build && npm run store -w @pmp/desktop",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",

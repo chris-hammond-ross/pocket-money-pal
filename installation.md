@@ -122,6 +122,23 @@ Go to **Settings > Apps**, find **Pocket Money Pal**, and choose **Uninstall**. 
 
 The family's data in `%APPDATA%\Pocket Money Pal` is kept, in case you reinstall. Delete that folder to remove everything. If you set up Tailscale, run `tailscale serve --https=443 off` to stop serving the address, or uninstall Tailscale itself.
 
+## The Microsoft Store version
+
+Pocket Money Pal is also in the [Microsoft Store](https://apps.microsoft.com/detail/9N722H5CK1G0). It's the same app, but Microsoft signs it, so there's no SmartScreen warning and no firewall question: Windows adds the rule for phones by itself. A few things work differently:
+
+- **Updates come from the Store**, not from the app. There's no **Restart to update** in the tray.
+- **Start when Windows starts** is a Windows setting for Store apps. If you turn it off in Task Manager or Settings, the tray checkbox opens **Settings > Apps > Startup** to turn it back on.
+- **Its data lives in its own folder**, apart from the `.exe` version's: `%LOCALAPPDATA%\Packages\ChrisHammond-Ross.PocketMoneyPal_261vw71rvrwvr\LocalCache\Roaming\Pocket Money Pal (Store)`.
+- **Uninstalling it deletes the family's data.** Download a backup on a phone first.
+
+**Moving from the `.exe` to the Store version:**
+
+1. On a phone, download a backup (see [Backup and restore](#backup-and-restore)).
+2. Quit the `.exe` version (tray icon > **Quit**). Only one copy can run at a time.
+3. Install Pocket Money Pal from the Store and open it.
+4. On the first setup screen, tap **📦 Restore from a backup** and pick the file. Phones paired before keep working.
+5. Uninstall the `.exe` version from **Settings > Apps**. Its old folder stays in `%APPDATA%` until you delete it.
+
 ## Troubleshooting
 
 - **A phone can't connect** (the page loads forever): check the phone is on the same Wi-Fi as the PC, and not a guest network, which routers usually keep apart. On the phone, open `http://<pc-address>:4789/api/health`; it should show `"ok":true`. If it doesn't, the firewall rule may be missing: run the installer again and choose Yes to the Network Command Shell question.

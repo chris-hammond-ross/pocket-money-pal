@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Microsoft Store package's manifest (electron-builder `appx.customManifestPath`, ADR 0027).
+  electron-builder's own template plus two things the NSIS installer does another way:
+  - a startup task, so the app starts at login (an MSIX app can't use the Run key). The task id
+    is read by src/startup-task.ts.
+  - an inbound firewall rule for the server's port, so phones on the LAN connect with no prompt
+    (installer.nsh adds it with netsh). It can't be limited to the local subnet like the netsh
+    rule: MSIX rules have no remote-address field.
+  ${...} values are filled in by electron-builder from build.appx in package.json.
+-->
+<Package
+   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+   xmlns:desktop2="http://schemas.microsoft.com/appx/manifest/desktop/windows10/2"
+   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+   IgnorableNamespaces="uap desktop desktop2 rescap">
+  <!-- use single quotes to avoid double quotes escaping in the publisher value  -->
+  <Identity Name="${identityName}"
+    ProcessorArchitecture="${arch}"
+    Publisher='${publisher}'
+    Version="${version}" />
+  <Properties>
+    <DisplayName>${displayName}</DisplayName>
+    <PublisherDisplayName>${publisherDisplayName}</PublisherDisplayName>
+    <Description>${description}</Description>
+    <Logo>${logo}</Logo>
+  </Properties>
+  <Resources>
+    ${resourceLanguages}
+  </Resources>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="${minVersion}" MaxVersionTested="${maxVersionTested}" />
+  </Dependencies>
+  ${capabilities}
+  <Applications>
+    <Application Id="${applicationId}" Executable="${executable}" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+       BackgroundColor="${backgroundColor}"
+       DisplayName="${displayName}"
+       Square150x150Logo="${square150x150Logo}"
+       Square44x44Logo="${square44x44Logo}"
+       Description="${description}">
+        ${lockScreen}
+        ${defaultTile}
+        ${splashScreen}
+      </uap:VisualElements>
+      <Extensions>
+        <desktop:Extension Category="windows.startupTask" Executable="${executable}" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="PocketMoneyPalStartup" Enabled="true" DisplayName="${displayName}" />
+        </desktop:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+  <Extensions>
+    <desktop2:Extension Category="windows.firewallRules">
+      <desktop2:FirewallRules Executable="${executable}">
+        <desktop2:Rule Direction="in" IPProtocol="TCP" Profile="all" LocalPortMin="4789" LocalPortMax="4789" />
+      </desktop2:FirewallRules>
+    </desktop2:Extension>
+  </Extensions>
+</Package>

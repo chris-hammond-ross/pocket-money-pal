@@ -1,5 +1,6 @@
 # Pushing a version tag (v0.2.0) builds the Windows installer and publishes it as a GitHub
 # release. Installed copies find it there and update themselves (electron-updater, ADR 0015).
+# It also attaches the Microsoft Store package (.appx) to upload to Partner Center (ADR 0027).
 name: Release
 
 on:
@@ -44,5 +45,17 @@ jobs:
         run: |
           cp "apps/desktop/release/Pocket-Money-Pal-Setup-${GITHUB_REF_NAME#v}.exe" Pocket-Money-Pal-Setup.exe
           gh release upload "$GITHUB_REF_NAME" Pocket-Money-Pal-Setup.exe --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # The Microsoft Store package (ADR 0027), packed from the app the installer step just built.
+      # It's unsigned: Microsoft signs it when it's submitted in Partner Center, which is where this
+      # file goes (by hand for now). Kept apart from the installer step so the .exe and its
+      # updater feed are made exactly as before.
+      - name: Build the Microsoft Store package
+        working-directory: apps/desktop
+        run: npx electron-builder --win appx --publish never --prepackaged release/win-unpacked
+      - name: Attach the Store package to the release
+        shell: bash
+        run: gh release upload "$GITHUB_REF_NAME" "apps/desktop/release/Pocket-Money-Pal-${GITHUB_REF_NAME#v}.appx" --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
