@@ -13,7 +13,7 @@
   prototypes/landing-site/README.md: markup, CSS, copy and timings are the prototype's, byte for byte.
   Production changes only: inline scripts moved to /assets/*.js (CSP), ../_shared → /assets, canvas-confetti
   self-hosted, head tags (icons, description, social), buy buttons scroll to #pricing (data-buy, no onclick),
-  page links → / and /legal. Change the look in the prototype's complete page first, then port it again.
+  page links → / and /legal. Re-ported in session 11.6 (Microsoft Store button, the .exe view). Change the look in the prototype's complete page first, then port it again.
 -->
 <link rel="stylesheet" href="/assets/brand.css" />
 <!-- Page fade: arriving from the other page starts invisible; the script at the end of the body fades it in. -->
@@ -71,6 +71,7 @@
   .dl-swap { margin: 18px 0 0; text-align: center; font-size: .95rem; color: var(--dim); }
   .dl-swap button { background: none; border: 0; padding: 0; font: inherit; color: var(--dim); text-decoration: underline; cursor: pointer; }
   .dl-swap button:hover { color: var(--text); }
+  .dl-swap + .dl-swap { margin-top: 6px; }
   .dl-help { margin: 28px 0 0; text-align: center; color: var(--dim); }
   .dl-help a { color: #c9ccf2; }
 
@@ -110,7 +111,27 @@
     <h1>Put Pocket Money Pal on <span class="g">your family's computer.</span></h1>
     <p class="dl-lead">Download it on the computer the kids will use, then run it. It takes a minute or two.</p>
     <div class="dl-card">
-      <a class="dl-btn" id="dlGet" href="https://github.com/chris-hammond-ross/pocket-money-pal/releases/latest/download/Pocket-Money-Pal-Setup.exe">⬇ Download for Windows<small>Free updates, for life</small></a>
+      <a class="dl-btn" id="dlGet" href="https://get.microsoft.com/installer/download/9N722H5CK1G0?referrer=appbadge">⬇ Download for Windows<small>From the Microsoft Store · free updates, for life</small></a>
+      <div class="dl-next">
+        <b class="t">WHAT HAPPENS NEXT</b>
+        <ol>
+          <li><div><b>Run it</b><small>Open the installer you just downloaded. It puts Pocket Money Pal on the computer, then opens it.</small></div></li>
+          <li><div><b>Pair your phone</b><small>The kids' screen opens with a code. Point your phone's camera at it.</small></div></li>
+          <li><div><b>Use your phone away from home</b><small>On your phone, go to Setup → Remote access and enter the key from your email.</small></div></li>
+        </ol>
+      </div>
+    </div>
+    <p class="dl-swap">Can't use the Microsoft Store? <button type="button" data-show="dlExe">Get the .exe instead</button></p>
+    <p class="dl-swap">Not on the family computer? <button type="button" data-show="dlOther">Send yourself the link</button></p>
+  </section>
+
+  <!-- On Windows, without the Microsoft Store (where it's blocked) -->
+  <section class="dl-view" id="dlExe" hidden>
+    <div class="dl-k">DOWNLOAD · WINDOWS .EXE</div>
+    <h1>Put Pocket Money Pal on <span class="g">your family's computer.</span></h1>
+    <p class="dl-lead">For computers where the Microsoft Store is turned off. It's the same app, and it updates itself.</p>
+    <div class="dl-card">
+      <a class="dl-btn" id="dlGetExe" href="https://github.com/chris-hammond-ross/pocket-money-pal/releases/latest/download/Pocket-Money-Pal-Setup.exe">⬇ Download the .exe<small>Free updates, for life</small></a>
       <div class="dl-next">
         <b class="t">WHAT HAPPENS NEXT</b>
         <ol>
@@ -120,6 +141,7 @@
         </ol>
       </div>
     </div>
+    <p class="dl-swap">Can use the Microsoft Store? <button type="button" data-show="dlWin">Use it instead</button></p>
     <p class="dl-swap">Not on the family computer? <button type="button" data-show="dlOther">Send yourself the link</button></p>
   </section>
 

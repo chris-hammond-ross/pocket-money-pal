@@ -6,20 +6,24 @@ Once it's running, the [user guide](user-guide.md) explains how to use it day to
 
 ## What you need
 
-- **A Windows 10 or 11 PC** that's on whenever the kids are about. It runs the app and keeps the family's data; nothing goes to the cloud.
+- **A Windows 10 (version 1903 or newer) or Windows 11 PC** that's on whenever the kids are about. It runs the app and keeps the family's data; nothing goes to the cloud.
 - **A screen for the kids.** A second monitor works best, but the PC's only monitor works too. A touch screen is nice; a mouse is fine. The board is laid out for 1920×1080 or bigger.
 - **The grown-ups' phones on the same Wi-Fi** as the PC. Android with Chrome is what we use and test on; iPhones haven't been tried yet.
 
 ## 1. Download and install
 
-1. Go to the [Releases page](https://github.com/chris-hammond-ross/pocket-money-pal/releases) and download `Pocket-Money-Pal-Setup-<version>.exe` from the newest release.
-2. Run it. Windows will probably show a blue **"Windows protected your PC"** box. That's SmartScreen: it warns about any program that hasn't been signed with a paid certificate, and this one isn't yet. Click **More info**, then **Run anyway**.
-3. Go through the installer. The defaults are fine. It installs for your Windows user only, so it never needs admin rights to update itself.
-4. Near the end, a message says Windows will ask about **Network Command Shell**. Choose **Yes** when it does. That adds a firewall rule so phones on your home network can reach the PC. It's the only time the app asks for admin rights. If you choose No, phones won't be able to connect; run the installer again to get the question back.
+Pocket Money Pal comes from the Microsoft Store.
+
+1. On the family PC, open [pocketmoneypal.com/download](https://pocketmoneypal.com/download) and click **Download for Windows**. That downloads a small installer from Microsoft, `Pocket Money Pal Installer.exe`. (Or open its [Store page](https://apps.microsoft.com/detail/9N722H5CK1G0), or search for Pocket Money Pal in the Microsoft Store app.)
+2. Run it. It installs Pocket Money Pal from the Store, then opens it.
+
+Microsoft signs Store apps, so Windows shows no warning. It also adds the firewall rule that lets phones on your home network reach the PC, without asking.
+
+If your PC can't use the Microsoft Store (some work and school PCs block it), install the `.exe` instead: see [Without the Microsoft Store](#without-the-microsoft-store-the-exe).
 
 When it finishes, Pocket Money Pal starts. A pig icon appears in the system tray (by the clock), and the kids' screen opens full screen.
 
-From now on the app starts when Windows starts. To change that, right-click the tray icon and untick **Start when Windows starts**.
+From now on the app starts when Windows starts. To change that, right-click the tray icon and untick **Start when Windows starts**. Windows has the last word on this for Store apps: if it's been turned off in Task Manager or **Settings > Apps > Startup**, the checkbox opens that Settings page to turn it back on.
 
 ## 2. First-run setup
 
@@ -108,43 +112,50 @@ A backup from a newer version of the app can only be restored once the PC is upd
 
 There's also a **Factory reset** under **DANGER ZONE** on the same tab, for starting again from scratch. It can't be undone, so download a backup first if you might want the old data back.
 
-**By hand:** everything also lives in one folder, `%APPDATA%\Pocket Money Pal`. With the app quit (tray icon > **Quit**), copying `pmp.db` (with `pmp.db-wal` and `pmp.db-shm` if they're there) and the `images` folder is a backup too.
+**By hand:** everything also lives in one folder, `%LOCALAPPDATA%\Packages\ChrisHammond-Ross.PocketMoneyPal_261vw71rvrwvr\LocalCache\Roaming\Pocket Money Pal (Store)` (the `.exe` version uses `%APPDATA%\Pocket Money Pal`). With the app quit (tray icon > **Quit**), copying `pmp.db` (with `pmp.db-wal` and `pmp.db-shm` if they're there) and the `images` folder is a backup too.
 
 ## Updating
 
-Updates install themselves. The app checks for a new version every few hours and downloads it in the background. It installs at about 3am, or straight away if the PC has only just started. To install a downloaded update now, choose **Restart to update** in the tray menu. Phones and the kids' screen pick up the new version by themselves.
+The Microsoft Store keeps Pocket Money Pal up to date, like your other Store apps. Phones and the kids' screen pick up the new version by themselves.
 
 The version you're running is shown at the bottom of the phone's **Players** tab.
 
 ## Uninstalling
 
-Go to **Settings > Apps**, find **Pocket Money Pal**, and choose **Uninstall**. Windows asks once more for permission, to remove the firewall rule.
+**Uninstalling deletes the family's data.** Download a backup on a phone first (see [Backup and restore](#backup-and-restore)).
 
-The family's data in `%APPDATA%\Pocket Money Pal` is kept, in case you reinstall. Delete that folder to remove everything. If you set up Tailscale, run `tailscale serve --https=443 off` to stop serving the address, or uninstall Tailscale itself.
+Go to **Settings > Apps**, find **Pocket Money Pal**, and choose **Uninstall**. Windows removes the firewall rule with it. If you set up Tailscale, run `tailscale serve --https=443 off` to stop serving the address, or uninstall Tailscale itself.
 
-## The Microsoft Store version
+## Without the Microsoft Store (the `.exe`)
 
-Pocket Money Pal is also in the [Microsoft Store](https://apps.microsoft.com/detail/9N722H5CK1G0). It's the same app, but Microsoft signs it, so there's no SmartScreen warning and no firewall question: Windows adds the rule for phones by itself. A few things work differently:
+For PCs where the Microsoft Store is blocked, Pocket Money Pal also comes as an ordinary installer. It's the same app.
 
-- **Updates come from the Store**, not from the app. There's no **Restart to update** in the tray.
-- **Start when Windows starts** is a Windows setting for Store apps. If you turn it off in Task Manager or Settings, the tray checkbox opens **Settings > Apps > Startup** to turn it back on.
-- **Its data lives in its own folder**, apart from the `.exe` version's: `%LOCALAPPDATA%\Packages\ChrisHammond-Ross.PocketMoneyPal_261vw71rvrwvr\LocalCache\Roaming\Pocket Money Pal (Store)`.
-- **Uninstalling it deletes the family's data.** Download a backup on a phone first.
+1. On [pocketmoneypal.com/download](https://pocketmoneypal.com/download), click **Can't use the Microsoft Store? Get the .exe instead**, then **Download the .exe**. (It's also on the [Releases page](https://github.com/chris-hammond-ross/pocket-money-pal/releases) as `Pocket-Money-Pal-Setup-<version>.exe`.)
+2. Run it. Windows will probably show a blue **"Windows protected your PC"** box. That's SmartScreen: it warns about any program that hasn't been signed with a paid certificate, and this one isn't. Click **More info**, then **Run anyway**.
+3. Go through the installer. The defaults are fine. It installs for your Windows user only, so it never needs admin rights to update itself.
+4. Near the end, a message says Windows will ask about **Network Command Shell**. Choose **Yes** when it does. That adds a firewall rule so phones on your home network can reach the PC. It's the only time the app asks for admin rights. If you choose No, phones won't be able to connect; run the installer again to get the question back.
+
+Then carry on from [First-run setup](#2-first-run-setup). A few things work differently from the Store version:
+
+- **It updates itself.** The app checks for a new version every few hours and downloads it in the background. It installs at about 3am, or straight away if the PC has only just started. To install a downloaded update now, choose **Restart to update** in the tray menu.
+- **Its data lives in** `%APPDATA%\Pocket Money Pal`, and **uninstalling keeps it**, in case you reinstall. Delete that folder to remove everything. Uninstalling asks once more for permission, to remove the firewall rule.
 
 **Moving from the `.exe` to the Store version:**
 
 1. On a phone, download a backup (see [Backup and restore](#backup-and-restore)).
 2. Quit the `.exe` version (tray icon > **Quit**). Only one copy can run at a time.
-3. Install Pocket Money Pal from the Store and open it.
+3. Install Pocket Money Pal from the Store (see [Download and install](#1-download-and-install)) and open it.
 4. On the first setup screen, tap **📦 Restore from a backup** and pick the file. Phones paired before keep working.
 5. Uninstall the `.exe` version from **Settings > Apps**. Its old folder stays in `%APPDATA%` until you delete it.
 
+Moving the other way works the same, but download the backup before uninstalling the Store version, because that deletes its data.
+
 ## Troubleshooting
 
-- **A phone can't connect** (the page loads forever): check the phone is on the same Wi-Fi as the PC, and not a guest network, which routers usually keep apart. On the phone, open `http://<pc-address>:4789/api/health`; it should show `"ok":true`. If it doesn't, the firewall rule may be missing: run the installer again and choose Yes to the Network Command Shell question.
-- **"Pocket Money Pal could not start"** or **"The server stopped unexpectedly"**: another copy is probably running. Quit it from the tray and try again.
+- **A phone can't connect** (the page loads forever): check the phone is on the same Wi-Fi as the PC, and not a guest network, which routers usually keep apart. On the phone, open `http://<pc-address>:4789/api/health`; it should show `"ok":true`. If it doesn't, the firewall rule may be missing. With the `.exe` version, run the installer again and choose Yes to the Network Command Shell question.
+- **"Pocket Money Pal could not start"** or **"The server stopped unexpectedly"**: another copy is probably running, perhaps both the Store and `.exe` versions. Quit it from the tray and try again.
 - **The kids' screen is on the wrong monitor:** see [Choose the kiosk screen](#3-choose-the-kiosk-screen).
-- **Something else:** the app writes a log to `%APPDATA%\Pocket Money Pal\desktop.log`. Please include it if you [open an issue](https://github.com/chris-hammond-ross/pocket-money-pal/issues).
+- **Something else:** the app writes a log, `desktop.log`, in its data folder (see [Backup and restore](#backup-and-restore) for where that is). Please include it if you [open an issue](https://github.com/chris-hammond-ross/pocket-money-pal/issues).
 
 ## Running from source
 
@@ -160,6 +171,7 @@ npm run build          # build everything, then:
 npm start              # serve it all on http://localhost:4789
 npm run desktop:dev    # build and open the kiosk window (Electron)
 npm run desktop:dist   # build the Windows installer into apps/desktop/release/
+npm run desktop:store  # build the Microsoft Store package (.appx, unsigned) into apps/desktop/release/
 ```
 
 In development, open http://localhost:5173/kiosk on the PC and `http://<pc-address>:5173/parent` on a phone. Phones need a firewall rule for the port; in PowerShell as administrator:
@@ -170,7 +182,7 @@ netsh advfirewall firewall add rule name="Pocket Money Pal" dir=in action=allow 
 
 Use `localport=5173` too for `npm run dev`. Use `profile=any`, not a Private-only rule: on a PC with VirtualBox, Hyper-V or VPN adapters, Windows can judge the home network as Public, and phones then time out with nothing in the firewall log.
 
-**Data:** `npm start` and `npm run dev` use `apps/server/data/pmp.db`; the kiosk app (dev or installed) uses `%APPDATA%\Pocket Money Pal\pmp.db`. Migrations run when the server starts.
+**Data:** `npm start` and `npm run dev` use `apps/server/data/pmp.db`; the kiosk app (dev or the installed `.exe`) uses `%APPDATA%\Pocket Money Pal\pmp.db`, and the Store version its own folder (see [Backup and restore](#backup-and-restore)). Migrations run when the server starts.
 
 **Settings** are environment variables, none of them required:
 
@@ -189,4 +201,4 @@ Use `localport=5173` too for `npm run dev`. Use `profile=any`, not a Private-onl
 
 When running the installed exe from a VS Code terminal, clear `ELECTRON_RUN_AS_NODE` first, or it silently does nothing.
 
-**Publishing a release:** push a version tag (`git tag v0.2.0 && git push origin v0.2.0`). The Release workflow sets every package's version from the tag, runs the checks, builds the installer and publishes it on GitHub. Installed copies update themselves within a few hours.
+**Publishing a release:** push a version tag (`git tag v0.2.0 && git push origin v0.2.0`). The Release workflow sets every package's version from the tag, runs the checks, builds the installer and the Store package, and publishes both on GitHub. Installed `.exe` copies update themselves within a few hours. The `.appx` goes up to Partner Center by hand (ADR 0027), and Store copies update once Microsoft has certified it.

@@ -7,11 +7,12 @@
   const platform = (navigator.userAgentData && navigator.userAgentData.platform) || '';
   const mobile = (navigator.userAgentData && navigator.userAgentData.mobile) || /Android|iPhone|iPad|Mobile/i.test(ua);
   const windows = !mobile && (platform === 'Windows' || /Windows NT/.test(ua));
-  const show = (id) => { $('dlWin').hidden = id !== 'dlWin'; $('dlOther').hidden = id !== 'dlOther'; };
+  const show = (id) => { for (const v of ['dlWin', 'dlExe', 'dlOther']) $(v).hidden = v !== id; };
   show(windows ? 'dlWin' : 'dlOther');
   document.querySelectorAll('[data-show]').forEach((b) => b.addEventListener('click', () => { SITE.play('whoosh', .3); show(b.dataset.show); }));
 
   $('dlGet').addEventListener('click', () => SITE.play('coin', .5));
+  $('dlGetExe').addEventListener('click', () => SITE.play('coin', .5));
   $('dlCopy').addEventListener('click', () => {
     const done = () => { SITE.play('pop', .35); SITE.toast('Link copied. Open it on the family computer.'); };
     navigator.clipboard.writeText('https://pocketmoneypal.com/download').then(done, () => {

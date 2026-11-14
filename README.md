@@ -22,14 +22,14 @@ Pocket Money Pal turns chores and pocket money into a game for kids. A screen on
 
 ## Install
 
-You need a Windows 10 or 11 PC for the kids' screen (a second monitor works well), and parents' phones on the same Wi-Fi.
+You need a Windows 10 (1903 or newer) or Windows 11 PC for the kids' screen (a second monitor works well), and parents' phones on the same Wi-Fi.
 
-1. Download `Pocket-Money-Pal-Setup-<version>.exe` from the [Releases page](https://github.com/chris-hammond-ross/pocket-money-pal/releases).
-2. Run it. It isn't code-signed yet, so Windows SmartScreen warns about it: choose **More info**, then **Run anyway**. When Windows asks about **Network Command Shell**, choose **Yes**; that lets phones connect.
+1. Get Pocket Money Pal from the [Microsoft Store](https://apps.microsoft.com/detail/9N722H5CK1G0), or click **Download for Windows** on [pocketmoneypal.com/download](https://pocketmoneypal.com/download) for a small installer that installs the Store version. There's no SmartScreen warning or firewall question: Windows lets phones connect by itself.
+2. Run it. Pocket Money Pal opens when it's installed.
 3. The kids' screen opens with a QR code. Scan it with your phone and follow the four setup steps: grown-ups, children, quests and the points rate.
 4. Pair the other grown-ups' phones from **Players > Pair another phone**.
 
-Updates install themselves. The [installation guide](installation.md) covers choosing the monitor, notifications with Tailscale, backups and uninstalling, and the [user guide](user-guide.md) explains day-to-day use.
+The Store keeps it up to date. Where the Store is blocked, there's an unsigned installer, `Pocket-Money-Pal-Setup-<version>.exe`, on the [Releases page](https://github.com/chris-hammond-ross/pocket-money-pal/releases); it updates itself ([installation guide](installation.md#without-the-microsoft-store-the-exe)). The [installation guide](installation.md) covers choosing the monitor, notifications with Tailscale, backups and uninstalling, and the [user guide](user-guide.md) explains day-to-day use.
 
 ## Running from source
 
