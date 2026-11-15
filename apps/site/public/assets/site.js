@@ -81,4 +81,25 @@
   document.addEventListener('click', (e) => {
     if (e.target.closest('[data-buy]')) SITE.checkout();
   });
+
+  // Email links copy the address instead of opening a mail app: most people use webmail, where a mailto
+  // link does nothing useful. The href stays mailto: so right-click "Copy email address" and no-JS still
+  // work, modifier clicks are left to the browser, and a mailto with no address (download.html's
+  // "Email it to me", which fills in a subject and body) still opens the mail app.
+  const mailAddress = (a) => decodeURIComponent(a.getAttribute('href').slice(7).split('?')[0]);
+  document.addEventListener('mouseover', (e) => {
+    const a = e.target.closest('a[href^="mailto:"]');
+    if (a && !a.title && mailAddress(a)) a.title = 'Click to copy the email address';
+  });
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href^="mailto:"]');
+    if (!a || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    const address = mailAddress(a);
+    if (!address) return;
+    e.preventDefault();
+    (navigator.clipboard ? navigator.clipboard.writeText(address) : Promise.reject()).then(
+      () => { SITE.play('pop', .35); SITE.toast('Copied ' + address + '. Paste it into your email.'); },
+      () => { location.href = a.href; }, // no clipboard access: fall back to the mail app
+    );
+  });
 })();
