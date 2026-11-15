@@ -308,7 +308,11 @@ describe('a paired remote phone', () => {
   it('reaches every route but the PC-only ones', async () => {
     const { cookie } = family();
     await app.ready();
-    const pcOnly = ['GET /api/setup/kiosk', 'GET /api/devices/pc-invite'];
+    const pcOnly = [
+      'GET /api/setup/kiosk',
+      'GET /api/devices/pc-invite',
+      'POST /api/devices/unpair-all',
+    ];
     for (const r of apiRoutes()) {
       const route = `${r.method} ${r.url}`;
       const res = await call(r, cookie);
@@ -486,6 +490,19 @@ describe('remote setup', () => {
     expect(fromPc.statusCode).toBe(204);
     expect((await viaTunnel({ url: '/api/setup/kiosk' })).statusCode).toBe(401);
     expect((await viaTunnel({ url: '/api/devices/pc-invite' })).statusCode).toBe(401);
+  });
+
+  it('can never unpair every phone, even a paired phone through the tunnel', async () => {
+    const { cookie } = family();
+    const unpair = { method: 'POST' as const, url: '/api/devices/unpair-all' };
+    expect((await viaTunnel(unpair)).json()).toEqual({ error: 'not-paired' });
+    expect((await viaTunnel({ ...unpair, headers: { cookie } })).json()).toEqual({
+      error: 'pc-only',
+    });
+    expect((await viaTailscale({ ...unpair, headers: { cookie } })).json()).toEqual({
+      error: 'pc-only',
+    });
+    expect((await viaTunnel({ url: '/api/devices/me', headers: { cookie } })).statusCode).toBe(200);
   });
 
   it('may restore a backup only with the setup token', async () => {

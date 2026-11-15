@@ -60,7 +60,7 @@ The **Players** tab has a card for each child: their streak, quests, points toda
 - **Bonus points:** the **+5**, **+10** and **−5** buttons further down give or take points straight away, for anything you like. The kiosk shows them land. They count towards payday but not towards levels.
 - **Sick day:** the button next to a child's card skips all their waiting quests today, so their streak is safe. Tap **Undo** to bring them back.
 - **Players:** tap a card to change a child's name, age, avatar or colour, or to remove them. **+ New player** adds one.
-- **Paired phones:** pair another grown-up's phone, or revoke a lost one.
+- **Paired phones:** pair another grown-up's phone, or revoke a lost one. If every phone is lost (or one was paired in the wrong browser), use **Unpair all phones…** in the family PC's tray menu, then scan the QR code on the kids' screen to pair again ([installation guide](installation.md#troubleshooting)).
 
 The **Setup** tab holds the family's settings, under the app's version number:
 

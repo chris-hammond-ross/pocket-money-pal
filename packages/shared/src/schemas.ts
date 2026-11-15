@@ -561,6 +561,10 @@ export const deviceListSchema = z.array(
 );
 export type DeviceList = z.infer<typeof deviceListSchema>;
 
+/** `POST /api/devices/unpair-all` (the PC's tray, ADR 0030): how many devices were revoked. */
+export const unpairAllResultSchema = z.object({ revoked: z.number().int() });
+export type UnpairAllResult = z.infer<typeof unpairAllResultSchema>;
+
 // ---------------------------------------------------------------------------
 // The phone's to-check tray and Day tab (spec 003)
 

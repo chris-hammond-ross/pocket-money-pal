@@ -3,7 +3,7 @@
  * secure origins only, so over plain `http://<pc-ip>` none of this switches on and the page
  * is an ordinary tab. Nothing here may assume HTTPS.
  */
-import { installDeviceOf, type FinishSetupState } from '@pmp/shared';
+import { installDeviceOf, type FinishSetupState, type InstallHints } from '@pmp/shared';
 import { useEffect, useState } from 'react';
 import { api } from './api';
 
@@ -236,6 +236,22 @@ export function finishSetupState(): FinishSetupState {
     standalone: isStandalone(),
     installed: isInstalled(),
     device: installDeviceOf(navigator.userAgent, navigator.maxTouchPoints),
+  };
+}
+
+/**
+ * `installRouteOf`'s inputs, read from this browser. Brands come from User-Agent Client
+ * Hints (Chromium browsers, on HTTPS); `navigator.duckduckgo` is DuckDuckGo's own object,
+ * since its user agent copies Chrome's exactly.
+ */
+export function installHints(hasPrompt: boolean): InstallHints {
+  const uaData = (navigator as { userAgentData?: { brands?: { brand: string }[] } }).userAgentData;
+  return {
+    userAgent: navigator.userAgent,
+    maxTouchPoints: navigator.maxTouchPoints,
+    hasPrompt,
+    brands: uaData?.brands?.map((b) => b.brand) ?? null,
+    duckDuckGo: 'duckduckgo' in navigator,
   };
 }
 

@@ -1,4 +1,9 @@
-import { deviceListSchema, pairingInviteSchema, PAIRING_CODE_MINUTES } from '@pmp/shared';
+import {
+  deviceListSchema,
+  pairingInviteSchema,
+  PAIRING_CODE_MINUTES,
+  unpairAllResultSchema,
+} from '@pmp/shared';
 import type { FastifyInstance, InjectOptions } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildApp } from '../app';
@@ -261,6 +266,72 @@ describe("the PC's pairing code", () => {
     pairedCookie(db, mum.id); // paired some other way meanwhile
     const res = await phone({ method: 'POST', url: '/api/devices/pair/check', payload: { code } });
     expect(res.statusCode).toBe(410);
+  });
+});
+
+describe("the PC's Unpair all phones", () => {
+  const unpairAll = (opts: Partial<InjectOptions> = {}) =>
+    pc({ method: 'POST', url: '/api/devices/unpair-all', ...opts });
+
+  it('revokes every phone, records it, and tells every screen', async () => {
+    const { mum, dad } = family();
+    const mumsPhone = pairedCookie(db, mum.id);
+    const dadsPhone = pairedCookie(db, dad.id);
+    const broadcast = vi.spyOn(app.hub, 'broadcast');
+
+    const res = await unpairAll();
+    expect(res.statusCode).toBe(200);
+    expect(unpairAllResultSchema.parse(res.json())).toEqual({ revoked: 2 });
+    expect(broadcast).toHaveBeenCalledWith({ type: 'devices.changed' });
+    for (const cookie of [mumsPhone, dadsPhone]) {
+      expect((await phone({ method: 'GET', url: '/api/devices/me' }, cookie)).statusCode).toBe(401);
+    }
+    const audit = db
+      .select()
+      .from(events)
+      .all()
+      .filter((e) => e.type === 'device.revoked');
+    expect(audit).toEqual([
+      expect.objectContaining({
+        at: now,
+        actorId: null,
+        data: { all: true, devices: 2, via: 'pc' },
+      }),
+    ]);
+    // The kiosk's "Pair a parent phone" card can come back.
+    expect((await pc({ method: 'GET', url: '/api/devices/pc-invite' })).statusCode).toBe(200);
+  });
+
+  it('does nothing, quietly, when no phone is paired', async () => {
+    family();
+    const broadcast = vi.spyOn(app.hub, 'broadcast');
+    const res = await unpairAll();
+    expect(res.json()).toEqual({ revoked: 0 });
+    expect(broadcast).not.toHaveBeenCalled();
+    expect(db.select().from(events).all()).toEqual([]);
+  });
+
+  it('refuses a phone on the home network, even a paired one', async () => {
+    const { mum } = family();
+    const cookie = pairedCookie(db, mum.id);
+    const res = await phone({ method: 'POST', url: '/api/devices/unpair-all' }, cookie);
+    expect(res.statusCode).toBe(403);
+    expect(res.json()).toEqual({ error: 'pc-only' });
+    expect((await phone({ method: 'GET', url: '/api/devices/me' }, cookie)).statusCode).toBe(200);
+  });
+
+  it('refuses a web page in a browser on the PC', async () => {
+    const { mum } = family();
+    const cookie = pairedCookie(db, mum.id);
+    const res = await unpairAll({ headers: { origin: 'https://evil.example' } });
+    expect(res.statusCode).toBe(403);
+    expect(res.json()).toEqual({ error: 'bad-origin' });
+    expect((await phone({ method: 'GET', url: '/api/devices/me' }, cookie)).statusCode).toBe(200);
+    // The server's own page is the same origin.
+    const own = await unpairAll({
+      headers: { host: 'localhost:4789', origin: 'http://localhost:4789' },
+    });
+    expect(own.json()).toEqual({ revoked: 1 });
   });
 });
 

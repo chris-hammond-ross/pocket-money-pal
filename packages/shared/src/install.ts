@@ -38,28 +38,126 @@ export function safariVersionOf(userAgent: string): number | null {
 export const SAFARI_SHARE_IN_MORE_MENU = 26;
 
 /**
+ * Which browser this is, for installing (Android and iOS). Most Android browsers copy
+ * Chrome's user agent, and DuckDuckGo sends exactly Chrome's reduced one
+ * (`Linux; Android 10; K … Chrome/N.0.0.0 Mobile Safari`). So the user agent alone can't
+ * say "this is Chrome": `navigator.userAgentData.brands` can. Real Chrome, Edge, Samsung
+ * Internet and Opera always list their brand there (on HTTPS, where this screen shows);
+ * a WebView browser like DuckDuckGo lists "Android WebView", or has no `userAgentData`.
+ * - `chrome` / `samsung` / `edge`: install from the ⋮ menu, or Chrome's prompt;
+ * - `firefox` / `opera`: install from their own menus;
+ * - `in-app`: an app's built-in browser (Facebook, Instagram, the Google app, a WebView);
+ * - `other`: anything else that can't install, DuckDuckGo included.
+ */
+export type InstallBrowser =
+  'safari' | 'chrome' | 'samsung' | 'edge' | 'firefox' | 'opera' | 'in-app' | 'other';
+
+/** What the browser tells the page. */
+export interface InstallHints {
+  userAgent: string;
+  /** `navigator.maxTouchPoints`, to tell an iPad from a Mac. */
+  maxTouchPoints: number;
+  /** Chrome's `beforeinstallprompt` is waiting to be used. */
+  hasPrompt: boolean;
+  /** `navigator.userAgentData.brands`' names, or null when the browser has none. */
+  brands: readonly string[] | null;
+  /** DuckDuckGo's own `navigator.duckduckgo` is there (it hides from the user agent). */
+  duckDuckGo: boolean;
+}
+
+/** Apps' built-in browsers, by what they add to the user agent. `; wv)` is any Android WebView. */
+const IN_APP =
+  /FBAN\/|FBAV\/|FB_IAB\/|FB4A|FBIOS|Instagram|GSA\/|; wv\)|LinkedInApp|Line\/|Snapchat|musical_ly|BytedanceWebview|Twitter/;
+
+export function installBrowserOf(h: Omit<InstallHints, 'hasPrompt'>): InstallBrowser {
+  const ua = h.userAgent;
+  if (IN_APP.test(ua)) return 'in-app';
+  if (h.duckDuckGo || /DuckDuckGo|Ddg\//.test(ua)) return 'other';
+  const device = installDeviceOf(ua, h.maxTouchPoints);
+  if (device === 'iphone' || device === 'ipad') {
+    if (isIosSafari(ua)) return 'safari';
+    if (/CriOS/.test(ua)) return 'chrome';
+    if (/EdgiOS/.test(ua)) return 'edge';
+    if (/FxiOS/.test(ua)) return 'firefox';
+    return 'other';
+  }
+  if (/Opera Mini|OPiOS|UCBrowser|YaBrowser|MiuiBrowser|HeyTapBrowser|Focus\//.test(ua)) {
+    return 'other';
+  }
+  if (/Firefox\//.test(ua)) return 'firefox';
+  if (/OPR\//.test(ua) || h.brands?.includes('Opera')) return 'opera';
+  if (/SamsungBrowser\//.test(ua) || h.brands?.includes('Samsung Internet')) return 'samsung';
+  if (/EdgA\/|Edg\//.test(ua) || h.brands?.includes('Microsoft Edge')) return 'edge';
+  // Chrome says so in its brands; a browser merely copying Chrome's user agent doesn't.
+  if (h.brands?.includes('Google Chrome')) return 'chrome';
+  return 'other';
+}
+
+/**
  * How this browser installs the app:
  * - `prompt`: Chrome is offering its install box, so our button opens it;
- * - `menu`: no prompt yet: the browser's ⋮ menu → Install app;
+ * - `menu`: Chrome, Samsung Internet or Edge with no prompt yet: ⋮ → Install app;
+ * - `firefox-menu` / `opera-menu`: their own menus;
  * - `ios-more`: Safari 26+ on iPhone: ⋯ → Share → Add to Home Screen → Add;
  * - `ios-share-bottom`: older iPhone Safari, Share in the bottom bar;
- * - `ios-share`: iPad, or another browser on iOS: its Share button → Add to Home Screen.
+ * - `ios-share`: iPad, or Chrome / Edge / Firefox on iOS: Share → Add to Home Screen;
+ * - `open-in-chrome`: this Android browser can't install (DuckDuckGo, an app's browser):
+ *   carry the pairing over to Chrome;
+ * - `open-in-safari`: an app's browser on iOS: carry it over to Safari.
  */
-export type InstallRoute = 'prompt' | 'menu' | 'ios-more' | 'ios-share-bottom' | 'ios-share';
+export type InstallRoute =
+  | 'prompt'
+  | 'menu'
+  | 'firefox-menu'
+  | 'opera-menu'
+  | 'ios-more'
+  | 'ios-share-bottom'
+  | 'ios-share'
+  | 'open-in-chrome'
+  | 'open-in-safari';
 
-export function installRouteOf(
-  userAgent: string,
-  maxTouchPoints: number,
-  hasPrompt: boolean,
-): InstallRoute {
-  const device = installDeviceOf(userAgent, maxTouchPoints);
-  if (device === 'iphone' && isIosSafari(userAgent)) {
-    return (safariVersionOf(userAgent) ?? 0) >= SAFARI_SHARE_IN_MORE_MENU
-      ? 'ios-more'
-      : 'ios-share-bottom';
+/** The routes for a browser that can't install, where the screen offers a way out. */
+export const CANT_INSTALL: readonly InstallRoute[] = ['open-in-chrome', 'open-in-safari'];
+
+export function installRouteOf(h: InstallHints): InstallRoute {
+  const device = installDeviceOf(h.userAgent, h.maxTouchPoints);
+  const browser = installBrowserOf(h);
+  if (device === 'iphone' || device === 'ipad') {
+    if (browser === 'in-app') return 'open-in-safari';
+    if (device === 'iphone' && browser === 'safari') {
+      return (safariVersionOf(h.userAgent) ?? 0) >= SAFARI_SHARE_IN_MORE_MENU
+        ? 'ios-more'
+        : 'ios-share-bottom';
+    }
+    // iPad Safari, and the other iOS browsers that can Add to Home Screen (iOS 16.4+).
+    return 'ios-share';
   }
-  if (device === 'iphone' || device === 'ipad') return 'ios-share';
-  return hasPrompt ? 'prompt' : 'menu';
+  // Any browser offering the prompt can install, whatever it calls itself.
+  if (h.hasPrompt) return 'prompt';
+  if (device === 'desktop') return 'menu'; // the screen never shows there
+  switch (browser) {
+    case 'chrome':
+    case 'samsung':
+    case 'edge':
+      return 'menu';
+    case 'firefox':
+      return 'firefox-menu';
+    case 'opera':
+      return 'opera-menu';
+    default:
+      return 'open-in-chrome';
+  }
+}
+
+/**
+ * Chrome on Android opens this `intent:` link even from another browser, and Android
+ * offers to install Chrome if it's missing. The scheme is kept (`https`, or `http` for
+ * `localhost` in development).
+ */
+export function chromeIntentUrl(url: string): string {
+  const m = /^([a-z]+):\/\/(.*)$/i.exec(url);
+  const [scheme, rest] = m ? [m[1], m[2]] : ['https', url];
+  return `intent://${rest}#Intent;scheme=${scheme};package=com.android.chrome;end`;
 }
 
 export interface FinishSetupState {

@@ -166,7 +166,7 @@ function createKioskWindow(): BrowserWindow {
 }
 
 // ---------------------------------------------------------------------------
-// Tray: Open, Restart, Kiosk screen, Quit. Closing the window leaves the server running for the phones.
+// Tray: Open, Restart, Kiosk screen, Unpair all phones, Quit. Closing the window leaves the server running for the phones.
 
 function iconPath(): string {
   return join(__dirname, '../assets/icon.png');
@@ -214,6 +214,8 @@ function updateTrayMenu(): void {
         click: (item) => (STORE ? void changeStartupTask() : setStartAtLogin(item.checked)),
       },
       { type: 'separator' },
+      { label: 'Unpair all phones…', click: () => void unpairAllPhones() },
+      { type: 'separator' },
       { label: 'Quit', click: () => app.quit() },
     ]),
   );
@@ -245,6 +247,49 @@ async function moveKiosk(displayId: number): Promise<void> {
     window = null;
   }
   await openWindow();
+}
+
+/**
+ * Tray > Unpair all phones… (ADR 0030): for lost phones, or one paired in the wrong browser.
+ * The server does the work (ADR 0001); this only asks first and calls it. Electron's main
+ * process counts as the PC and sends no `Origin`, which the route requires.
+ */
+async function unpairAllPhones(): Promise<void> {
+  const { response } = await dialog.showMessageBox({
+    type: 'warning',
+    title: 'Unpair all phones',
+    message: 'Unpair every parent phone?',
+    detail:
+      'Every paired phone stops working with Pocket Money Pal straight away, including any ' +
+      'that are lost. Nothing else changes: quests, points and money stay as they are.\n\n' +
+      'To pair a phone again, scan the QR code on the kids’ screen with the phone’s camera ' +
+      'and open it in Chrome (Safari on an iPhone). Then pair any other phones from that one.',
+    buttons: ['Unpair all phones', 'Cancel'],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+  });
+  if (response !== 0) return;
+  try {
+    const res = await fetch(`${baseUrl}/api/devices/unpair-all`, { method: 'POST' });
+    if (!res.ok) throw new Error(`The server said ${res.status}.`);
+    const { revoked } = (await res.json()) as { revoked: number };
+    log(`unpaired ${revoked} phone(s) from the tray`);
+    await dialog.showMessageBox({
+      type: 'info',
+      title: 'Unpair all phones',
+      message:
+        revoked === 0
+          ? 'No phones were paired.'
+          : `Unpaired ${revoked === 1 ? '1 phone' : `${revoked} phones`}.`,
+      detail: 'The kids’ screen now shows a QR code. Scan it with a phone to pair it again.',
+      noLink: true,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    log(`unpair all failed: ${message}`);
+    dialog.showErrorBox('Couldn’t unpair the phones', message);
+  }
 }
 
 function restart(): void {

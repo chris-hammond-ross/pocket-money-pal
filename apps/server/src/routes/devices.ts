@@ -7,6 +7,7 @@ import {
   type DeviceMe,
   type PairCheckResult,
   type PairingInvite,
+  type UnpairAllResult,
 } from '@pmp/shared';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { authOf, deviceOf, requireParent, setDeviceCookie } from '../auth/devices';
@@ -20,6 +21,7 @@ import {
   deviceNameFrom,
   listDevices,
   pairDevice,
+  revokeAllDevices,
   revokeDevice,
   spendPairingCode,
   type PairingCodeProblem,
@@ -124,6 +126,36 @@ export async function deviceRoutes(
     if (isSetupNeeded(db)) return reply.code(409).send({ error: 'setup-needed' });
     if (countActiveDevices(db) > 0) return reply.code(409).send({ error: 'phones-paired' });
     return invite(createPairingCode(db, { createdByDevice: null, now: now() }));
+  });
+
+  /**
+   * The PC's tray "Unpair all phones…" (ADR 0030): for lost phones, or one paired in the
+   * wrong browser. Only from the PC itself, and never from a web page: a page in a browser
+   * on the PC is `pc` too, but it sends an `Origin` that isn't this server's, and Electron's
+   * main process sends none. Every screen hears `devices.changed`, so the kiosk shows its
+   * "Pair a parent phone" card at once and the phones drop to "Pair this phone".
+   */
+  app.post('/api/devices/unpair-all', async (req, reply) => {
+    if (requestOrigin(req) !== 'pc') return reply.code(403).send({ error: 'pc-only' });
+    const origin = req.headers.origin;
+    if (origin !== undefined && origin !== `${req.protocol}://${req.headers.host}`) {
+      return reply.code(403).send({ error: 'bad-origin' });
+    }
+    const at = now();
+    const revoked = db.transaction((tx) => {
+      const n = revokeAllDevices(tx, at);
+      if (n > 0) {
+        recordEvent(tx, {
+          type: 'device.revoked',
+          at,
+          data: { all: true, devices: n, via: 'pc' },
+        });
+      }
+      return n;
+    });
+    if (revoked > 0) app.hub.broadcast({ type: 'devices.changed' });
+    const result: UnpairAllResult = { revoked };
+    return result;
   });
 
   const refuseCode = (reply: FastifyReply, problem: PairingCodeProblem) =>
