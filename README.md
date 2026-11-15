@@ -1,6 +1,6 @@
 # Pocket Money Pal
 
-Pocket Money Pal turns chores and pocket money into a game for kids. A screen on the family PC shows each child's quests for the day and how long they have left to finish them, parents approve finished chores from their phones, and once a week the points become money that the kids save in jars for the things they want. It runs on your home network, with no accounts or cloud service needed.
+Pocket Money Pal turns chores and pocket money into a game for kids. A screen on the family PC shows each child's quests for the day and how long they have left to finish them, parents approve finished chores from their phones, and once a week the points become money that the kids save in jars for the things they want. It runs on the family PC and keeps all its data there, with no accounts needed.
 
 <table>
   <tr>
@@ -18,7 +18,7 @@ Pocket Money Pal turns chores and pocket money into a game for kids. A screen on
 - Surprise quests pop up on the kids' screen for them to race for, or take on together.
 - Sounds and animations for claims, approvals, level-ups and payday, with quiet hours.
 - A holiday pause and sick days, so time off doesn't break a streak.
-- Optionally, over [Tailscale](https://tailscale.com): notifications on parents' phones, an installable app, and planning while the PC is off.
+- Optionally, the phone app installed with notifications, use away from home, and planning while the PC is off. That needs an HTTPS address: remote access, a one-off purchase from [pocketmoneypal.com](https://pocketmoneypal.com), or one you set up yourself with Tailscale, `cloudflared` or a reverse proxy.
 
 ## Install
 
@@ -29,7 +29,7 @@ You need a Windows 10 (1903 or newer) or Windows 11 PC for the kids' screen (a s
 3. The kids' screen opens with a QR code. Scan it with your phone and follow the four setup steps: grown-ups, children, quests and the points rate.
 4. Pair the other grown-ups' phones from **Players > Pair another phone**.
 
-The Store keeps it up to date. Where the Store is blocked, there's an unsigned installer, `Pocket-Money-Pal-Setup-<version>.exe`, on the [Releases page](https://github.com/chris-hammond-ross/pocket-money-pal/releases); it updates itself ([installation guide](installation.md#without-the-microsoft-store-the-exe)). The [installation guide](installation.md) covers choosing the monitor, notifications with Tailscale, backups and uninstalling, and the [user guide](user-guide.md) explains day-to-day use.
+The Store keeps it up to date. Where the Store is blocked, there's an unsigned installer, `Pocket-Money-Pal-Setup-<version>.exe`, on the [Releases page](https://github.com/chris-hammond-ross/pocket-money-pal/releases); it updates itself ([installation guide](installation.md#without-the-microsoft-store-the-exe)). The [installation guide](installation.md) covers choosing the monitor, [remote access](installation.md#5-remote-access-and-the-phone-app) and [running it all yourself](installation.md#advanced-run-it-all-yourself), backups and uninstalling, and the [user guide](user-guide.md) explains day-to-day use.
 
 ## Running from source
 
@@ -47,10 +47,11 @@ Open http://localhost:5173/kiosk on the PC, and `http://<pc-address>:5173/parent
 
 ## How it fits together
 
-- `apps/server`: Fastify, SQLite (Drizzle) and a WebSocket hub. It holds all the data and rules, runs the scheduler (new days, payday, surprises), and serves the web app. It's the single source of truth.
+- `apps/server`: Fastify, SQLite (Drizzle) and a WebSocket hub. It holds all the data and rules, runs the scheduler (new days, payday, surprises), and serves the web app. It's the single source of truth. With remote access on, it also keeps a tunnel open to the relay, which only forwards phones' requests to it.
 - `apps/web`: React and Mantine. `/kiosk` is the kids' screen and `/parent` is the phone app. Every screen is a client of the server and refreshes when it broadcasts a change.
 - `apps/desktop`: Electron. It starts the server, shows the kiosk full screen on the chosen monitor, and handles the tray and auto-updates.
-- `packages/shared`: Zod schemas and the rules (points, streaks, levels, payday, money in integer cents) as pure, tested functions used by both.
+- `packages/shared`: Zod schemas and the rules (points, streaks, levels, payday, money in integer cents) as pure, tested functions used by both, plus the tunnel protocol.
+- `apps/site`: the website at pocketmoneypal.com and its checkout, a Cloudflare Worker. The relay itself is a separate, private repository.
 
 ## Licence
 

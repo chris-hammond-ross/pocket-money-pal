@@ -49,7 +49,7 @@ Points are worked out when the child taps the quest, so an evening approval does
 
 If the child did the quest but forgot to tap it, open the quest and use **Mark done**.
 
-With notifications on ([installation guide](installation.md#secure-access-with-tailscale)), your phone tells you when there's something to check.
+With the app installed and notifications on ([remote access](installation.md#5-remote-access-and-the-phone-app)), your phone tells you when there's something to check, wherever you are.
 
 ## Bonuses, sick days and settings
 
@@ -67,6 +67,7 @@ The **Setup** tab holds the family's settings, under the app's version number:
 - **Loot rate and currency:** what one point is worth. A new rate only applies from then on.
 - **Notifications:** this phone's notifications, and **quiet hours** (8pm to 7am to start): no notifications, and no sounds on the kiosk. Animations still play.
 - **Sounds:** the kiosk's volume, and **Phone sounds** to turn this phone's own sounds on or off.
+- **Remote access:** whether the PC is connected, the button that moves this phone to the app, and **Disconnect** ([installation guide](installation.md#5-remote-access-and-the-phone-app)).
 - **Data:** download a backup of everything, or restore one.
 - **Danger zone:** the factory reset, to start again from scratch.
 
@@ -134,4 +135,4 @@ There's a big **level-up** moment when they reach a new level. During quiet hour
 
 ## When the PC is off
 
-Everything lives on the family PC, so most things need it on. With the installed app over Tailscale ([installation guide](installation.md#secure-access-with-tailscale)), you can still **plan** while it's off: add, edit and delete quests, change the Week grid, and set up a holiday. The changes wait on your phone and are sent the next time you open the app with the PC on (sooner on Android, in the background). If another grown-up changed the same quest in the meantime, the app tells you whose change yours replaced.
+Everything lives on the family PC, so most things need it on. With the installed app, from [remote access](installation.md#5-remote-access-and-the-phone-app) or [your own HTTPS address](installation.md#advanced-run-it-all-yourself), you can still **plan** while it's off: add, edit and delete quests, change the Week grid, and set up a holiday. The changes wait on your phone and are sent the next time you open the app with the PC on (sooner on Android, in the background). If another grown-up changed the same quest in the meantime, the app tells you whose change yours replaced.

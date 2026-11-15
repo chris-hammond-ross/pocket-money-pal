@@ -1,14 +1,14 @@
 # Installing Pocket Money Pal
 
-This guide takes you from download to a working quest board, with the kids' screen on the family PC and the grown-ups' app on your phones. It takes about 15 minutes, plus another 15 if you set up notifications.
+This guide takes you from download to a working quest board, with the kids' screen on the family PC and the grown-ups' app on your phones. It takes about 15 minutes, plus a few more to turn on remote access and install the app on your phone.
 
 Once it's running, the [user guide](user-guide.md) explains how to use it day to day.
 
 ## What you need
 
-- **A Windows 10 (version 1903 or newer) or Windows 11 PC** that's on whenever the kids are about. It runs the app and keeps the family's data; nothing goes to the cloud.
+- **A Windows 10 (version 1903 or newer) or Windows 11 PC** that's on whenever the kids are about. It runs the app and keeps the family's data; nothing is stored in the cloud.
 - **A screen for the kids.** A second monitor works best, but the PC's only monitor works too. A touch screen is nice; a mouse is fine. The board is laid out for 1920×1080 or bigger.
-- **The grown-ups' phones on the same Wi-Fi** as the PC. Android with Chrome is what we use and test on; iPhones haven't been tried yet.
+- **The grown-ups' phones.** They pair on the same Wi-Fi as the PC. With [remote access](#5-remote-access-and-the-phone-app) they work from anywhere after that. Android with Chrome is what we use and test on; iPhones haven't been tried yet.
 
 ## 1. Download and install
 
@@ -67,33 +67,62 @@ Every grown-up action happens on a paired phone: approving chores, editing quest
 
 The phone opens an address like `http://192.168.1.20:4789/parent`. Add it to your home screen from the browser menu so it's one tap away.
 
-This works as an ordinary web page. To get **notifications when a child finishes a chore**, an **app icon without the browser bar**, and the ability to **plan quests while the PC is off**, set up Tailscale as below.
+This works as an ordinary web page, at home only. For the phone app, notifications and use away from home, set up remote access next.
 
-### Secure access with Tailscale
+## 5. Remote access and the phone app
 
-Phones only allow notifications and installed web apps over a secure (HTTPS) address. [Tailscale](https://tailscale.com) gives the PC one for free, reachable only by your own devices, at home or away. It's optional: everything else works without it. These are the steps we used on Windows 11 and an Android phone with Chrome.
+Remote access gives the family PC a secure address, like `https://k7qm4pxdhb.pocketmoneypal.app`. With it, each grown-up's phone gets:
 
-1. **Install Tailscale on the PC** from [tailscale.com/download/windows](https://tailscale.com/download/windows). If the installer ends with a long "Unable to set up Tailscale client" message about `Shell_NotifyIcon`, click OK: only its tray icon failed to start, and Tailscale itself is running.
-2. **Sign in.** Open Tailscale from the Start menu and log in with the account that will own your private network (Google, Microsoft, GitHub and others work).
-3. **Turn on HTTPS.** In the Tailscale admin console, open [DNS](https://login.tailscale.com/admin/dns), check **MagicDNS** is on, and click **Enable HTTPS** under HTTPS Certificates. The **Machines** page shows the PC's name; you can rename it there, for example to `family-pc`.
-4. **Point Tailscale at Pocket Money Pal.** With Pocket Money Pal running, open PowerShell and run:
+- **the app installed** on the phone, with its own icon and no browser bar;
+- **notifications** when a child finishes a chore;
+- **use from anywhere:** approve chores from work, plan the week from the bus;
+- **planning while the PC is off:** changes wait on the phone and are sent when it's back.
 
-   ```powershell
-   & "C:\Program Files\Tailscale\tailscale.exe" serve --bg 4789
-   ```
+It's a one-off purchase: pay once and it's yours for life. Nothing else to install, no router settings, no extra accounts. The family's data stays on your PC (see [How it works](#how-remote-access-works)).
 
-   It prints the PC's secure address, something like `https://family-pc.tail1234.ts.net`, and keeps serving it after restarts. Open `https://family-pc.tail1234.ts.net/kiosk` on the PC once: that fetches the certificate (it can take a few seconds) and tells Pocket Money Pal its secure address.
+Rather not pay, or like doing it yourself? Everything apart from remote access is free, and you can get the same things with your own set-up: see [Advanced: run it all yourself](#advanced-run-it-all-yourself).
 
-5. **Install Tailscale on each grown-up's phone** from the Play Store, sign in with the **same account**, and leave it connected. It only carries traffic for your own devices, so the rest of the phone's internet is unaffected.
-6. **Move each phone across.** On a paired phone, go to **Players** and tap **Switch to secure app**. It opens the secure address with a one-time code; tap your name. (A phone that isn't paired yet can open the secure address's `/parent` page directly and pair with a code from another phone.)
-7. **Install the app and turn on notifications.** The app asks once whether to notify this phone; tap **Yes, notify this phone** and allow notifications. Install it with **Install** at the top of the Players tab, or Chrome's menu, then **Install app**. It appears as **Money Pal**.
+### Buy it
 
-Good to know:
+1. Go to [pocketmoneypal.com](https://pocketmoneypal.com#pricing), enter your email and pay.
+2. Your key arrives by email within a few minutes, from `hello@pocketmoneypal.com`. It looks like `PMP-XXXXX-XXXXX-XXXXX-XXXXX`. Nothing after 10 minutes? Check your spam folder, or email [support@pocketmoneypal.com](mailto:support@pocketmoneypal.com).
 
-- No notifications are sent during **quiet hours** (8pm to 7am unless you change them on the Setup tab).
-- Several chores finished within two minutes arrive as one notification.
-- Notifications go through Google's push service, so the PC needs to be online for them. Everything else stays on your network.
-- On Samsung phones the installed app doesn't appear in Settings > Apps. It's still installed: Chrome lists it at `chrome://webapks`.
+Keep the email: you'll need the key again if you move to a new PC.
+
+### Turn it on
+
+1. On a paired phone, on the home Wi-Fi, open the **Setup** tab and find **🌍 Remote access**.
+2. Paste or type the key (spaces, dashes and capitals don't matter) and tap **Connect**.
+3. After a few seconds it says **🟢 Connected**.
+
+The PC keeps the connection open by itself from now on, including after restarts. If it drops (the internet goes down, say), it reconnects on its own; the phone shows **🟠 Reconnecting…** in the meantime.
+
+### Move each phone to the app
+
+Each phone that was paired on the Wi-Fi address moves across once. On the phone:
+
+1. Open **Setup** and tap **📲 Use remote access on this phone** (or **Players → 🔒 Move to the app**). If changes made while the PC was off are still waiting, it sends them first.
+2. The new address opens. Tap your name under **Who's this phone for?**
+3. The **Install the app** screen opens. Tap **📲 Install** (on an iPhone, follow the Share steps it shows). It appears on the home screen as **Money Pal**.
+4. Open the installed app. It asks once whether to notify this phone: tap **Yes, notify this phone** and allow notifications.
+5. Remove the old home-screen shortcut, if you made one. It now shows "Pair this phone" and isn't needed.
+
+New phones need none of this: **Players → Pair another phone** gives a code that leads straight to the secure address, from anywhere.
+
+### Good to know
+
+- No notifications are sent during **quiet hours** (8pm to 7am unless you change them on the Setup tab). Several chores finished within two minutes arrive as one notification.
+- **The PC has to be on and online** for phones to reach it. When it's off, the app says "Family PC is off". You can still plan quests and they're sent later; approvals wait.
+- **If the home internet is down**, phones can't reach the PC through remote access, even at home. A phone on the Wi-Fi can still open the PC's own address (`http://<pc-address>:4789/parent`) in a browser; it's paired separately.
+- **Turning it off:** Setup → Remote access → **Disconnect**. Phones on the secure address stop working until you connect again. The key stays yours, and connecting again gives the same address.
+- **A new PC, or after a factory reset:** restore your backup (see [Backup and restore](#backup-and-restore)), then enter the same key. It says the key is in use on another PC: tap **Move it**. The address stays the same, so phones carry on as before, notifications included.
+- **iPhones** haven't been tried yet. **Samsung phones** don't list the installed app in Settings > Apps; Chrome lists it at `chrome://webapks`.
+
+### How remote access works
+
+The PC opens a connection out to Pocket Money Pal's service and keeps it open. When a phone uses the secure address, its messages pass along that connection to the PC and back. The PC stores everything and makes every decision; the service only forwards. It runs on Cloudflare, and the connection is encrypted between the phone and Cloudflare and between Cloudflare and the PC, but not end to end: messages are readable by the service as they pass through. It keeps no copy of them and logs none. It keeps your email, your purchase and which PC your key is connected to.
+
+Remote access only lets in phones you've paired. Pairing still needs a one-time code from a phone that's already paired or the kids' screen, and too many wrong tries are blocked.
 
 ## Backup and restore
 
@@ -124,7 +153,9 @@ The version you're running is shown at the bottom of the phone's **Players** tab
 
 **Uninstalling deletes the family's data.** Download a backup on a phone first (see [Backup and restore](#backup-and-restore)).
 
-Go to **Settings > Apps**, find **Pocket Money Pal**, and choose **Uninstall**. Windows removes the firewall rule with it. If you set up Tailscale, run `tailscale serve --https=443 off` to stop serving the address, or uninstall Tailscale itself.
+Go to **Settings > Apps**, find **Pocket Money Pal**, and choose **Uninstall**. Windows removes the firewall rule with it.
+
+Your remote access key stays yours: enter it on the next PC and choose **Move it**. If you set up Tailscale yourself, run `tailscale serve --https=443 off` to stop serving the address, or uninstall Tailscale itself.
 
 ## Without the Microsoft Store (the `.exe`)
 
@@ -150,9 +181,94 @@ Then carry on from [First-run setup](#2-first-run-setup). A few things work diff
 
 Moving the other way works the same, but download the backup before uninstalling the Store version, because that deletes its data.
 
+## Advanced: run it all yourself
+
+Remote access is the easy way to get the phone app. Everything else in Pocket Money Pal is free, and if you're comfortable with networking you can do without remote access entirely. There are three ways.
+
+**Requests through any proxy are treated as coming from outside.** Whatever carries a phone's request to the PC (Tailscale, `cloudflared`, a reverse proxy), the PC treats it exactly like remote access: only paired phones get in, every change must come from the app's own page, and pairing and setup are rate-limited. Paired phones notice no difference.
+
+### Home network only
+
+Nothing to set up: pair phones as in [Connect parents' phones](#4-connect-parents-phones) and add the page to the home screen. Without a secure (HTTPS) address, phones won't install the app, give notifications or plan while the PC is off, and they only work on the home Wi-Fi.
+
+### Tailscale
+
+[Tailscale](https://tailscale.com) gives the PC a free HTTPS address, reachable only by your own devices, at home or away. Each phone needs the Tailscale app, signed in to the same account. These are the steps we used on Windows 11 and an Android phone with Chrome.
+
+1. **Install Tailscale on the PC** from [tailscale.com/download/windows](https://tailscale.com/download/windows). If the installer ends with a long "Unable to set up Tailscale client" message about `Shell_NotifyIcon`, click OK: only its tray icon failed to start, and Tailscale itself is running.
+2. **Sign in.** Open Tailscale from the Start menu and log in with the account that will own your private network (Google, Microsoft, GitHub and others work).
+3. **Turn on HTTPS.** In the Tailscale admin console, open [DNS](https://login.tailscale.com/admin/dns), check **MagicDNS** is on, and click **Enable HTTPS** under HTTPS Certificates. The **Machines** page shows the PC's name; you can rename it there, for example to `family-pc`.
+4. **Point Tailscale at Pocket Money Pal.** With Pocket Money Pal running, open PowerShell and run:
+
+   ```powershell
+   & "C:\Program Files\Tailscale\tailscale.exe" serve --bg 4789
+   ```
+
+   It prints the PC's secure address, something like `https://family-pc.tail1234.ts.net`, and keeps serving it after restarts. Open `https://family-pc.tail1234.ts.net/kiosk` on the PC once: that fetches the certificate (it can take a few seconds) and tells Pocket Money Pal its secure address.
+
+5. **Install Tailscale on each grown-up's phone** from the Play Store, sign in with the **same account**, and leave it connected. It only carries traffic for your own devices, so the rest of the phone's internet is unaffected.
+6. **Move each phone across.** On a paired phone, go to **Players** and tap **🔒 Switch to secure app**. It opens the secure address with a one-time code; tap your name.
+7. **Install the app and turn on notifications,** as in steps 3 and 4 of [Move each phone to the app](#move-each-phone-to-the-app).
+
+Pairing codes still lead to the Wi-Fi address, so a new phone pairs on the home Wi-Fi first, then switches.
+
+### Your own domain, with `cloudflared` or a reverse proxy
+
+You can put the PC behind your own HTTPS address, such as `https://pmp.example.com`, with a [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) (`cloudflared`) or a reverse proxy such as Caddy or nginx. Whatever you use must:
+
+- **run on the family PC itself** and connect to `http://127.0.0.1:4789`. A proxy on another machine (a NAS, a router, a Raspberry Pi) makes every request look as if it came from inside your home, which would let anyone on the internet use the kids' screen without pairing. Don't do that;
+- **send `X-Forwarded-For`** with the phone's address, and `X-Forwarded-Proto: https`;
+- **keep the public name** in `Host` (or send it as `X-Forwarded-Host`), or the app refuses every change with `bad-origin`;
+- **pass WebSockets** on `/ws`;
+- **allow uploads up to 100 MB**, for restoring a backup from a phone.
+
+`cloudflared` and Caddy do all of this with their defaults. With `cloudflared`, the ingress rule is:
+
+```yaml
+ingress:
+  - hostname: pmp.example.com
+    service: http://127.0.0.1:4789
+  - service: http_status:404
+```
+
+With Caddy:
+
+```text
+pmp.example.com {
+	reverse_proxy 127.0.0.1:4789
+}
+```
+
+nginx needs it spelled out:
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:4789;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    client_max_body_size 100m;
+}
+```
+
+(`$connection_upgrade` comes from the usual `map $http_upgrade $connection_upgrade { default upgrade; '' close; }` in the `http` block.)
+
+Then, to start using it:
+
+1. On a phone that's already paired, open **Players → Pair another phone** to get a code.
+2. On the phone you want on the new address, open `https://pmp.example.com/parent`, type the code and tap your name. That phone now uses the secure address, and the PC remembers it.
+3. Install the app and turn on notifications, as in [Move each phone to the app](#move-each-phone-to-the-app). Other phones can now use **Players → 🔒 Switch to secure app**.
+
 ## Troubleshooting
 
 - **A phone can't connect** (the page loads forever): check the phone is on the same Wi-Fi as the PC, and not a guest network, which routers usually keep apart. On the phone, open `http://<pc-address>:4789/api/health`; it should show `"ok":true`. If it doesn't, the firewall rule may be missing. With the `.exe` version, run the installer again and choose Yes to the Network Command Shell question.
+- **Remote access says "That key isn't right"**: check it against your purchase email, or copy and paste it from there. Still wrong? Email [support@pocketmoneypal.com](mailto:support@pocketmoneypal.com) from the address you bought with.
+- **"Can't reach Pocket Money Pal's remote access service"**: the PC isn't online, or something on it (a firewall, antivirus or work network) blocks outgoing connections to `pocketmoneypal.app`. Check the PC's internet connection and try again.
+- **"Remote access moved to another PC"**: the same key was entered on another PC, which now has remote access. To bring it back to this PC, enter the key again and tap **Move it**.
+- **The installed app says "Family PC is off"** while the PC is on: check the PC is online, and that Setup → Remote access says **🟢 Connected** (from a phone on the home Wi-Fi, if needed). Restarting the app from the tray reconnects it.
 - **"Pocket Money Pal could not start"** or **"The server stopped unexpectedly"**: another copy is probably running, perhaps both the Store and `.exe` versions. Quit it from the tray and try again.
 - **The kids' screen is on the wrong monitor:** see [Choose the kiosk screen](#3-choose-the-kiosk-screen).
 - **The phone says "Open this in Chrome to install":** the phone's browser (DuckDuckGo, or an app's built-in browser such as Facebook's or Gmail's) can't install apps. Tap **Open in Chrome**, or **Copy the link** and paste it into Chrome within 10 minutes. The phone stays paired as the same grown-up. On an iPhone, paste it into Safari. To stay in that browser without installing, tap **Keep using this tab**.
@@ -188,18 +304,19 @@ Use `localport=5173` too for `npm run dev`. Use `profile=any`, not a Private-onl
 
 **Settings** are environment variables, none of them required:
 
-| Variable            | Default                           | What it does                                                                             |
-| ------------------- | --------------------------------- | ---------------------------------------------------------------------------------------- |
-| `PMP_PORT`          | `4789`                            | Port the server listens on.                                                              |
-| `PMP_HOST`          | `0.0.0.0`                         | Address to listen on. `127.0.0.1` keeps it off the network.                              |
-| `PMP_DB_PATH`       | see above                         | Path of the database file.                                                               |
-| `PMP_LOG_LEVEL`     | `info`                            | Server log level.                                                                        |
-| `PMP_PUBLIC_URL`    | guessed LAN address               | Address phones use in the setup QR code, if the guess picks the wrong network adapter.   |
-| `PMP_SECURE_URL`    | learned                           | The HTTPS address for "Switch to secure app", if you'd rather not let it be learned.     |
-| `PMP_VAPID_SUBJECT` | `mailto:pocketmoneypal@localhost` | Contact address push services see with notifications.                                    |
-| `PMP_DISPLAY`       | the tray's choice                 | Kiosk app only: the monitor index (`0`, `1`, …). Overrides the tray's Kiosk screen menu. |
-| `PMP_KIOSK`         | off                               | Kiosk app only: `1` locks the window in kiosk mode.                                      |
-| `PMP_SERVER_URL`    | bundled server                    | Kiosk app only: use an already-running server, e.g. `http://localhost:5173`.             |
+| Variable            | Default                           | What it does                                                                                                                   |
+| ------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `PMP_PORT`          | `4789`                            | Port the server listens on.                                                                                                    |
+| `PMP_HOST`          | `0.0.0.0`                         | Address to listen on. `127.0.0.1` keeps it off the network.                                                                    |
+| `PMP_DB_PATH`       | see above                         | Path of the database file.                                                                                                     |
+| `PMP_LOG_LEVEL`     | `info`                            | Server log level.                                                                                                              |
+| `PMP_PUBLIC_URL`    | guessed LAN address               | Address phones use in the setup QR code, if the guess picks the wrong network adapter.                                         |
+| `PMP_SECURE_URL`    | learned                           | Your own HTTPS address for "Switch to secure app", if you'd rather not let it be learned. Remote access, when on, comes first. |
+| `PMP_RELAY_URL`     | `https://pocketmoneypal.app`      | The remote access service. Point it at a staging or local relay when developing.                                               |
+| `PMP_VAPID_SUBJECT` | `mailto:pocketmoneypal@localhost` | Contact address push services see with notifications.                                                                          |
+| `PMP_DISPLAY`       | the tray's choice                 | Kiosk app only: the monitor index (`0`, `1`, …). Overrides the tray's Kiosk screen menu.                                       |
+| `PMP_KIOSK`         | off                               | Kiosk app only: `1` locks the window in kiosk mode.                                                                            |
+| `PMP_SERVER_URL`    | bundled server                    | Kiosk app only: use an already-running server, e.g. `http://localhost:5173`.                                                   |
 
 When running the installed exe from a VS Code terminal, clear `ELECTRON_RUN_AS_NODE` first, or it silently does nothing.
 

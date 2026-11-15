@@ -4,17 +4,17 @@ The promotional site and its checkout: static pages in `public/`, plus a small C
 
 ## What's where
 
-| Path                                               | What it is                                                                                                                                                                             |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `public/index.html`, `legal.html`, `download.html` | The pages, **ported verbatim** from `prototypes/landing-site/complete/` (the production rule in `prototypes/landing-site/README.md`). Change the look there first, then port it again. |
-| `public/assets/`                                   | The pages' scripts (moved out of the HTML for the CSP), `brand.css`, images, sounds, self-hosted canvas-confetti, and `site.js` (the site's facts)                                     |
-| `public/assets/checkout.js`                        | The real checkout (new code, not from the prototype): Stripe's Express Checkout Element and Payment Element in `#ofCo`                                                                 |
-| `public/_headers`                                  | Security headers and the CSP. Update it if you add a script host, a font host or analytics.                                                                                            |
-| `public/404.html`, `styles.css`                    | The not-found page (served with a 404 status for any missing path)                                                                                                                     |
-| `worker/index.ts`                                  | The Worker's entry. Only handlers may be exported from it, so the routes are in `worker/app.ts`.                                                                                       |
-| `worker/app.ts`                                    | `GET /` (adds the live offer to the page's head), `GET /api/offer`, `POST /api/checkout`, `GET /api/order`                                                                             |
-| `worker/stripe.ts`, `validate.ts`, `offer.ts`      | Stripe over `fetch` (no SDK), input checks, and the offer and relay binding                                                                                                            |
-| `worker/funnel.ts`                                 | The checkout funnel's Analytics Engine data points (`EVENTS`): a random per-page-view id and the step, nothing else                                                                    |
+| Path                                                           | What it is                                                                                                                                                                             |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `public/index.html`, `legal.html`, `download.html`, `faq.html` | The pages, **ported verbatim** from `prototypes/landing-site/complete/` (the production rule in `prototypes/landing-site/README.md`). Change the look there first, then port it again. |
+| `public/assets/`                                               | The pages' scripts (moved out of the HTML for the CSP), `brand.css`, images, sounds, self-hosted canvas-confetti, and `site.js` (the site's facts)                                     |
+| `public/assets/checkout.js`                                    | The real checkout (new code, not from the prototype): Stripe's Express Checkout Element and Payment Element in `#ofCo`                                                                 |
+| `public/_headers`                                              | Security headers and the CSP. Update it if you add a script host, a font host or analytics.                                                                                            |
+| `public/404.html`, `styles.css`                                | The not-found page (served with a 404 status for any missing path)                                                                                                                     |
+| `worker/index.ts`                                              | The Worker's entry. Only handlers may be exported from it, so the routes are in `worker/app.ts`.                                                                                       |
+| `worker/app.ts`                                                | `GET /` (adds the live offer to the page's head), `GET /api/offer`, `POST /api/checkout`, `GET /api/order`                                                                             |
+| `worker/stripe.ts`, `validate.ts`, `offer.ts`                  | Stripe over `fetch` (no SDK), input checks, and the offer and relay binding                                                                                                            |
+| `worker/funnel.ts`                                             | The checkout funnel's Analytics Engine data points (`EVENTS`): a random per-page-view id and the step, nothing else                                                                    |
 
 The ported files in `public/` are excluded from ESLint and Prettier so they stay byte-for-byte; `checkout.js` and `worker/` aren't.
 
@@ -32,13 +32,13 @@ The ported files in `public/` are excluded from ESLint and Prettier so they stay
 
 ## Environments
 
-|               | Production                                                              | Staging                                                                                                                                      |
-| ------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Worker        | `pocketmoneypal`                                                        | `pocketmoneypal-staging`                                                                                                                     |
-| Address       | `pocketmoneypal.com`                                                    | `staging.pocketmoneypal.com` (noindex)                                                                                                       |
-| Stripe        | live (set up in session 9.6)                                            | sandbox, test mode                                                                                                                           |
-| Relay binding | `pmp-relay`                                                             | `pmp-relay-staging`                                                                                                                          |
-| Deployed by   | **hand, until launch** (9.6); Workers Builds' production builds are off | Workers Builds on every push to `main` touching `apps/site/` (`npx wrangler deploy --env staging`), or `npm run deploy:staging -w @pmp/site` |
+|               | Production                                                             | Staging                                                                                                                                      |
+| ------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Worker        | `pocketmoneypal`                                                       | `pocketmoneypal-staging`                                                                                                                     |
+| Address       | `pocketmoneypal.com`                                                   | `staging.pocketmoneypal.com` (noindex)                                                                                                       |
+| Stripe        | live (since session 9.6)                                               | sandbox, test mode                                                                                                                           |
+| Relay binding | `pmp-relay`                                                            | `pmp-relay-staging`                                                                                                                          |
+| Deployed by   | Workers Builds on push to `main` (production builds back on at launch) | Workers Builds on every push to `main` touching `apps/site/` (`npx wrangler deploy --env staging`), or `npm run deploy:staging -w @pmp/site` |
 
 Vars are in `wrangler.jsonc` (`ENVIRONMENT`, `PRICE_CENTS`, `CURRENCY`, `STRIPE_PUBLISHABLE_KEY`). The one secret is **`STRIPE_SECRET_KEY`**, per environment: a restricted key with PaymentIntents write (plan §5.8). Set it with `npx wrangler secret put STRIPE_SECRET_KEY [--env staging]`. Exception: a brand-new Worker can't be created without it, so the first deploy uses `--secrets-file`.
 

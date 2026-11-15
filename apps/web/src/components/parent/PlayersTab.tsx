@@ -31,9 +31,9 @@ import { problemText, useParentUi, usePlayers } from './context';
 import { MOVE_LABEL, MoveButton, useMoveTarget } from './MoveToSecure';
 import classes from './parent.module.css';
 
-/** For hands-on families (their own HTTPS, ADR 0021): the install guide's secure-access section. */
+/** For hands-on families (their own HTTPS, ADR 0021): the install guide's run-it-yourself section. */
 export const SECURE_ACCESS_GUIDE =
-  'https://github.com/chris-hammond-ross/pocket-money-pal/blob/main/installation.md#secure-access-with-tailscale';
+  'https://github.com/chris-hammond-ross/pocket-money-pal/blob/main/installation.md#advanced-run-it-all-yourself';
 
 /**
  * The Players tab (spec 003): player cards (with their streak and a sick-day button, spec

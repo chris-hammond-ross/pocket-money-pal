@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Frequently asked questions · Pocket Money Pal</title>
+<link rel="canonical" href="https://pocketmoneypal.com/faq" />
+<meta name="description" content="Short answers to what parents ask us most about Pocket Money Pal: what you need, the price, refunds and privacy." />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/favicon.png" type="image/png" sizes="192x192" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<!--
+  Ported from prototypes/landing-site/complete/faq.html (session 9.6) by the production rule in
+  prototypes/landing-site/README.md: markup, CSS, copy and timings are the prototype's, byte for byte.
+  Production changes only: the head's fade script → /assets/fade-in.js (CSP), ../_shared → /assets,
+  faq.js and faq-content.js → /assets, head tags (canonical, description, icons), page links → /, /#ft and /legal.
+  Change the look in the prototype's complete page first, then port it again.
+-->
+<link rel="stylesheet" href="/assets/brand.css" />
+<!-- Page fade: arriving from another page starts invisible; faq.js puts it in place and fades it in. -->
+<script src="/assets/fade-in.js"></script>
+<style>
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+  body { background: radial-gradient(900px 500px at 70% 0%, var(--glow) 0%, var(--bg) 70%) no-repeat var(--bg); color: var(--text); }
+
+  /* Nav: legal.html's, without the document links (as download.html). */
+  .nav { display: flex; align-items: center; gap: 28px; max-width: 1240px; margin: 0 auto; padding: 18px var(--gutter); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.2rem; color: var(--text); text-decoration: none; }
+  .brand img { width: 36px; }
+  .nav .home { margin-left: auto; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  @media (max-width: 420px) { .nav { gap: 12px; } .brand { font-size: 1.05rem; } .brand img { width: 30px; } .nav .home { padding: 7px 12px; font-size: .9rem; } }
+
+  /* The hero's pixel night sky, behind the nav only (legal.html's). */
+  .lp-top { position: relative; isolation: isolate; }
+  .lp-sky { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; pointer-events: none; -webkit-mask-image: linear-gradient(#000 60%, transparent); mask-image: linear-gradient(#000 60%, transparent); }
+
+  /* ===== FAQ (08-faq/c) ===== */
+  #faq { max-width: 1240px; margin: 0 auto; padding: clamp(70px, 10vw, 120px) var(--gutter); }
+  @media (min-width: 901px) { #faq { min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; justify-content: center; } }
+  #faq h1 { margin: 0; text-align: center; font-family: var(--font-pixel); font-size: clamp(1.1rem, 2.4vw, 1.6rem); letter-spacing: .04em; line-height: 1.5; text-transform: uppercase; }
+  .fq-short { display: none; }
+  @media (max-width: 600px) {
+    .fq-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .fq-short { display: inline; }
+  }
+  .fq-sub { text-align: center; color: #c9ccf2; font-size: 1.12rem; margin: 12px 0 28px; }
+
+  .fq-tools { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; margin-bottom: 28px; }
+  .fq-search { position: relative; flex: 0 1 340px; }
+  .fq-search input { width: 100%; font: inherit; font-size: 1rem; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 99px; padding: 10px 16px 10px 40px; }
+  .fq-search input::placeholder { color: var(--dim); }
+  .fq-search input:focus { outline: none; border-color: var(--gold); }
+  .fq-search::before { content: '🔍'; position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: .95rem; opacity: .7; }
+  .fq-tab { background: transparent; color: var(--dim); border: 1px solid var(--line); border-radius: 99px; padding: 9px 15px; font-size: .95rem; font-weight: 500; }
+  .fq-tab[aria-pressed="true"] { background: var(--gold); border-color: var(--gold); color: #2a2100; font-weight: 600; }
+  .fq-tab:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  .fq-grid { columns: 3 300px; column-gap: 16px; }
+  .fq-card { break-inside: avoid; margin: 0 0 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; }
+  .fq-card.proposal { border-style: dashed; }
+  .fq-card[hidden] { display: none; }
+  .fq-tag { font-family: var(--font-pixel); font-size: 8px; letter-spacing: .08em; color: var(--dim); text-transform: uppercase; }
+  .fq-card h3 { margin: 8px 0 8px; font-size: 1.14rem; line-height: 1.3; }
+  .fq-card p { margin: 0; color: #c9ccf2; font-size: 1rem; line-height: 1.55; }
+  .fq-card a { color: var(--gold); }
+  .fq-card mark { background: rgba(255, 212, 59, .25); color: inherit; border-radius: 3px; padding: 0 1px; }
+  .fq-none { text-align: center; color: var(--dim); padding: 30px 0; }
+  .fq-none a { color: var(--gold); }
+  .fq-more { text-align: center; color: var(--dim); margin: 12px 0 0; }
+  .fq-more a { color: var(--gold); font-weight: 600; }
+
+  @media (max-width: 600px) {
+    .fq-search { flex-basis: 100%; }
+    .fq-tools { justify-content: flex-start; }
+  }
+
+  /* Footer bar (legal.html's). */
+  .lp-foot { border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+  .lp-foot div { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; max-width: 1240px; margin: 0 auto; padding: 20px var(--gutter) 28px; color: var(--dim); font-size: .9rem; }
+  .lp-foot a { color: #c9ccf2; }
+  .lp-foot img { display: inline-block; width: 1.4em; height: 1.4em; vertical-align: -.35em; margin-left: .3em; }
+  .lp-foot .home { margin-left: auto; }
+
+  /* Page fade (legal.html's). */
+  html { background: var(--bg); }
+  html.pg-in body { opacity: 0; }
+  html.pg-in.pg-go body { opacity: 1; }
+  @media (prefers-reduced-motion: no-preference) {
+    html.pg-go body { animation: pg-in .4s ease-out both; }
+    body.pg-out { animation: pg-out .2s ease-in forwards; }
+  }
+  @keyframes pg-in { from { opacity: 0; } }
+  @keyframes pg-out { to { opacity: 0; } }
+</style>
+</head>
+<body>
+
+<div class="lp-top">
+  <canvas class="lp-sky" id="lpSky" aria-hidden="true"></canvas>
+  <nav class="nav">
+    <a class="brand" href="/" data-page><img src="/assets/img/pig.svg" alt="" />Pocket Money Pal</a>
+    <a class="home" href="/#ft" data-page>← Back to home</a>
+  </nav>
+</div>
+
+<main>
+<section id="faq" aria-labelledby="fqTitle">
+  <h1 id="fqTitle"><span class="fq-long">Frequently Asked Questions</span><span class="fq-short" aria-hidden="true">FAQ</span></h1>
+  <p class="fq-sub">Short answers to what parents ask us most.</p>
+  <div class="fq-tools">
+    <label class="fq-search"><input id="fqQ" type="search" placeholder="Type a word, like refund" aria-label="Search the questions" /></label>
+    <div id="fqTabs" style="display:contents"></div>
+  </div>
+  <div class="fq-grid" id="fqGrid"></div>
+  <p class="fq-none" id="fqNone" hidden>No answer for that yet. Ask us at <a href="mailto:hello@pocketmoneypal.com">hello@pocketmoneypal.com</a>.</p>
+  <p class="fq-more">Something else? <a href="mailto:hello@pocketmoneypal.com">hello@pocketmoneypal.com</a></p>
+</section>
+</main>
+
+<footer class="lp-foot"><div>
+  <span>© <span id="lpYear">2026</span> Pocket Money Pal</span>
+  <span>Made with ❤️ in <img src="/assets/img/flag-au.svg" alt="Australia" title="Australia" /></span>
+  <a href="/legal" data-page>Terms and privacy</a>
+  <a class="home" href="/#ft" data-page>← Back to home</a>
+</div></footer>
+
+<script src="/assets/faq-content.js"></script>
+<script src="/assets/faq.js"></script>
+</body>
+</html>
