@@ -76,12 +76,14 @@
   .lead b { color: var(--text); font-weight: 600; }
 
   /* Buy block */
-  .buy { display: grid; gap: 14px; }
+  /* Same nesting as How it works: an outer tinted box (like .demo) holding the button and an inner one (like .example). */
+  /* Solid versions of the translucent tints, as they look over --bg: white at 2.5% (outer), plus 3.5% more (inner). */
+  .buy { display: grid; gap: 18px; background: #15162a; border-radius: 26px; padding: clamp(14px, 1.6vw, 18px); }
   .btn-gold { width: 100%; background: var(--gold); color: #2a2000; border: 0; border-radius: 18px; padding: 18px 30px; font-size: 1.3rem; font-weight: 700; box-shadow: 0 6px 0 var(--gold-shadow), 0 14px 40px rgba(255, 212, 59, .25); transition: transform .1s, box-shadow .1s; }
   .btn-gold:hover { transform: translateY(-2px); }
   .btn-gold:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--gold-shadow); }
   .btn-gold small { display: block; font-size: .85rem; font-weight: 500; opacity: .75; }
-  .spots { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px 12px; text-align: center; }
+  .spots { background: rgba(255, 255, 255, .035); border-radius: 16px; padding: 14px 16px 12px; text-align: center; }
   .spots .bar { height: 12px; border-radius: 99px; background: #4a4d94; overflow: hidden; }
   .spots .bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--bonus), var(--gold)); }
   .spots p { margin: 10px 0 0; font-size: 1rem; color: var(--dim); }
