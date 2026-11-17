@@ -28,9 +28,26 @@ describe('server app', () => {
     const res = await app.inject({ method: 'GET', url: '/api/health' });
     expect(res.statusCode).toBe(200);
     // No web bundle in tests: nothing to compare, but the API version is always there.
-    expect(res.json()).toMatchObject({ ok: true, build: null, apiVersion: API_VERSION });
+    expect(res.json()).toMatchObject({
+      ok: true,
+      build: null,
+      apiVersion: API_VERSION,
+      platform: 'pc',
+    });
     // Not built by esbuild and not under Electron: no version to report.
     expect(res.json().version).toBe(process.env.PMP_APP_VERSION || 'dev');
+  });
+
+  it('says in health when the Android app runs it (ADR 0029)', async () => {
+    const opened = openDb(':memory:', migrationsDir);
+    const android = await buildApp({ db: opened.db, webDist: null, platform: 'android' });
+    try {
+      const res = await android.inject({ method: 'GET', url: '/api/health' });
+      expect(res.json()).toMatchObject({ ok: true, platform: 'android' });
+    } finally {
+      await android.close();
+      opened.close();
+    }
   });
 
   it('seeds default family settings', async () => {

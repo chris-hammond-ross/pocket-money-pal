@@ -4,6 +4,7 @@ import {
   formatLicenceKey,
   licenceKeyCaret,
   licenceHintOf,
+  mayLinkToPurchase,
   normaliseLicenceKey,
   relayConnectRequestSchema,
   relayInfoSchema,
@@ -136,5 +137,12 @@ describe('relay.changed', () => {
       type: 'relay.changed',
       relay,
     });
+  });
+});
+
+describe('mayLinkToPurchase', () => {
+  it('links to the website from a PC, never from the Android app (ADR 0029)', () => {
+    expect(mayLinkToPurchase('pc')).toBe(true);
+    expect(mayLinkToPurchase('android')).toBe(false);
   });
 });

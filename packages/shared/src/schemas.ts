@@ -103,6 +103,13 @@ export const phoneSettingsPatchSchema = z
   .refine((p) => Object.keys(p).length > 0, 'Nothing to change');
 export type PhoneSettingsPatch = z.infer<typeof phoneSettingsPatchSchema>;
 
+/**
+ * What the server runs on: a PC (Windows, Mac, or `npm start` anywhere), or the Android app,
+ * which sets `PMP_PLATFORM=android` (ADR 0029).
+ */
+export const hostPlatformSchema = z.enum(['pc', 'android']);
+export type HostPlatform = z.infer<typeof hostPlatformSchema>;
+
 export const healthSchema = z.object({
   ok: z.literal(true),
   version: z.string(),
@@ -110,6 +117,7 @@ export const healthSchema = z.object({
   /** The web build being served, and the API version (ADR 0011). */
   build: z.string().nullable(),
   apiVersion: z.number().int(),
+  platform: hostPlatformSchema,
 });
 export type Health = z.infer<typeof healthSchema>;
 

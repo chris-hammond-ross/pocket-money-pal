@@ -6,6 +6,15 @@ dist/
 out/
 release/
 apps/desktop/.stage/
+apps/server/dist-node-sqlite/
+apps/mobile/.cache/
+apps/mobile/.stage/
+apps/mobile/android/.gradle/
+apps/mobile/android/.kotlin/
+apps/mobile/android/build/
+apps/mobile/android/app/build/
+apps/mobile/android/app/.cxx/
+apps/mobile/android/local.properties
 *.tsbuildinfo
 
 # Local data

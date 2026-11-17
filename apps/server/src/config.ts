@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_PORT } from '@pmp/shared';
+import { DEFAULT_PORT, type HostPlatform } from '@pmp/shared';
 
 /** The hands-off relay (ADR 0021). `PMP_RELAY_URL` points at staging or a local fake. */
 export const DEFAULT_RELAY_URL = 'https://pocketmoneypal.app';
@@ -30,6 +30,8 @@ export interface Config {
   vapidSubject: string | undefined;
   /** `PMP_DEV_CLOCK=1`: the clock can be moved with `/api/dev/clock` (development only). */
   devClock: boolean;
+  /** `PMP_PLATFORM=android`: run by the Android app (ADR 0029). Anything else is a PC. */
+  platform: HostPlatform;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -48,5 +50,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     vapidSubject: env.PMP_VAPID_SUBJECT || undefined,
     webDist: existsSync(resolve(webDist, 'index.html')) ? webDist : null,
     devClock: env.PMP_DEV_CLOCK === '1',
+    platform: env.PMP_PLATFORM === 'android' ? 'android' : 'pc',
   };
 }

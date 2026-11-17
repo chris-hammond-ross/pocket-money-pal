@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app icon's dark background (as the Store tiles), and the kiosk's own. -->
+    <color name="icon_background">#161525</color>
+    <color name="kiosk_background">#FFFFFF</color>
+</resources>

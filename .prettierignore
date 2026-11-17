@@ -5,6 +5,10 @@ release
 coverage
 apps/server/drizzle
 apps/desktop/.stage
+apps/server/dist-node-sqlite
+apps/mobile/.cache
+apps/mobile/.stage
+apps/mobile/android
 package-lock.json
 apps/site/public/*
 !apps/site/public/assets/

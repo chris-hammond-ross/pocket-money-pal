@@ -8,6 +8,7 @@ import {
   acceptsLicenceKeyEdit,
   formatLicenceKey,
   licenceKeyCaret,
+  mayLinkToPurchase,
   RELAY_RECONNECTING_AFTER_MS,
   type RelayInfo,
   type TunnelProblem,
@@ -23,14 +24,25 @@ import classes from './parent.module.css';
 
 const SITE = 'https://pocketmoneypal.com';
 
+/**
+ * Whether to point at pocketmoneypal.com to buy or renew. Not when the Android app runs the
+ * server (ADR 0029, Play's rules), and not until health has said which it is.
+ */
+function useMayLinkToPurchase(): boolean {
+  const health = useQuery({ queryKey: ['health'], queryFn: api.health, staleTime: Infinity });
+  return health.data ? mayLinkToPurchase(health.data.platform) : false;
+}
+
 /** What went wrong connecting, in the spec's words. */
-function connectProblem(err: unknown): string {
+function connectProblem(err: unknown, mayLink: boolean): string {
   if (err instanceof ApiError) {
     switch (err.code) {
       case 'unknown-licence':
         return 'That key isn’t right. Check it against your purchase email.';
       case 'licence-expired':
-        return 'This licence has expired. Renew it at pocketmoneypal.com.';
+        return mayLink
+          ? 'This licence has expired. Renew it at pocketmoneypal.com.'
+          : 'This licence has expired.';
       case 'licence-revoked':
         return 'This licence can’t be used. Contact support@pocketmoneypal.com.';
       case 'relay-unreachable':
@@ -82,6 +94,7 @@ function LicenceForm({ cta = 'Connect' }: { cta?: string }) {
     caret.current = null;
   }, [key]);
   const [askMove, setAskMove] = useState(false);
+  const mayLink = useMayLinkToPurchase();
   const connect = useMutation({
     mutationFn: (takeOver: boolean) => api.connectRelay(key, takeOver),
     onSuccess: (info) => {
@@ -131,7 +144,7 @@ function LicenceForm({ cta = 'Connect' }: { cta?: string }) {
           setKey(next);
         }}
       />
-      {showError && <p className={classes.error}>{connectProblem(error)}</p>}
+      {showError && <p className={classes.error}>{connectProblem(error, mayLink)}</p>}
       <div className={classes.remoteActions}>
         <ArcadeButton
           size="small"
@@ -173,7 +186,7 @@ function LicenceForm({ cta = 'Connect' }: { cta?: string }) {
           </p>
           {connect.error &&
             !(connect.error instanceof ApiError && connect.error.code === 'licence-in-use') && (
-              <p className={classes.error}>{connectProblem(connect.error)}</p>
+              <p className={classes.error}>{connectProblem(connect.error, mayLink)}</p>
             )}
         </Sheet>
       )}
@@ -182,6 +195,7 @@ function LicenceForm({ cta = 'Connect' }: { cta?: string }) {
 }
 
 function NotSetUp() {
+  const mayLink = useMayLinkToPurchase();
   return (
     <div className={classes.remoteCard}>
       <div className={classes.remoteHead}>🌍 Remote access</div>
@@ -189,12 +203,14 @@ function NotSetUp() {
         Use the app away from home, install it on your phone, and get a buzz when a chore is done.
       </p>
       <LicenceForm />
-      <p className={classes.note}>
-        Don’t have one?{' '}
-        <a href={SITE} target="_blank" rel="noreferrer">
-          pocketmoneypal.com
-        </a>
-      </p>
+      {mayLink && (
+        <p className={classes.note}>
+          Don’t have one?{' '}
+          <a href={SITE} target="_blank" rel="noreferrer">
+            pocketmoneypal.com
+          </a>
+        </p>
+      )}
     </div>
   );
 }
@@ -242,6 +258,7 @@ function Problem({ info }: { info: RelayInfo }) {
   const queryClient = useQueryClient();
   const ui = useParentUi();
   const problem = info.problem ?? 'bad-secret';
+  const mayLink = useMayLinkToPurchase();
   const retry = useMutation({
     mutationFn: api.retryRelay,
     onSuccess: (next) => {
@@ -258,7 +275,11 @@ function Problem({ info }: { info: RelayInfo }) {
         <span>🌍 Remote access</span>
         <span className={classes.remoteState}>🔴 Not working</span>
       </div>
-      <p>{PROBLEM_TEXT[problem]}</p>
+      <p>
+        {problem === 'licence-expired' && !mayLink
+          ? 'This licence has expired.'
+          : PROBLEM_TEXT[problem]}
+      </p>
       {NEEDS_KEY.includes(problem) && <LicenceForm cta="Connect again" />}
       {CAN_RETRY.includes(problem) && (
         <div className={classes.remoteActions}>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Full screen from the first frame; the kiosk page is white. -->
+    <style name="Theme.Pmp" parent="android:Theme.DeviceDefault.Light.NoActionBar.Fullscreen">
+        <item name="android:windowBackground">@color/kiosk_background</item>
+    </style>
+
+    <!-- The Unpair all phones confirmation: only the dialog shows, over whatever is on screen. -->
+    <style name="Theme.Pmp.Dialog" parent="android:Theme.DeviceDefault.Light.Dialog.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowIsFloating">true</item>
+    </style>
+</resources>

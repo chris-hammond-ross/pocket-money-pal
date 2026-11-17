@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
-import { WS_PATH, pingRequestSchema, type Health } from '@pmp/shared';
+import { WS_PATH, pingRequestSchema, type Health, type HostPlatform } from '@pmp/shared';
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import { installRemoteGuard } from './auth/remote';
 import { serverVersion } from './build-info';
@@ -80,6 +80,8 @@ export interface AppOptions {
    * (and may run a payday, or put the next surprise up).
    */
   onScheduleChanged?: () => void;
+  /** What the server runs on (`PMP_PLATFORM`, ADR 0029): told to screens in `/api/health`. */
+  platform?: HostPlatform;
 }
 
 export async function buildApp({
@@ -97,6 +99,7 @@ export async function buildApp({
   imagesDir = null,
   migrationsDir = null,
   imageFetcher = createImageFetcher(),
+  platform = 'pc',
   onScheduleChanged,
 }: AppOptions): Promise<FastifyInstance> {
   // Trust X-Forwarded-For from loopback only: Vite's dev proxy (and a local HTTPS proxy such
@@ -163,6 +166,7 @@ export async function buildApp({
     version: VERSION,
     uptimeSeconds: Math.round(process.uptime()),
     ...version(),
+    platform,
   }));
 
   app.get('/api/settings', async () => getSettings(db));

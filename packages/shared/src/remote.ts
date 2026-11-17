@@ -3,7 +3,17 @@
  * about the PC's connection to the relay, and the licence key a parent types to connect.
  */
 import { z } from 'zod';
+import type { HostPlatform } from './schemas';
 import { tunnelProblemSchema } from './tunnel';
+
+/**
+ * Whether the app may send people to pocketmoneypal.com to buy or renew a licence. Not when
+ * the server runs in the Android app (ADR 0029): Play allows a licence bought elsewhere only
+ * if the app neither sells it nor points the way to buying it. Entering a key is fine.
+ */
+export function mayLinkToPurchase(platform: HostPlatform): boolean {
+  return platform !== 'android';
+}
 
 /**
  * A licence key as typed (" pmp-k7qm4-pxd2r … ") reduced to its characters, the way the

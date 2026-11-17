@@ -3,3 +3,6 @@
 *.jpg binary
 *.mp3 binary
 *.ico binary
+*.jar binary
+# Windows batch files need CRLF (apps/mobile/android/gradlew.bat).
+*.bat text eol=crlf

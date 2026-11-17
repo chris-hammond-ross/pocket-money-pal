@@ -1,6 +1,6 @@
 import type { NetworkInterfaceInfo } from 'node:os';
 import { describe, expect, it } from 'vitest';
-import { isOnPc, lanAddresses, originOfIp } from './net';
+import { isOnPc, lanAddresses, originOfIp, safeNetworkInterfaces } from './net';
 
 function v4(address: string, internal = false): NetworkInterfaceInfo {
   return {
@@ -86,5 +86,21 @@ describe('originOfIp (ADR 0021)', () => {
     ['not-an-address', 'remote'],
   ])('%s → %s', (ip, expected) => {
     expect(originOfIp(ip, interfaces)).toBe(expected);
+  });
+});
+
+describe('safeNetworkInterfaces (ADR 0029)', () => {
+  it('gives no interfaces when Node can’t list them, so only loopback is the PC', () => {
+    const none = safeNetworkInterfaces(() => {
+      throw new Error('uv_interface_addresses returned Unknown system error 13');
+    });
+    expect(none).toEqual({});
+    expect(lanAddresses(none)).toEqual([]);
+    expect(originOfIp('127.0.0.1', none)).toBe('pc');
+    expect(originOfIp('192.168.1.30', none)).toBe('lan');
+  });
+
+  it('passes the list through when it works', () => {
+    expect(safeNetworkInterfaces(() => ({ lo: [] }))).toEqual({ lo: [] });
   });
 });

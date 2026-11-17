@@ -27,6 +27,7 @@ const app = await buildApp({
   imagesDir: join(dirname(config.dbPath), 'images'),
   migrationsDir: config.migrationsDir,
   onScheduleChanged: () => rescheduleNow(),
+  platform: config.platform,
   logger: { level: process.env.PMP_LOG_LEVEL ?? 'info' },
 });
 
@@ -79,6 +80,7 @@ app.log.info(
     db: config.dbPath,
     web: config.webDist ?? '(not built: use the Vite dev server)',
     devClock: config.devClock,
+    platform: config.platform,
     lan: lanUrls,
   },
   'Pocket Money Pal server ready',

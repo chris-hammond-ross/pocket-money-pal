@@ -4,12 +4,13 @@ A game-like chore and pocket-money app for kids. Read `docs/plan.md` for the ful
 
 ## Architecture in one breath
 
-Server-first. `apps/server` (Fastify + SQLite/Drizzle + WebSocket) is the source of truth and serves the built React app. Every screen is just an HTTP/WS client: the kiosk window (Electron, `apps/desktop`), parents' phones on the LAN (`/parent`), and later Home Assistant. Never put business logic in Electron or only in the web client.
+Server-first. `apps/server` (Fastify + SQLite/Drizzle + WebSocket) is the source of truth and serves the built React app. Every screen is just an HTTP/WS client: the kiosk window (Electron, `apps/desktop`, or the Android app, `apps/mobile`), parents' phones on the LAN (`/parent`), and later Home Assistant. Never put business logic in Electron, the Android shell, or only in the web client. "The PC" means the PC or the tablet: an Android tablet can run the same server itself (ADR 0029, ADR 0032).
 
 ```
 apps/server     Fastify API, WebSocket hub, scheduler, Drizzle schema + migrations
 apps/web        React + Vite + Mantine. Routes: /kiosk, /parent
 apps/desktop    Electron shell: forks the server, opens the kiosk window
+apps/mobile     Android shell (plain Gradle/Java): runs the server in a foreground service, kiosk WebView
 packages/shared Zod schemas, domain types, points/money rules (pure functions)
 prototypes/     GITIGNORED throwaway HTML/JS prototypes
 docs/           plan.md, features/ (committed specs), decisions/ (ADRs)
@@ -22,6 +23,7 @@ docs/           plan.md, features/ (committed specs), decisions/ (ADRs)
 - `npm run desktop:dev`: builds, stages the server for Electron, launches the kiosk window.
 - `npm test` / `npm run lint` / `npm run typecheck` / `npm run format`
 - `npm run db:generate -w @pmp/server`: generate a migration after editing `apps/server/src/db/schema.ts`.
+- `npm run mobile:apk` / `npm run mobile:release`: the Android app (needs Android Studio's JDK and SDK; see `apps/mobile/README.md`). The release build is signed with the upload key in `~/.pocket-money-pal/`, never in the repo.
 
 ## Conventions
 

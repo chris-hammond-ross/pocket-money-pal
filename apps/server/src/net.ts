@@ -5,6 +5,20 @@ import type { FastifyRequest } from 'fastify';
 
 type Interfaces = NodeJS.Dict<NetworkInterfaceInfo[]>;
 
+/**
+ * The machine's network interfaces, or none if Node can't list them. Android limits the
+ * netlink calls this uses for apps (ADR 0029); without the guard every request would fail,
+ * because the request's origin is worked out from them. With none, only loopback counts as
+ * the PC (the kiosk on the device itself), and the QR codes need `PMP_PUBLIC_URL`.
+ */
+export function safeNetworkInterfaces(list: () => Interfaces = networkInterfaces): Interfaces {
+  try {
+    return list();
+  } catch {
+    return {};
+  }
+}
+
 /** Adapters that are rarely how a phone on the home Wi-Fi reaches the PC. */
 const VIRTUAL_ADAPTER = /vethernet|virtualbox|vmware|wsl|docker|hyper-v|tailscale|zerotier|vpn/i;
 
@@ -20,7 +34,7 @@ function privateRank(address: string): number {
  * others, real adapters before virtual ones (Hyper-V, WSL, VPNs). Link-local addresses
  * (169.254.x.x, an adapter with no DHCP) are left out. Used for the setup QR.
  */
-export function lanAddresses(interfaces: Interfaces = networkInterfaces()): string[] {
+export function lanAddresses(interfaces: Interfaces = safeNetworkInterfaces()): string[] {
   return Object.entries(interfaces)
     .flatMap(([name, infos]) =>
       (infos ?? [])
@@ -43,7 +57,7 @@ function normalise(ip: string): string {
  * Whether a request comes from the family PC itself: a loopback address, or one of the
  * machine's own addresses (a browser on the PC opening its LAN URL). ADR 0005.
  */
-export function isOnPc(ip: string, interfaces: Interfaces = networkInterfaces()): boolean {
+export function isOnPc(ip: string, interfaces: Interfaces = safeNetworkInterfaces()): boolean {
   const address = normalise(ip);
   if (address === '::1' || address.startsWith('127.')) return true;
   return Object.values(interfaces).some((infos) =>
@@ -83,7 +97,7 @@ function isLan(address: string): boolean {
  */
 export function originOfIp(
   ip: string,
-  interfaces: Interfaces = networkInterfaces(),
+  interfaces: Interfaces = safeNetworkInterfaces(),
 ): RequestOrigin {
   if (isOnPc(ip, interfaces)) return 'pc';
   // A link-local IPv6 address can carry its zone ("fe80::1%12").
