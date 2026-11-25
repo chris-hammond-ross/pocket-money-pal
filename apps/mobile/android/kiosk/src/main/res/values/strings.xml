@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- app_name comes from app/build.gradle.kts (per build type). -->
+    <!-- app_name comes from kiosk/build.gradle.kts (per build type). -->
 
     <!-- The server's foreground-service notification (ServerService). -->
     <string name="channel_server">Pocket Money Pal running</string>

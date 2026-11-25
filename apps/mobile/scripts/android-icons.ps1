@@ -1,4 +1,4 @@
-# Makes the Android launcher icons in android/app/src/main/res/mipmap-*/ from the desktop
+# Makes the Android launcher icons in android/kiosk/src/main/res/mipmap-*/ from the desktop
 # app's icon (apps/desktop/build/icon.png), like appx-assets.ps1 does for the Store. Run again if
 # the icon changes:
 #   powershell -NoProfile -File apps/mobile/scripts/android-icons.ps1
@@ -14,7 +14,7 @@ Add-Type -AssemblyName System.Drawing
 $mobile = Split-Path -Parent $PSScriptRoot
 $repo = Split-Path -Parent (Split-Path -Parent $mobile)
 $source = [System.Drawing.Image]::FromFile((Join-Path $repo 'apps\desktop\build\icon.png'))
-$res = Join-Path $mobile 'android\app\src\main\res'
+$res = Join-Path $mobile 'android\kiosk\src\main\res'
 
 function Save-Icon([string]$path, [int]$canvas, [double]$iconShare) {
   $bitmap = New-Object System.Drawing.Bitmap $canvas, $canvas

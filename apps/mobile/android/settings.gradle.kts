@@ -1,4 +1,6 @@
 pluginManagement {
+    // The shared build setup: the pmp.android-app and pmp.android-library plugins (ADR 0034).
+    includeBuild("build-logic")
     repositories {
         google()
         mavenCentral()
@@ -15,4 +17,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "pocket-money-pal"
-include(":app")
+// One Gradle project, one module per app (ADR 0033): kiosk is the kids' screen and the server;
+// shell is what the apps share.
+include(":kiosk", ":shell")

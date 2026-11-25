@@ -22,7 +22,7 @@
     "desktop:release": "npm run build && npm run release -w @pmp/desktop",
     "desktop:store": "npm run build && npm run store -w @pmp/desktop",
     "mobile:apk": "npm run build && npm run apk -w @pmp/mobile",
-    "mobile:release": "npm run build && npm run apk:release -w @pmp/mobile && npm run gradle -w @pmp/mobile -- bundleRelease",
+    "mobile:release": "npm run build && npm run release:kiosk -w @pmp/mobile",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",

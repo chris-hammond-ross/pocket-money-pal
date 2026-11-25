@@ -8,6 +8,7 @@ export * from './kiosk';
 export * from './levels';
 export * from './library';
 export * from './money';
+export * from './native-bridge';
 export * from './notify';
 export * from './outbox';
 export * from './pairing';

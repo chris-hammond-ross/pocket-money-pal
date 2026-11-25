@@ -22,13 +22,14 @@ import android.view.WindowInsetsController;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
-import android.webkit.WebSettings;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import com.pocketmoneypal.shell.ShellWebView;
+import com.pocketmoneypal.shell.ShellWebViewClient;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -98,20 +99,13 @@ public final class MainActivity extends Activity {
     // ---------------------------------------------------------------------------------------
     // Views: the WebView, and a status message (starting / couldn't start) over it.
 
-    @SuppressLint("SetJavaScriptEnabled")
     private void buildViews() {
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.WHITE);
 
         web = new WebView(this);
-        WebSettings settings = web.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        // Sounds are part of the game; don't wait for a tap before playing them (as Electron).
-        settings.setMediaPlaybackRequiresUserGesture(false);
-        // The kiosk sets its own sizes; Android's font-size setting would break its layout.
-        settings.setTextZoom(100);
-        settings.setSupportZoom(false);
+        // JavaScript, sounds without a tap, the text size fixed at 100% (shared with every app).
+        ShellWebView.configure(web);
         web.setWebViewClient(new KioskClient());
         web.setVisibility(View.INVISIBLE);
         root.addView(web, new FrameLayout.LayoutParams(
@@ -195,18 +189,11 @@ public final class MainActivity extends Activity {
         return false;
     }
 
-    private final class KioskClient extends WebViewClient {
+    /** The server's pages show here; anything else (a help link) opens in the browser. */
+    private final class KioskClient extends ShellWebViewClient {
         @Override
-        public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-            Uri url = request.getUrl();
-            if (isServer(url)) return false;
-            // Anything else (a help link) opens in the browser, not in the kiosk.
-            try {
-                startActivity(new Intent(Intent.ACTION_VIEW, url));
-            } catch (RuntimeException e) {
-                Log.w(ServerService.TAG, "no app to open " + url);
-            }
-            return true;
+        protected boolean isOwnOrigin(Uri url) {
+            return isServer(url);
         }
 
         @Override

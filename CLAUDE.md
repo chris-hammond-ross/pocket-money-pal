@@ -10,7 +10,8 @@ Server-first. `apps/server` (Fastify + SQLite/Drizzle + WebSocket) is the source
 apps/server     Fastify API, WebSocket hub, scheduler, Drizzle schema + migrations
 apps/web        React + Vite + Mantine. Routes: /kiosk, /parent
 apps/desktop    Electron shell: forks the server, opens the kiosk window
-apps/mobile     Android shell (plain Gradle/Java): runs the server in a foreground service, kiosk WebView
+apps/mobile     Android (one plain Gradle/Java project): kiosk runs the server in a foreground service + kiosk WebView;
+                shell is shared WebView setup; build-logic holds versions and signing; parent app from 12.2
 packages/shared Zod schemas, domain types, points/money rules (pure functions)
 prototypes/     GITIGNORED throwaway HTML/JS prototypes
 docs/           plan.md, features/ (committed specs), decisions/ (ADRs)

@@ -12,8 +12,10 @@ apps/mobile/.stage/
 apps/mobile/android/.gradle/
 apps/mobile/android/.kotlin/
 apps/mobile/android/build/
-apps/mobile/android/app/build/
-apps/mobile/android/app/.cxx/
+apps/mobile/android/*/build/
+apps/mobile/android/*/.cxx/
+apps/mobile/android/build-logic/.gradle/
+apps/mobile/android/build-logic/.kotlin/
 apps/mobile/android/local.properties
 *.tsbuildinfo
 

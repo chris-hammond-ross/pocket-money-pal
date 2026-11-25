@@ -3,13 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "The Android app: a thin shell that runs the server in a foreground service and shows the kiosk (ADR 0029).",
+  "description": "The Android apps: one Gradle project, a module per app. The kiosk app runs the server in a foreground service and shows the kiosk (ADR 0032, ADR 0033).",
   "scripts": {
     "fetch-node": "node scripts/fetch-node.mjs",
     "stage": "node scripts/stage-server.mjs",
-    "apk": "npm run fetch-node && npm run stage && node scripts/gradle.mjs assembleDebug",
-    "apk:release": "npm run fetch-node && npm run stage && node scripts/gradle.mjs assembleRelease",
-    "bundle:release": "npm run fetch-node && npm run stage && node scripts/gradle.mjs bundleRelease",
+    "apk:kiosk": "npm run fetch-node && npm run stage && node scripts/gradle.mjs :kiosk:assembleDebug",
+    "release:kiosk": "npm run fetch-node && npm run stage && node scripts/gradle.mjs :kiosk:assembleRelease :kiosk:bundleRelease",
+    "apk": "npm run apk:kiosk --",
+    "apk:release": "npm run fetch-node && npm run stage && node scripts/gradle.mjs :kiosk:assembleRelease",
+    "bundle:release": "npm run fetch-node && npm run stage && node scripts/gradle.mjs :kiosk:bundleRelease",
     "gradle": "node scripts/gradle.mjs"
   }
 }
