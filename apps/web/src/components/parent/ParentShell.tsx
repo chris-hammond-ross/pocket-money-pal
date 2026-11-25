@@ -1,5 +1,5 @@
 import type { SetupChore } from '@pmp/shared';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/api';
@@ -7,6 +7,8 @@ import { browserTimeZone } from '../../lib/format';
 import { useFamilyPc } from '../../lib/offline';
 import { useRefetchAfterSend } from '../../lib/outbox';
 import { useLiveEvents } from '../../lib/live-events';
+import { isNativeShell, tellShell } from '../../lib/native';
+import { useOutbox } from '../../lib/outbox';
 import { useMuted } from '../../lib/parent-prefs';
 import {
   askedPush,
@@ -45,6 +47,7 @@ import { WeekTab } from './WeekTab';
 import {
   asksPushHere,
   finishSetupShows,
+  nativeAddressesOf,
   formatMoney,
   surpriseBanner,
   type DayPlan,
@@ -350,6 +353,7 @@ export function ParentShell({ welcome }: { welcome: Banner | null }) {
       {outboxOpen && <OutboxSheet timezone={timezone} onClose={() => setOutboxOpen(false)} />}
       <PushOptIn />
       <FinishSetup />
+      {isNativeShell() && <TellShellAddresses />}
     </ParentUiContext.Provider>
   );
 }
@@ -442,6 +446,7 @@ function PushOptIn() {
       finishSetupShowing: finishSetupShows(finishSetupState()),
       standalone: isStandalone(),
       installed: isInstalled(),
+      inApp: isNativeShell(),
     });
     if (!asks) return;
     const timer = setTimeout(() => {
@@ -498,4 +503,26 @@ function PushOptIn() {
       </p>
     </Sheet>
   );
+}
+
+/**
+ * In the parents' app (ADR 0035): tells the shell the family's addresses, so it opens the
+ * secure one (the relay) first and the home one when that can't be reached, and switches over
+ * by itself when remote access is turned on. Sent again whenever they change.
+ */
+function TellShellAddresses() {
+  const access = useQuery({ queryKey: ['access'], queryFn: api.access });
+  const relay = useQuery({ queryKey: ['relay'], queryFn: api.relay, retry: false });
+  const { queue } = useOutbox();
+  const { secureUrl, lanUrl } = nativeAddressesOf({
+    here: location.origin,
+    secureUrl: access.data?.secureUrl ?? null,
+    serverLanUrl: relay.data?.lanUrl ?? null,
+    queued: queue.length,
+  });
+  const known = access.isSuccess;
+  useEffect(() => {
+    if (known) void tellShell({ paired: true, secureUrl, lanUrl });
+  }, [known, secureUrl, lanUrl]);
+  return null;
 }

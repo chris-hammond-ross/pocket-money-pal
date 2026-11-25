@@ -92,6 +92,13 @@
       "when": 1791715765421,
       "tag": "0012_piggy_bank",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1795605054721,
+      "tag": "0013_device_client",
+      "breakpoints": true
     }
   ]
 }

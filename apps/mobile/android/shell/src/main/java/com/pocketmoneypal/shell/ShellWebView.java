@@ -22,4 +22,14 @@ public final class ShellWebView {
         settings.setTextZoom(100);
         settings.setSupportZoom(false);
     }
+
+    /**
+     * Adds the app to the WebView's user agent, {@code PocketMoneyPal/<version> (android; <app>)},
+     * so the server can tell the parents' app from a browser (ADR 0033, {@code deviceClientOf}).
+     * The page itself goes by the bridge, not this.
+     */
+    public static void markUserAgent(WebView web, String version, String app) {
+        WebSettings settings = web.getSettings();
+        settings.setUserAgentString(settings.getUserAgentString() + " PocketMoneyPal/" + version + " (android; " + app + ")");
+    }
 }

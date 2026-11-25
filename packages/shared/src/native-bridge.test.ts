@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   NATIVE_BRIDGE_VERSION,
+  deviceClientOf,
+  nativeAddressesOf,
   nativeCan,
   nativeInfoSchema,
   nativeRequestSchema,
@@ -28,6 +30,15 @@ describe('nativeRequestSchema', () => {
       { id: '6', type: 'push.permission', ask: true },
       { id: '7', type: 'push.subscribe', applicationServerKey: 'BKx-abc_123' },
       { id: '8', type: 'push.unsubscribe' },
+      { id: '9', type: 'session', paired: false },
+      {
+        id: '10',
+        type: 'session',
+        paired: true,
+        secureUrl: 'https://k7qm.pocketmoneypal.app',
+        lanUrl: 'http://192.168.0.10:4789',
+      },
+      { id: '11', type: 'session', paired: true, secureUrl: null, lanUrl: null },
     ];
     for (const request of requests) {
       expect(nativeRequestSchema.safeParse(request).success, request.type).toBe(true);
@@ -141,5 +152,96 @@ describe('nativeCan', () => {
     expect(nativeCan(info, 'scanQr')).toBe(true);
     expect(nativeCan(info, 'openExternal')).toBe(true);
     expect(nativeCan(info, 'push')).toBe(false);
+  });
+});
+
+describe('session', () => {
+  it('only takes http(s) addresses', () => {
+    const bad = { id: '1', type: 'session', paired: true, lanUrl: 'javascript:alert(1)' };
+    expect(nativeRequestSchema.safeParse(bad).success).toBe(false);
+    expect(nativeResultSchemas.session.safeParse({}).success).toBe(true);
+  });
+});
+
+describe('deviceClientOf', () => {
+  const chrome =
+    'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36';
+
+  it('reads the parents’ app marker', () => {
+    expect(deviceClientOf(`${chrome} PocketMoneyPal/0.3.0 (android; parent)`)).toBe('android-app');
+    expect(deviceClientOf('Mozilla/5.0 (iPhone) PocketMoneyPal/1.0.0 (ios; parent)')).toBe(
+      'ios-app',
+    );
+  });
+
+  it('calls everything else a browser, the kiosk app included', () => {
+    expect(deviceClientOf(chrome)).toBe('browser');
+    expect(deviceClientOf(`${chrome} PocketMoneyPal/0.3.0 (android; kiosk)`)).toBe('browser');
+    expect(deviceClientOf(undefined)).toBe('browser');
+  });
+});
+
+describe('nativeAddressesOf', () => {
+  const relay = 'https://k7qm.pocketmoneypal.app';
+  const lan = 'http://192.168.0.10:4789';
+  const other = 'http://10.0.0.5:4789';
+
+  it('on the home address: the relay first, this address as the fallback', () => {
+    expect(
+      nativeAddressesOf({ here: lan, secureUrl: relay, serverLanUrl: other, queued: 0 }),
+    ).toEqual({ secureUrl: relay, lanUrl: lan });
+  });
+
+  it('on the relay: the server’s home address as the fallback', () => {
+    expect(
+      nativeAddressesOf({ here: relay, secureUrl: relay, serverLanUrl: lan, queued: 0 }),
+    ).toEqual({ secureUrl: relay, lanUrl: lan });
+  });
+
+  it('hands-on over plain HTTP: no secure address', () => {
+    expect(
+      nativeAddressesOf({ here: lan, secureUrl: null, serverLanUrl: null, queued: 0 }),
+    ).toEqual({
+      secureUrl: null,
+      lanUrl: lan,
+    });
+  });
+
+  it('keeps an HTTPS address with changes queued on it, until they are sent', () => {
+    const tailnet = 'https://pc.tail1234.ts.net';
+    expect(
+      nativeAddressesOf({ here: tailnet, secureUrl: relay, serverLanUrl: lan, queued: 2 }),
+    ).toEqual({ secureUrl: tailnet, lanUrl: lan });
+    expect(
+      nativeAddressesOf({ here: tailnet, secureUrl: relay, serverLanUrl: lan, queued: 0 }),
+    ).toEqual({ secureUrl: relay, lanUrl: lan });
+  });
+
+  it('reduces addresses to their origins and drops what is not http(s)', () => {
+    expect(
+      nativeAddressesOf({
+        here: `${lan}/parent?tray=1`,
+        secureUrl: `${relay}/`,
+        serverLanUrl: null,
+        queued: 0,
+      }),
+    ).toEqual({ secureUrl: relay, lanUrl: lan });
+    expect(
+      nativeAddressesOf({ here: relay, secureUrl: 'ftp://x', serverLanUrl: 'nonsense', queued: 0 }),
+    ).toEqual({ secureUrl: null, lanUrl: null });
+  });
+
+  it('on a plain-HTTP secure address, still the server’s home address as the fallback', () => {
+    const own = 'http://pmp.example:8080';
+    expect(nativeAddressesOf({ here: own, secureUrl: own, serverLanUrl: lan, queued: 0 })).toEqual({
+      secureUrl: own,
+      lanUrl: lan,
+    });
+  });
+
+  it('never gives the same address twice', () => {
+    expect(
+      nativeAddressesOf({ here: relay, secureUrl: relay, serverLanUrl: relay, queued: 0 }),
+    ).toEqual({ secureUrl: relay, lanUrl: null });
   });
 });

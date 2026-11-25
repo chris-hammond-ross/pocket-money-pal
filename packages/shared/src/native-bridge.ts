@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { pushSubscriptionSchema } from './schemas';
+import { pushSubscriptionSchema, type DeviceClient } from './schemas';
 
 /**
  * The bridge between a page and the native app around it (ADR 0033, ADR 0034). The apps are
@@ -26,10 +26,13 @@ export const nativePlatformSchema = z.enum(['android', 'ios']);
 export type NativePlatform = z.infer<typeof nativePlatformSchema>;
 
 /** What a shell can do for the page beyond `info`. */
-export const nativeFeatureSchema = z.enum(['scanQr', 'openExternal', 'push']);
+export const nativeFeatureSchema = z.enum(['scanQr', 'openExternal', 'push', 'session']);
 export type NativeFeature = z.infer<typeof nativeFeatureSchema>;
 
 const idSchema = z.string().min(1).max(64);
+
+/** A family address the shell may open: an http(s) origin. */
+const originSchema = z.url({ protocol: /^https?$/ }).max(300);
 
 /** Page → shell. */
 export const nativeRequestSchema = z.discriminatedUnion('type', [
@@ -56,6 +59,20 @@ export const nativeRequestSchema = z.discriminatedUnion('type', [
   }),
   /** Drop this phone's push subscription. */
   z.object({ id: idSchema, type: z.literal('push.unsubscribe') }),
+  /**
+   * Where this phone stands with the family's server (ADR 0035). `paired: true` comes from
+   * the paired app, with the addresses the shell should remember: `secureUrl` (the relay, or
+   * a hands-on HTTPS address) is opened first, `lanUrl` when that can't be reached. Each
+   * report replaces the last. `paired: false` means the server said this phone isn't paired
+   * (a 401): a shell that was paired goes back to its first-run scanner.
+   */
+  z.object({
+    id: idSchema,
+    type: z.literal('session'),
+    paired: z.boolean(),
+    secureUrl: originSchema.nullable().optional(),
+    lanUrl: originSchema.nullable().optional(),
+  }),
 ]);
 export type NativeRequest = z.infer<typeof nativeRequestSchema>;
 export type NativeRequestType = NativeRequest['type'];
@@ -95,6 +112,7 @@ export const nativeResultSchemas = {
   'push.permission': z.object({ state: nativePushPermissionSchema }),
   'push.subscribe': pushSubscriptionSchema,
   'push.unsubscribe': z.object({}),
+  session: z.object({}),
 } satisfies Record<NativeRequestType, z.ZodType>;
 export type NativeResult<T extends NativeRequestType> = z.infer<(typeof nativeResultSchemas)[T]>;
 
@@ -123,4 +141,53 @@ export type NativeResponse = z.infer<typeof nativeResponseSchema>;
 /** The shell can do `feature`. `null` info means the page isn't in an app. */
 export function nativeCan(info: NativeInfo | null, feature: NativeFeature): boolean {
   return info !== null && info.features.includes(feature);
+}
+
+/**
+ * The marker the parents' app adds to its WebView's user agent, for the server
+ * (`PocketMoneyPal/<version> (android; parent)`, ADR 0033). The page goes by the bridge.
+ */
+export const NATIVE_USER_AGENT_MARKER = /\bPocketMoneyPal\/\S+ \((android|ios); parent\)/;
+
+export function deviceClientOf(userAgent: string | undefined): DeviceClient {
+  const match = NATIVE_USER_AGENT_MARKER.exec(userAgent ?? '');
+  if (!match) return 'browser';
+  return match[1] === 'ios' ? 'ios-app' : 'android-app';
+}
+
+function originOf(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.origin : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * What the paired page tells the shell about the family's addresses (ADR 0035):
+ * - `secureUrl` is the server's secure address (`/api/access`: the relay, or a hands-on
+ *   HTTPS one). While changes are queued on this HTTPS address it stays this address: the
+ *   queue lives here and goes before the app switches (ADR 0025).
+ * - `lanUrl` is this page's own address when it's plain HTTP and not the secure one (it
+ *   demonstrably works), else the home address the server reports (`/api/relay`'s
+ *   `lanUrl`), if any.
+ */
+export function nativeAddressesOf(s: {
+  /** `location.origin`. */
+  here: string;
+  /** `/api/access`'s `secureUrl`. */
+  secureUrl: string | null;
+  /** `/api/relay`'s `lanUrl`, when known. */
+  serverLanUrl: string | null;
+  /** Changes waiting in this address's outbox. */
+  queued: number;
+}): { secureUrl: string | null; lanUrl: string | null } {
+  const here = originOf(s.here);
+  const onHttps = here?.startsWith('https:') ?? false;
+  const secure = originOf(s.secureUrl);
+  const secureUrl = s.queued > 0 && onHttps && here !== secure ? here : secure;
+  const lanUrl = here && !onHttps && here !== secureUrl ? here : originOf(s.serverLanUrl);
+  return { secureUrl, lanUrl: lanUrl === secureUrl ? null : lanUrl };
 }

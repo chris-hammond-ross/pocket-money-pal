@@ -11,7 +11,8 @@ apps/server     Fastify API, WebSocket hub, scheduler, Drizzle schema + migratio
 apps/web        React + Vite + Mantine. Routes: /kiosk, /parent
 apps/desktop    Electron shell: forks the server, opens the kiosk window
 apps/mobile     Android (one plain Gradle/Java project): kiosk runs the server in a foreground service + kiosk WebView;
-                shell is shared WebView setup; build-logic holds versions and signing; parent app from 12.2
+                parent is the parents' app (a WebView on /parent, code scanner, addresses);
+                shell is shared WebView setup and the page↔app bridge; build-logic holds versions and signing
 packages/shared Zod schemas, domain types, points/money rules (pure functions)
 prototypes/     GITIGNORED throwaway HTML/JS prototypes
 docs/           plan.md, features/ (committed specs), decisions/ (ADRs)
@@ -24,7 +25,7 @@ docs/           plan.md, features/ (committed specs), decisions/ (ADRs)
 - `npm run desktop:dev`: builds, stages the server for Electron, launches the kiosk window.
 - `npm test` / `npm run lint` / `npm run typecheck` / `npm run format`
 - `npm run db:generate -w @pmp/server`: generate a migration after editing `apps/server/src/db/schema.ts`.
-- `npm run mobile:apk` / `npm run mobile:release`: the Android app (needs Android Studio's JDK and SDK; see `apps/mobile/README.md`). The release build is signed with the upload key in `~/.pocket-money-pal/`, never in the repo.
+- `npm run mobile:apk` / `npm run mobile:release`: the kiosk Android app; `npm run mobile:apk:parent` / `npm run mobile:release:parent`: the parents' app (needs Android Studio's JDK and SDK; see `apps/mobile/README.md`). Release builds are signed with the upload key in `~/.pocket-money-pal/`, never in the repo.
 
 ## Conventions
 

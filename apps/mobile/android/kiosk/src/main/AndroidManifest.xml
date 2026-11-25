@@ -53,7 +53,7 @@
         </activity>
 
         <!-- Unpair all phones (ADR 0030), as Android's "Additional settings in the app" (Settings →
-             Apps → Pocket Money Pal), not in the notification, where kids can reach it. It asks
+             Apps → Kids Board), not in the notification, where kids can reach it. It asks
              for the device's screen lock first (ADR 0032). Exported for Settings; anything else
              that opens it meets the same screen lock. -->
         <activity

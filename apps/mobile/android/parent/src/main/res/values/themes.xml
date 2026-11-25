@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- A standard phone app, not a full-screen game: the status bar and Android's navigation stay
+         (ADR 0035). The page's navy shows behind them; MainActivity pads the page so nothing sits
+         under the bars. Dark, so the bars' icons are light. -->
+    <style name="Theme.Pmp.Parent" parent="android:Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowBackground">@color/parent_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

@@ -13,7 +13,7 @@
     <string name="start_failed">Pocket Money Pal couldn’t start.\n\nIf another copy is running, close it, then try again.</string>
     <string name="try_again">Try again</string>
 
-    <!-- Unpair all phones (UnpairActivity), from Android's Settings → Apps → Pocket Money Pal →
+    <!-- Unpair all phones (UnpairActivity), from Android's Settings → Apps → Kids Board →
          Additional settings in the app. Worded like the PC tray's dialog (ADR 0030). -->
     <string name="unpair_label">Unpair all phones</string>
     <string name="unpair_lock_title">Unpair all phones</string>

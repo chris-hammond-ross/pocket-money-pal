@@ -1,5 +1,10 @@
 import { createHash, randomBytes, randomInt } from 'node:crypto';
-import { PAIRING_ALPHABET, PAIRING_CODE_LENGTH, PAIRING_CODE_MINUTES } from '@pmp/shared';
+import {
+  PAIRING_ALPHABET,
+  PAIRING_CODE_LENGTH,
+  PAIRING_CODE_MINUTES,
+  type DeviceClient,
+} from '@pmp/shared';
 import { and, asc, count, eq, isNotNull, isNull, lte, or } from 'drizzle-orm';
 import { devices, pairingCodes, users } from '../db/schema';
 import type { DbOrTx } from './db';
@@ -32,7 +37,7 @@ export function deviceNameFrom(userAgent: string | undefined): string {
 /** Pairs a new device to a parent. Returns the plain token, which is never stored. */
 export function pairDevice(
   db: DbOrTx,
-  args: { userId: number; name: string; now: number },
+  args: { userId: number; name: string; client?: DeviceClient; now: number },
 ): { device: Device; token: string } {
   const token = randomBytes(32).toString('base64url');
   const device = db
@@ -40,6 +45,7 @@ export function pairDevice(
     .values({
       userId: args.userId,
       name: args.name,
+      client: args.client ?? 'browser',
       tokenHash: hashDeviceToken(token),
       lastSeenAt: args.now,
     })

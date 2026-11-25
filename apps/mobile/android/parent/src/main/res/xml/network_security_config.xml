@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Plain http is allowed everywhere: a hands-on family's PC is at a LAN address like
+     http://192.168.1.20:4789, and Android can't list IP ranges here (ADR 0033, ADR 0035). The
+     relay and every other site are https. The Play listing explains why. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

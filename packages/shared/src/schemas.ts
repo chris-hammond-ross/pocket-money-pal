@@ -555,11 +555,17 @@ export const pairingInviteSchema = z.object({
 });
 export type PairingInvite = z.infer<typeof pairingInviteSchema>;
 
+/** How a paired phone reaches the server: a browser, or the parents' app (ADR 0035). */
+export const deviceClientSchema = z.enum(['browser', 'android-app', 'ios-app']);
+export type DeviceClient = z.infer<typeof deviceClientSchema>;
+
 /** `GET /api/devices`: every paired (not revoked) device. */
 export const deviceListSchema = z.array(
   z.object({
     id: idSchema,
     name: z.string(),
+    /** A browser, or the parents' app (ADR 0035). Older servers don't say: a browser. */
+    client: deviceClientSchema.default('browser'),
     parent: z.object({ id: idSchema, name: z.string() }),
     pairedAt: z.string(),
     lastSeenAt: z.number().int().nullable(),

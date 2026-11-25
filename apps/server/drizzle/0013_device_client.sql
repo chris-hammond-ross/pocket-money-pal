@@ -1,0 +1,1 @@
+ALTER TABLE `devices` ADD `client` text DEFAULT 'browser' NOT NULL;

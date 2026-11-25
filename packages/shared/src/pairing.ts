@@ -23,3 +23,27 @@ export function normalisePairingCode(input: string): string | null {
   if (code.length !== PAIRING_CODE_LENGTH) return null;
   return [...code].every((ch) => PAIRING_ALPHABET.includes(ch)) ? code : null;
 }
+
+/**
+ * What a scanned QR code holds: a pairing link (`/parent/pair?code=…`), a setup link
+ * from the kiosk's title screen (`/setup?token=…`), or just a code. Null when it's none of these. Used by the
+ * parents' app's Pair screen (ADR 0035).
+ */
+export function scannedPairingOf(text: string): { url: string | null; code: string | null } | null {
+  const trimmed = text.trim();
+  const bare = normalisePairingCode(trimmed);
+  if (bare) return { url: null, code: bare };
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+  if (url.pathname === '/setup' || url.pathname.startsWith('/setup/')) {
+    return { url: url.href, code: null };
+  }
+  if (url.pathname !== '/parent/pair') return null;
+  const code = normalisePairingCode(url.searchParams.get('code') ?? '');
+  return code ? { url: url.href, code } : null;
+}

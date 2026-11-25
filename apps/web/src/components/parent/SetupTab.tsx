@@ -10,6 +10,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { api } from '../../lib/api';
+import { isNativeShell } from '../../lib/native';
 import { clockTime } from '../../lib/format';
 import { useMuted } from '../../lib/parent-prefs';
 import { canPush, disablePush, enablePush, pushState, type PushState } from '../../lib/pwa';
@@ -155,6 +156,8 @@ function PushRow() {
     void pushState().then(setState);
   }, []);
 
+  // The parents' app has its own notifications (session 12.4), never the browser's.
+  if (isNativeShell()) return null;
   if (!canPush()) {
     return (
       <div className={classes.row}>

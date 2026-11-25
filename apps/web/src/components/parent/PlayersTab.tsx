@@ -14,6 +14,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { api } from '../../lib/api';
+import { isNativeShell } from '../../lib/native';
 import { formatMinutesAgo } from '../../lib/format';
 import {
   installHintDismissed,
@@ -83,6 +84,8 @@ function InstallCard() {
   const [dismissed, setDismissed] = useState(() => installHintDismissed()[0]);
   const [moveDismissed, setMoveDismissed] = useState(() => moveHintDismissed()[0]);
 
+  // The parents' app is installed already, and moves address by itself (ADR 0035).
+  if (isNativeShell()) return null;
   if (needed) {
     if (moveDismissed) return null;
     return (
@@ -449,7 +452,8 @@ function PairedPhones() {
           <span className={classes.rowIcon}>📱</span>
           <div className={classes.grow}>
             <b>
-              {d.name} · {d.parent.name}
+              {d.name}
+              {d.client !== 'browser' && ' (app)'} · {d.parent.name}
             </b>
             <small>{d.current ? 'this phone' : lastSeen(d)}</small>
           </div>

@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * "Unpair all phones": the tablet's version of the PC tray's item (ADR 0030). It's Android's
- * "Additional settings in the app" (Settings → Apps → Pocket Money Pal), not a notification
+ * "Additional settings in the app" (Settings → Apps → Kids Board), not a notification
  * action, because kids can reach the notification shade (ADR 0032). With no paired phone, the
  * first phone to scan the kids' screen's QR code pairs as a parent, so this asks for the device's
  * screen lock first (the device's own lock, not an app PIN: ADR 0008), then confirms. With no

@@ -1,14 +1,17 @@
 import {
   formatPairingCode,
+  nativeCan,
   normalisePairingCode,
+  scannedPairingOf,
   type DeviceMe,
   type PairCheckResult,
 } from '@pmp/shared';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { api, ApiError } from '../../lib/api';
 import { celebrate } from '../../lib/confetti';
+import { nativeInfo, nativeRequest, NativeError } from '../../lib/native';
 import { markFinishSetup } from '../../lib/pwa';
 import { sound } from '../../lib/sounds';
 import { ArcadeButton } from '../arcade';
@@ -71,6 +74,32 @@ export function PairScreen({ onPaired }: { onPaired?: (me: DeviceMe) => void }) 
 
   const code = normalisePairingCode(typed);
 
+  // In the parents' app: scan the kiosk's code with the camera (ADR 0035). A code for this
+  // address is checked here; one for another address is opened, and the app moves there.
+  const shell = useQuery({ queryKey: ['native-info'], queryFn: nativeInfo, staleTime: Infinity });
+  const [scanProblem, setScanProblem] = useState<string | null>(null);
+  const scan = async () => {
+    sound.tap();
+    setScanProblem(null);
+    try {
+      const { text } = await nativeRequest('scanQr');
+      const scanned = scannedPairingOf(text);
+      if (!scanned) {
+        sound.sad();
+        setScanProblem('That isn’t a Pocket Money Pal code. Scan the one on the family screen.');
+      } else if (scanned.url && new URL(scanned.url).origin !== location.origin) {
+        location.href = scanned.url;
+      } else if (scanned.code) {
+        setTyped(formatPairingCode(scanned.code));
+        check.mutate(scanned.code);
+      }
+    } catch (err) {
+      if (err instanceof NativeError && err.code === 'cancelled') return;
+      sound.sad();
+      setScanProblem('The camera couldn’t read a code. Try again, or type it below.');
+    }
+  };
+
   if (checked) {
     return (
       <div className={classes.pairScreen}>
@@ -105,6 +134,12 @@ export function PairScreen({ onPaired }: { onPaired?: (me: DeviceMe) => void }) 
         then scan the code with your camera.
       </p>
       <p>No phone paired yet? The quest board on the family PC shows a code.</p>
+      {nativeCan(shell.data ?? null, 'scanQr') && (
+        <>
+          <ArcadeButton onClick={() => void scan()}>📷 Scan the code</ArcadeButton>
+          {scanProblem && <p className={classes.error}>{scanProblem}</p>}
+        </>
+      )}
       <p>Or type the code here:</p>
       <input
         className={classes.codeInput}

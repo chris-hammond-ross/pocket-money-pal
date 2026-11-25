@@ -40,12 +40,14 @@ android {
             // Installs beside a release build. Both use port 4789, so only one runs at a time.
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            resValue("string", "app_name", "PMP (debug)")
+            resValue("string", "app_name", "Kids (debug)")
             // The staging relay, so testing remote access never moves a real licence (ADR 0021).
             buildConfigField("String", "RELAY_URL", "\"https://staging.pocketmoneypal.app\"")
         }
         release {
-            resValue("string", "app_name", "Pocket Money Pal")
+            // The launcher label (ADR 0033). The Play title is "Pocket Money Pal: Kids Board";
+            // inside the code it's still the kiosk.
+            resValue("string", "app_name", "Kids Board")
             buildConfigField("String", "RELAY_URL", "\"\"") // the server's default: production
         }
     }

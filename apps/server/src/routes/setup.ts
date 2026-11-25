@@ -1,5 +1,6 @@
 import {
   CHORE_LIBRARY,
+  deviceClientOf,
   setupDraftSchema,
   setupRequestSchema,
   type SetupKioskInfo,
@@ -103,7 +104,12 @@ export async function setupRoutes(
       result = completeSetup(db, {
         request,
         now: now(),
-        pairAs: onPc ? null : { deviceName: deviceNameFrom(req.headers['user-agent']) },
+        pairAs: onPc
+          ? null
+          : {
+              deviceName: deviceNameFrom(req.headers['user-agent']),
+              client: deviceClientOf(req.headers['user-agent']),
+            },
       });
     } catch (err) {
       if (err instanceof ConflictError) return reply.code(409).send({ error: 'setup-done' });

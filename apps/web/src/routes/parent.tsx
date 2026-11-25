@@ -6,6 +6,7 @@ import type { Banner } from '../components/parent/context';
 import { PairScreen } from '../components/parent/PairScreen';
 import { ParentShell } from '../components/parent/ParentShell';
 import { api } from '../lib/api';
+import { tellShell } from '../lib/native';
 import { forgetParentData, useRemoteEnded } from '../lib/offline';
 import { clearOutbox } from '../lib/outbox';
 
@@ -40,12 +41,14 @@ export function ParentPage() {
     refetchInterval: retryWhileUnreachable,
   });
 
-  // Unpaired (or revoked): nothing kept or queued on this phone is any use now.
+  // Unpaired (or revoked): nothing kept or queued on this phone is any use now. In the
+  // parents' app, a shell that was paired goes back to its first-run scanner (ADR 0035).
   const unpaired = me.data === null;
   useEffect(() => {
     if (!unpaired) return;
     forgetParentData();
     void clearOutbox();
+    void tellShell({ paired: false });
   }, [unpaired]);
 
   if (status.data?.needed) return <Navigate to="/setup" replace />;

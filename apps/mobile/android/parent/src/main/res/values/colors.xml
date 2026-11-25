@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The launcher icon's background: arcade gold (apps/web/src/theme.ts), so the parents' app
+         stands apart from the kiosk app's navy icon (ADR 0035). -->
+    <color name="parent_icon_background">#FFD43B</color>
+    <!-- The /parent page's own background (arcade.bg), behind the status and navigation bars. -->
+    <color name="parent_background">#0F1024</color>
+    <color name="parent_text">#FFFFFF</color>
+    <color name="parent_dim_text">#B3FFFFFF</color>
+    <color name="parent_button">#FFD43B</color>
+    <color name="parent_button_text">#0F1024</color>
+</resources>

@@ -170,26 +170,32 @@ export interface FinishSetupState {
   /** Installed from this browser already. */
   installed: boolean;
   device: InstallDevice;
+  /** Inside the native parents' app (ADR 0033): it's installed already. */
+  inApp: boolean;
 }
 
 /**
  * The full-screen "Install the app" screen shows only where installing can work, and only
- * on phones and tablets: it has no way out, and some desktop browsers can't install.
+ * on phones and tablets: it has no way out, and some desktop browsers can't install. Never
+ * inside the native app.
  */
 export function finishSetupShows(s: FinishSetupState): boolean {
+  if (s.inApp) return false;
   return s.pending && s.secure && !s.standalone && !s.installed && s.device !== 'desktop';
 }
 
 /**
  * Notifications are asked in the installed app (spec 009): not while the install screen
- * is up, and not in a browser tab on a phone where the app is installed.
+ * is up, and not in a browser tab on a phone where the app is installed. Never the browser's
+ * Web Push opt-in inside the native app, which asks through its bridge (ADR 0033).
  */
 export function asksPushHere(s: {
   asked: boolean;
   finishSetupShowing: boolean;
   standalone: boolean;
   installed: boolean;
+  inApp: boolean;
 }): boolean {
-  if (s.asked || s.finishSetupShowing) return false;
+  if (s.inApp || s.asked || s.finishSetupShowing) return false;
   return s.standalone || !s.installed;
 }

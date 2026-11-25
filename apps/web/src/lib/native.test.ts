@@ -137,3 +137,26 @@ describe('in the app', () => {
     expect(shell.sent).toHaveLength(2);
   });
 });
+
+describe('tellShell', () => {
+  it('sends the session to an app that takes it', async () => {
+    const shell = fakeShell((r) =>
+      r.type === 'info'
+        ? { id: r.id, ok: true, result: { ...info, features: ['session'] } }
+        : { id: r.id, ok: true, result: {} },
+    );
+    await native.tellShell({ paired: true, secureUrl: null, lanUrl: 'http://192.168.0.10:4789' });
+    expect(shell.sent.map((r) => r.type)).toEqual(['info', 'session']);
+    expect(shell.sent[1]).toMatchObject({ paired: true, lanUrl: 'http://192.168.0.10:4789' });
+  });
+
+  it('sends nothing to an app without session, or in a browser', async () => {
+    const shell = fakeShell((r) => ({ id: r.id, ok: true, result: info }));
+    await native.tellShell({ paired: false });
+    expect(shell.sent.map((r) => r.type)).toEqual(['info']);
+    vi.unstubAllGlobals();
+    vi.resetModules();
+    const browser = await import('./native');
+    await expect(browser.tellShell({ paired: false })).resolves.toBeUndefined();
+  });
+});

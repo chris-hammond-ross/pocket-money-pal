@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- app_name comes from parent/build.gradle.kts (per build type). -->
+
+    <!-- First run, and after the phone is unpaired (MainActivity). -->
+    <string name="first_run_title">Pocket Money Pal</string>
+    <string name="first_run_text">Scan the code on the family screen.</string>
+    <string name="first_run_hint">The kids’ screen shows a code while no phone is paired. Already have a paired phone? Open 🎮 Players → Pair another phone on it.</string>
+    <string name="scan">📷 Scan the code</string>
+    <string name="type_address">Type the address instead</string>
+    <string name="not_a_code">That isn’t a Pocket Money Pal code. Scan the one on the family screen.</string>
+    <string name="scanner_failed">The camera couldn’t read a code. Try again, or type the address.</string>
+
+    <!-- Typing the address. -->
+    <string name="address_title">The family PC’s address</string>
+    <string name="address_message">It’s under the code on the family screen, like 192.168.1.20:4789.</string>
+    <string name="address_hint">192.168.1.20:4789</string>
+    <string name="address_go">Open</string>
+    <string name="address_bad">That doesn’t look like an address.</string>
+    <string name="address_unreachable">Couldn’t reach %1$s. Check the address, and that this phone is on the home Wi-Fi.</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Opening, and when the family PC can't be reached. -->
+    <string name="connecting">Connecting…</string>
+    <string name="unreachable_title">Can’t reach the family PC</string>
+    <string name="unreachable_text">Check the PC is on, and that this phone is online (on the home Wi-Fi, for a home address).</string>
+    <string name="try_again">Try again</string>
+</resources>

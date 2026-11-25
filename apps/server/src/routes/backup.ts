@@ -1,6 +1,7 @@
 import { createReadStream } from 'node:fs';
 import {
   backupRestoreRequestSchema,
+  deviceClientOf,
   RESTORE_WORD,
   zonedDateOf,
   type BackupInspectResult,
@@ -159,7 +160,11 @@ export async function backupRoutes(
         token,
         pairAs:
           parentId !== undefined && !onPc
-            ? { parentId, deviceName: deviceNameFrom(req.headers['user-agent']) }
+            ? {
+                parentId,
+                deviceName: deviceNameFrom(req.headers['user-agent']),
+                client: deviceClientOf(req.headers['user-agent']),
+              }
             : undefined,
       });
     } catch (err) {

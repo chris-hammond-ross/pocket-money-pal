@@ -186,6 +186,7 @@ describe('finishSetupShows', () => {
     standalone: false,
     installed: false,
     device: 'android',
+    inApp: false,
   };
 
   it('shows on a phone just paired over HTTPS', () => {
@@ -210,10 +211,20 @@ describe('finishSetupShows', () => {
   it('never shows on a desktop browser', () => {
     expect(finishSetupShows({ ...ready, device: 'desktop' })).toBe(false);
   });
+
+  it('never shows inside the native parents’ app', () => {
+    expect(finishSetupShows({ ...ready, inApp: true })).toBe(false);
+  });
 });
 
 describe('asksPushHere', () => {
-  const fresh = { asked: false, finishSetupShowing: false, standalone: false, installed: false };
+  const fresh = {
+    asked: false,
+    finishSetupShowing: false,
+    standalone: false,
+    installed: false,
+    inApp: false,
+  };
 
   it('asks in the installed app on its first open', () => {
     expect(asksPushHere({ ...fresh, standalone: true, installed: true })).toBe(true);
@@ -233,5 +244,10 @@ describe('asksPushHere', () => {
 
   it('asks only once', () => {
     expect(asksPushHere({ ...fresh, asked: true, standalone: true })).toBe(false);
+  });
+
+  it('never asks for browser push inside the native app', () => {
+    expect(asksPushHere({ ...fresh, inApp: true })).toBe(false);
+    expect(asksPushHere({ ...fresh, inApp: true, standalone: true, installed: true })).toBe(false);
   });
 });

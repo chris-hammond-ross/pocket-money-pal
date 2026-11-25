@@ -6,6 +6,7 @@
  */
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { isNativeShell } from '../../lib/native';
 import { useFamilyPc } from '../../lib/offline';
 import { requestFlush, useOutbox } from '../../lib/outbox';
 import { pairUrl } from '../../lib/qr';
@@ -22,7 +23,8 @@ export function useMoveTarget(): { secureUrl: string | null; needed: boolean; is
   const access = useQuery({ queryKey: ['access'], queryFn: api.access });
   const relay = useQuery({ queryKey: ['relay'], queryFn: api.relay, retry: false });
   const secureUrl = access.data?.secureUrl ?? null;
-  const needed = secureUrl !== null && !isHere(secureUrl);
+  // The parents' app switches address by itself (ADR 0035): nothing to move by hand.
+  const needed = secureUrl !== null && !isHere(secureUrl) && !isNativeShell();
   return { secureUrl, needed, isRelay: secureUrl !== null && relay.data?.url === secureUrl };
 }
 

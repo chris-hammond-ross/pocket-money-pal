@@ -18,5 +18,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "pocket-money-pal"
 // One Gradle project, one module per app (ADR 0033): kiosk is the kids' screen and the server;
-// shell is what the apps share.
-include(":kiosk", ":shell")
+// parent is the parents' app; shell is what the apps share.
+include(":kiosk", ":parent", ":shell")

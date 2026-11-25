@@ -7,6 +7,7 @@ import {
   setupDraftSchema,
   startsNextTime,
   zonedDateOf,
+  type DeviceClient,
   type SetupDraft,
   type SetupRequest,
 } from '@pmp/shared';
@@ -72,7 +73,7 @@ export interface CompleteSetupArgs {
   request: SetupRequest;
   now: number;
   /** Pair the calling device to the first parent (not on the family PC; ADR 0005). */
-  pairAs: { deviceName: string } | null;
+  pairAs: { deviceName: string; client?: DeviceClient } | null;
 }
 
 export interface CompleteSetupResult {
@@ -132,7 +133,12 @@ export function completeSetup(db: Db, args: CompleteSetupArgs): CompleteSetupRes
 
     let deviceToken: string | null = null;
     if (args.pairAs) {
-      const paired = pairDevice(tx, { userId: firstParent, name: args.pairAs.deviceName, now });
+      const paired = pairDevice(tx, {
+        userId: firstParent,
+        name: args.pairAs.deviceName,
+        client: args.pairAs.client,
+        now,
+      });
       deviceToken = paired.token;
       recordEvent(tx, {
         type: 'device.paired',

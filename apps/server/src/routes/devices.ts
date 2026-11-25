@@ -1,4 +1,5 @@
 import {
+  deviceClientOf,
   idSchema,
   inviteRequestSchema,
   pairCheckRequestSchema,
@@ -73,6 +74,7 @@ export async function deviceRoutes(
     return listDevices(db).map(({ device, parent }) => ({
       id: device.id,
       name: device.name,
+      client: device.client,
       parent: { id: parent.id, name: parent.name },
       pairedAt: device.createdAt,
       lastSeenAt: device.lastSeenAt,
@@ -192,6 +194,7 @@ export async function deviceRoutes(
       const paired = pairDevice(tx, {
         userId: parent.id,
         name: deviceNameFrom(req.headers['user-agent']),
+        client: deviceClientOf(req.headers['user-agent']),
         now: at,
       });
       recordEvent(tx, {

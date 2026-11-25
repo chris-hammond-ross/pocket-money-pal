@@ -6,6 +6,7 @@
 import { installDeviceOf, type FinishSetupState, type InstallHints } from '@pmp/shared';
 import { useEffect, useState } from 'react';
 import { api } from './api';
+import { isNativeShell } from './native';
 
 /** HTTPS (or `localhost` in development): service worker, install and push are possible. */
 export function isSecure(): boolean {
@@ -236,6 +237,7 @@ export function finishSetupState(): FinishSetupState {
     standalone: isStandalone(),
     installed: isInstalled(),
     device: installDeviceOf(navigator.userAgent, navigator.maxTouchPoints),
+    inApp: isNativeShell(),
   };
 }
 

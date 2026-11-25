@@ -6,6 +6,7 @@
  */
 import {
   NATIVE_BRIDGE_OBJECT,
+  nativeCan,
   nativeRequestSchema,
   nativeResponseSchema,
   nativeResultSchemas,
@@ -151,4 +152,17 @@ export function nativeInfo(): Promise<NativeInfo | null> {
     return null;
   });
   return info;
+}
+
+/**
+ * Tells the parents' app where this phone stands (ADR 0035): paired, with the addresses to
+ * remember, or not paired any more. Quietly does nothing in a browser, or in an app that
+ * doesn't take `session`.
+ */
+export async function tellShell(session: NativeRequestPayload<'session'>): Promise<void> {
+  const shell = await nativeInfo();
+  if (!nativeCan(shell, 'session')) return;
+  await nativeRequest('session', session).catch((error: unknown) => {
+    console.warn('The app did not take the session', error);
+  });
 }

@@ -8,7 +8,7 @@ import { randomBytes } from 'node:crypto';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { BackupSummary } from '@pmp/shared';
+import type { BackupSummary, DeviceClient } from '@pmp/shared';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
@@ -220,7 +220,7 @@ export function restoreBackup(
   args: {
     now: number;
     token?: string;
-    pairAs?: { parentId: number; deviceName: string };
+    pairAs?: { parentId: number; deviceName: string; client?: DeviceClient };
   },
 ): RestoreResult {
   const sqlite = db.$client;
@@ -294,7 +294,12 @@ function pairThisPhone(
   if (!known && pairAs) {
     const parent = findParent(db, pairAs.parentId);
     if (!parent) throw new BackupError('no-parent');
-    const paired = pairDevice(db, { userId: parent.id, name: pairAs.deviceName, now });
+    const paired = pairDevice(db, {
+      userId: parent.id,
+      name: pairAs.deviceName,
+      client: pairAs.client,
+      now,
+    });
     recordEvent(db, {
       type: 'device.paired',
       at: now,

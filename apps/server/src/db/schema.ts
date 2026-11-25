@@ -1,4 +1,4 @@
-import type { SurpriseRunStatus, Weekday } from '@pmp/shared';
+import type { DeviceClient, SurpriseRunStatus, Weekday } from '@pmp/shared';
 import { sql } from 'drizzle-orm';
 import {
   index,
@@ -418,6 +418,8 @@ export const devices = sqliteTable('devices', {
     .notNull()
     .references(() => users.id),
   name: text('name').notNull(),
+  /** How it reaches the server (`deviceClientOf`, ADR 0035): a browser, or the parents' app. */
+  client: text('client').$type<DeviceClient>().notNull().default('browser'),
   tokenHash: text('token_hash').notNull().unique(),
   /** Web Push subscription (ADR 0002), when the phone opted in over HTTPS. */
   pushSubscription: text('push_subscription', { mode: 'json' }).$type<Record<string, unknown>>(),

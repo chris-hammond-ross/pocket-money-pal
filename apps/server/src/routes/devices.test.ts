@@ -348,6 +348,26 @@ describe('paired phones list and revoking', () => {
     ]);
   });
 
+  it('says which phones paired from the parents’ app (ADR 0035)', async () => {
+    const { mum, dad } = family();
+    const mumsPhone = pairedCookie(db, mum.id);
+    const code = await invite(mumsPhone);
+    const appUa = `${ANDROID_UA} PocketMoneyPal/0.3.0 (android; parent)`;
+    const paired = await phone({
+      method: 'POST',
+      url: '/api/devices/pair',
+      payload: { code, parentId: dad.id },
+      headers: { 'user-agent': appUa },
+    });
+    expect(paired.statusCode).toBe(201);
+    const res = await phone({ method: 'GET', url: '/api/devices' }, mumsPhone);
+    const list = deviceListSchema.parse(res.json());
+    expect(list.map((d) => [d.parent.name, d.name, d.client])).toEqual([
+      ['Mum', expect.any(String), 'browser'],
+      ['Dad', 'Android phone', 'android-app'],
+    ]);
+  });
+
   it('revokes another phone, which is locked out at once, and tells every screen', async () => {
     const { mum, dad } = family();
     const mumsPhone = pairedCookie(db, mum.id);

@@ -23,6 +23,8 @@
     "desktop:store": "npm run build && npm run store -w @pmp/desktop",
     "mobile:apk": "npm run build && npm run apk -w @pmp/mobile",
     "mobile:release": "npm run build && npm run release:kiosk -w @pmp/mobile",
+    "mobile:apk:parent": "npm run apk:parent -w @pmp/mobile",
+    "mobile:release:parent": "npm run release:parent -w @pmp/mobile",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
