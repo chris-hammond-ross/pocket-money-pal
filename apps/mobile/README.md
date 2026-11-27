@@ -57,7 +57,7 @@ The parents' app has no server inside, so its scripts (`apk:parent`, `release:pa
 Outputs are in `android/kiosk/build/outputs/`: `apk/debug/kiosk-debug.apk`, `apk/release/kiosk-release.apk` and `bundle/release/kiosk-release.aab`. Before session 12.1 the module was called `app`, and the files `app-*.apk`.
 
 - The launcher label is **Kids Board** (ADR 0033); the debug build is `com.pocketmoneypal.kiosk.debug` ("Kids (debug)"), so it installs beside a release build. Both use port 4789, so only one can run at a time.
-- `-Ppmp.versionCode=N` overrides the version code, to test an update over an existing install. By default it comes from the repo version: `1.2.3` → `1002003`.
+- `-Ppmp.versionCode=N` overrides the version code, to test an update over an existing install. By default it comes from the repo version: `1.2.3` → `1002003`. In PowerShell, quote it (`'-Ppmp.versionCode=N'`), or PowerShell splits it at the dot. Once a device has a higher code, a default build won't install over it (`INSTALL_FAILED_VERSION_DOWNGRADE`): keep raising it, or `adb install -r -d` for a debug build.
 - Server logs go to logcat: `adb logcat -s PmpServer PmpShell`.
 
 ## The upload key

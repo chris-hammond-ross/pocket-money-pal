@@ -20,7 +20,7 @@
     <string name="unpair_lock_subtitle">Enter this device’s screen lock to continue.</string>
     <string name="unpair_no_lock">\n\nThis device has no screen lock, so anyone using it can do this, kids included. To stop that, set a screen lock in Android’s Settings.</string>
     <string name="unpair_title">Unpair every parent phone?</string>
-    <string name="unpair_message">Every paired phone stops working with Pocket Money Pal straight away, including any that are lost. Nothing else changes: quests, points and money stay as they are.\n\nTo pair a phone again, scan the QR code on the kids’ screen with the phone’s camera and open it in Chrome (Safari on an iPhone). Then pair any other phones from that one.</string>
+    <string name="unpair_message">Every paired phone stops working with Pocket Money Pal straight away, including any that are lost. Nothing else changes: quests, points and money stay as they are.\n\nTo pair a phone again, open the Pocket Money Pal: Parent app on it and scan the code on the kids’ screen. On an iPhone, scan it with the camera and open it in Safari. Then pair any other phones from that one.</string>
     <string name="unpair_confirm">Unpair all phones</string>
     <string name="cancel">Cancel</string>
     <string name="unpaired_none">No phones were paired.</string>

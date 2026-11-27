@@ -15,6 +15,7 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -134,6 +135,13 @@ public final class UnpairActivity extends Activity {
             c.setRequestMethod("POST");
             c.setConnectTimeout(5000);
             c.setReadTimeout(10000);
+            // An empty JSON body. Without one, Android still labels a POST
+            // application/x-www-form-urlencoded, which the server refuses with 415.
+            c.setRequestProperty("Content-Type", "application/json");
+            c.setDoOutput(true);
+            try (OutputStream out = c.getOutputStream()) {
+                out.write("{}".getBytes(StandardCharsets.UTF_8));
+            }
             int code = c.getResponseCode();
             if (code != 200) throw new Exception("The server said " + code + ".");
             return new JSONObject(readAll(c.getInputStream())).getInt("revoked");

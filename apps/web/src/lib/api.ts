@@ -84,11 +84,23 @@ export class ApiError extends Error {
 export const GATEWAY_STATUSES: readonly number[] = [502, 503, 504];
 
 /**
+ * How long a read waits for the PC. A PC that powered off can leave the relay or a proxy
+ * holding a dead connection, so a read that never answers is "can't reach", like an error.
+ * Changes bring their own time limit (the offline queue's) or none.
+ */
+const READ_TIMEOUT_MS = 15_000;
+
+/**
  * A request to the PC. Not reaching it (it's off, the app is closed behind a proxy, or the
  * phone is off the home network) is an `ApiError` with status 0 and code `offline`, and is
  * noted for the offline queue (spec 007); any answer from the PC itself means it's on.
  */
 async function request(path: string, init?: RequestInit): Promise<unknown> {
+  const method = init?.method ?? 'GET';
+  const read = method === 'GET' || method === 'HEAD';
+  const signal =
+    init?.signal ??
+    (read && 'timeout' in AbortSignal ? AbortSignal.timeout(READ_TIMEOUT_MS) : null);
   const offline = () => {
     noteUnreachable();
     return new ApiError(0, 'offline', `${init?.method ?? 'GET'} ${path}: can't reach the PC`);
@@ -97,6 +109,7 @@ async function request(path: string, init?: RequestInit): Promise<unknown> {
   try {
     res = await fetch(path, {
       ...init,
+      signal,
       headers: { ...(init?.body && { 'content-type': 'application/json' }), ...init?.headers },
     });
   } catch {

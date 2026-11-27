@@ -273,6 +273,14 @@ describe("the PC's Unpair all phones", () => {
   const unpairAll = (opts: Partial<InjectOptions> = {}) =>
     pc({ method: 'POST', url: '/api/devices/unpair-all', ...opts });
 
+  it("takes the Android kiosk app's request: an empty JSON body", async () => {
+    const { mum } = family();
+    pairedCookie(db, mum.id);
+    const res = await unpairAll({ headers: { 'content-type': 'application/json' }, payload: '{}' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ revoked: 1 });
+  });
+
   it('revokes every phone, records it, and tells every screen', async () => {
     const { mum, dad } = family();
     const mumsPhone = pairedCookie(db, mum.id);
