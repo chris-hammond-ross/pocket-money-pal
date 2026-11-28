@@ -109,7 +109,14 @@ export const nativeResultSchemas = {
   info: nativeInfoSchema,
   scanQr: z.object({ text: z.string().max(4096) }),
   openExternal: z.object({}),
-  'push.permission': z.object({ state: nativePushPermissionSchema }),
+  /**
+   * `subscribed`: the app holds a push subscription (turned on and not off since). Older apps
+   * leave it out, which reads as not subscribed.
+   */
+  'push.permission': z.object({
+    state: nativePushPermissionSchema,
+    subscribed: z.boolean().optional(),
+  }),
   'push.subscribe': pushSubscriptionSchema,
   'push.unsubscribe': z.object({}),
   session: z.object({}),
@@ -137,6 +144,19 @@ export const nativeResponseSchema = z.discriminatedUnion('ok', [
   }),
 ]);
 export type NativeResponse = z.infer<typeof nativeResponseSchema>;
+
+/**
+ * Shell → page, unasked: a notification was tapped while the page was open (ADR 0037). The
+ * shell dispatches a window `CustomEvent` of this name whose `detail` is the message's `url`
+ * (a path under `/parent`, like `CLAIM_PUSH_URL`), so the page opens the tray or tab in place
+ * instead of reloading. With the app closed, the shell just opens that path.
+ */
+export const NATIVE_OPEN_EVENT = 'pmp:open';
+
+/** A path the shell may open from a notification: under `/parent`, on the page's own origin. */
+export function isParentPath(url: unknown): url is string {
+  return typeof url === 'string' && /^\/parent(?:[/?#]|$)/.test(url) && url.length <= 500;
+}
 
 /** The shell can do `feature`. `null` info means the page isn't in an app. */
 export function nativeCan(info: NativeInfo | null, feature: NativeFeature): boolean {

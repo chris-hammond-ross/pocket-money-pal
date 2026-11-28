@@ -79,6 +79,7 @@ export async function deviceRoutes(
       pairedAt: device.createdAt,
       lastSeenAt: device.lastSeenAt,
       current: device.id === current.id,
+      notifications: device.pushSubscription !== null,
     }));
   });
 

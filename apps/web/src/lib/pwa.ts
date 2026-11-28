@@ -7,6 +7,15 @@ import { installDeviceOf, type FinishSetupState, type InstallHints } from '@pmp/
 import { useEffect, useState } from 'react';
 import { api } from './api';
 import { isNativeShell } from './native';
+import {
+  nativeDisablePush,
+  nativeEnablePush,
+  nativePushState,
+  nativeResyncPush,
+  type PushState,
+} from './native-push';
+
+export type { PushState };
 
 /** HTTPS (or `localhost` in development): service worker, install and push are possible. */
 export function isSecure(): boolean {
@@ -98,10 +107,12 @@ async function registration(): Promise<ServiceWorkerRegistration> {
   return navigator.serviceWorker.ready;
 }
 
-export type PushState = 'unavailable' | 'denied' | 'off' | 'on';
-
-/** Whether this phone gets claim notifications. */
+/**
+ * Whether this phone gets claim notifications. In the parents' app, the app's own
+ * notifications (ADR 0037), never the WebView's.
+ */
 export async function pushState(): Promise<PushState> {
+  if (isNativeShell()) return nativePushState();
   if (!canPush()) return 'unavailable';
   if (Notification.permission === 'denied') return 'denied';
   const reg = await navigator.serviceWorker.getRegistration(SW_SCOPE);
@@ -114,6 +125,7 @@ export async function pushState(): Promise<PushState> {
  * stores the subscription on this phone's device record. Returns the new state.
  */
 export async function enablePush(): Promise<PushState> {
+  if (isNativeShell()) return nativeEnablePush(api);
   if (!canPush()) return 'unavailable';
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') return permission === 'denied' ? 'denied' : 'off';
@@ -139,6 +151,7 @@ function sameKey(a: Uint8Array, b: Uint8Array): boolean {
 }
 
 export async function disablePush(): Promise<PushState> {
+  if (isNativeShell()) return nativeDisablePush(api);
   const reg = await navigator.serviceWorker.getRegistration(SW_SCOPE);
   const sub = await reg?.pushManager.getSubscription();
   await sub?.unsubscribe();
@@ -151,6 +164,7 @@ export async function disablePush(): Promise<PushState> {
  * subscription the push service says is gone, and a re-paired phone has a new device.
  */
 export async function resyncPush(): Promise<void> {
+  if (isNativeShell()) return nativeResyncPush(api);
   if ((await pushState()) !== 'on') return;
   const reg = await navigator.serviceWorker.getRegistration(SW_SCOPE);
   const sub = await reg?.pushManager.getSubscription();

@@ -186,8 +186,8 @@ export function finishSetupShows(s: FinishSetupState): boolean {
 
 /**
  * Notifications are asked in the installed app (spec 009): not while the install screen
- * is up, and not in a browser tab on a phone where the app is installed. Never the browser's
- * Web Push opt-in inside the native app, which asks through its bridge (ADR 0033).
+ * is up, and not in a browser tab on a phone where the app is installed. Inside the native
+ * parents' app, once (it asks through its bridge, ADR 0037).
  */
 export function asksPushHere(s: {
   asked: boolean;
@@ -196,6 +196,8 @@ export function asksPushHere(s: {
   installed: boolean;
   inApp: boolean;
 }): boolean {
-  if (s.inApp || s.asked || s.finishSetupShowing) return false;
+  if (s.asked) return false;
+  if (s.inApp) return true;
+  if (s.finishSetupShowing) return false;
   return s.standalone || !s.installed;
 }

@@ -1,8 +1,9 @@
 /**
  * Web Push for claimed chores (spec 003 "Notifications", ADR 0002 and ADR 0009).
  *
- * Phones subscribe over HTTPS only; over plain HTTP nobody has a subscription and nothing
- * here does anything. The first claim pushes at once and opens a 2-minute window; claims
+ * Browsers subscribe over HTTPS only. The parents' app subscribes on any address, with the
+ * push gateway as its endpoint (ADR 0033, ADR 0037); to the server it's one more Web Push
+ * subscription. With no subscriptions nothing here does anything. The first claim pushes at once and opens a 2-minute window; claims
  * in the window go out together when it ends, under the same tag so the notification is
  * replaced rather than buzzing again. At send time, claims already handled are dropped,
  * and nothing is sent in quiet hours.

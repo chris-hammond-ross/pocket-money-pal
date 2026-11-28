@@ -25,4 +25,8 @@
     <string name="unreachable_title">Can’t reach the family PC</string>
     <string name="unreachable_text">Check the PC is on, and that this phone is online (on the home Wi-Fi, for a home address).</string>
     <string name="try_again">Try again</string>
+
+    <!-- Notifications (ADR 0037): the one channel, as Android's settings show it. -->
+    <string name="channel_claims">Claims and family alerts</string>
+    <string name="channel_claims_description">A child claimed a chore, payday is ready, or a jar was smashed.</string>
 </resources>

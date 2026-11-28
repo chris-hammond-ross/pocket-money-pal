@@ -5,7 +5,9 @@
  * and every request fails with `unsupported`, so callers fall back to the web way.
  */
 import {
+  isParentPath,
   NATIVE_BRIDGE_OBJECT,
+  NATIVE_OPEN_EVENT,
   nativeCan,
   nativeRequestSchema,
   nativeResponseSchema,
@@ -165,4 +167,18 @@ export async function tellShell(session: NativeRequestPayload<'session'>): Promi
   await nativeRequest('session', session).catch((error: unknown) => {
     console.warn('The app did not take the session', error);
   });
+}
+
+/**
+ * A notification tapped while the page is open (ADR 0037): the parents' app sends its `url`
+ * (a `/parent` path) so the page can open the tray or tab in place. Returns the unsubscribe.
+ */
+export function onNativeOpen(listener: (url: string) => void): () => void {
+  if (typeof window === 'undefined') return () => undefined;
+  const handler = (event: Event) => {
+    const url = (event as CustomEvent<unknown>).detail;
+    if (isParentPath(url)) listener(url);
+  };
+  window.addEventListener(NATIVE_OPEN_EVENT, handler);
+  return () => window.removeEventListener(NATIVE_OPEN_EVENT, handler);
 }

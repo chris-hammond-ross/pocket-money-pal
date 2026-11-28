@@ -15,9 +15,10 @@ export interface PushRouteOptions {
 }
 
 /**
- * HTTPS and push (ADR 0002, ADR 0009): the server's HTTPS address, the VAPID public key,
- * and each phone's push subscription. Subscriptions only ever come from HTTPS pages, since
- * browsers offer push to secure origins only.
+ * HTTPS and push (ADR 0002, ADR 0009, ADR 0037): the server's HTTPS address, the VAPID public
+ * key, and each phone's push subscription. A subscription comes from a browser on an HTTPS
+ * page, or from the parents' app on any address (its endpoint is the push gateway). Every
+ * screen hears `devices.changed`, since the Paired phones list shows who gets notifications.
  */
 export async function pushRoutes(
   app: FastifyInstance,
@@ -35,11 +36,13 @@ export async function pushRoutes(
     const sub = pushSubscriptionSchema.safeParse(req.body);
     if (!sub.success) return reply.code(400).send({ error: sub.error.issues });
     setPushSubscription(db, authOf(req).device.id, sub.data);
+    app.hub.broadcast({ type: 'devices.changed' });
     return reply.code(204).send();
   });
 
   app.delete('/api/devices/me/push-subscription', parentOnly, async (req, reply) => {
     setPushSubscription(db, authOf(req).device.id, null);
+    app.hub.broadcast({ type: 'devices.changed' });
     return reply.code(204).send();
   });
 

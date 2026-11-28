@@ -571,6 +571,11 @@ export const deviceListSchema = z.array(
     lastSeenAt: z.number().int().nullable(),
     /** The device asking. */
     current: z.boolean(),
+    /**
+     * It has a push subscription. Cleared when the push service says it's gone, so false also
+     * means a stale one (ADR 0037). Older servers don't say: off.
+     */
+    notifications: z.boolean().default(false),
   }),
 );
 export type DeviceList = z.infer<typeof deviceListSchema>;

@@ -246,8 +246,9 @@ describe('asksPushHere', () => {
     expect(asksPushHere({ ...fresh, asked: true, standalone: true })).toBe(false);
   });
 
-  it('never asks for browser push inside the native app', () => {
-    expect(asksPushHere({ ...fresh, inApp: true })).toBe(false);
-    expect(asksPushHere({ ...fresh, inApp: true, standalone: true, installed: true })).toBe(false);
+  it('asks once inside the native app, through its bridge', () => {
+    expect(asksPushHere({ ...fresh, inApp: true })).toBe(true);
+    expect(asksPushHere({ ...fresh, inApp: true, installed: true })).toBe(true);
+    expect(asksPushHere({ ...fresh, inApp: true, asked: true })).toBe(false);
   });
 });

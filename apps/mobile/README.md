@@ -2,12 +2,12 @@
 
 Thin shells, like `apps/desktop`. There's no business logic here (ADR 0001). `android/` is one Gradle project, with a module per app (ADR 0033, ADR 0034):
 
-| Module        | What it is                                                                                                                                                                                                                                                                |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `kiosk`       | The kiosk app (`com.pocketmoneypal.kiosk`): runs the same server on the device and shows the kids' screen. Phones pair with the device as they would with a PC.                                                                                                           |
-| `shell`       | An Android library both apps use: the WebView setup (text size fixed at 100%, sounds without a tap, other sites in the browser, the user-agent marker), the page↔app bridge (`NativeBridge`), the theme and the colours.                                                  |
-| `build-logic` | Not an app: Gradle plugins for what the apps share. `pmp.android-app` sets the SDK levels, the version and version code, and release signing with the upload key. `pmp.android-library` sets the SDK levels for `shell`. The Android Gradle Plugin's version is set here. |
-| `parent`      | The parents' app (`com.pocketmoneypal.parent`): the family server's `/parent` in a WebView, with a code scanner for pairing and the family's addresses (ADR 0035).                                                                                                        |
+| Module        | What it is                                                                                                                                                                                                                                                                                                                                |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kiosk`       | The kiosk app (`com.pocketmoneypal.kiosk`): runs the same server on the device and shows the kids' screen. Phones pair with the device as they would with a PC.                                                                                                                                                                           |
+| `shell`       | An Android library both apps use: the WebView setup (text size fixed at 100%, sounds without a tap, other sites in the browser, the user-agent marker), the page↔app bridge (`NativeBridge`), the theme and the colours.                                                                                                                  |
+| `build-logic` | Not an app: Gradle plugins for what the apps share. `pmp.android-app` sets the SDK levels, the version and version code, and release signing with the upload key. `pmp.android-library` sets the SDK levels for `shell`. `pmp.firebase` reads the parents' app's `google-services.json`. The Android Gradle Plugin's version is set here. |
+| `parent`      | The parents' app (`com.pocketmoneypal.parent`): the family server's `/parent` in a WebView, with a code scanner for pairing and the family's addresses (ADR 0035).                                                                                                                                                                        |
 
 The page talks to the app around it through a small bridge. Its contract (message names and shapes, `bridgeVersion`, `nativeCan`) is in `packages/shared/src/native-bridge.ts`, and the web side is `apps/web/src/lib/native.ts`. The parents' app implements it (`NativeBridge` in `shell`); the kiosk page doesn't use it.
 
@@ -29,10 +29,12 @@ Decisions: ADR 0029 (the spike) and ADR 0032 (this app).
 - **Addresses** (`Addresses`): the paired page reports the family's addresses through the bridge's `session` message. The app opens the secure one (the relay) when `/api/health` answers there, the home address when it doesn't, and copies the `pmp_device` cookie between them, so it's one paired device on every address. Turning on remote access switches the app over by itself.
 - **Can't reach the PC:** HTTPS has the page's service worker (ADR 0017). On plain HTTP the page is retried from the WebView's own cache, so the web app's own "Can't reach the family PC" shows and keeps trying; with nothing cached, the app's native screen with Try again.
 - **Unpaired** (from another phone, or Unpair all): the page reports `session { paired: false }`; the app asks the server with its token, and on a 401 forgets the addresses and cookies and shows the first-run screen.
-- **The bridge** (`NativeBridge` in `shell`) answers `info`, `scanQr`, `openExternal` and `session`, for the family's own addresses only.
+- **The bridge** (`NativeBridge` in `shell`) answers `info`, `scanQr`, `openExternal`, `session` and `push.*`, for the family's own addresses only.
+- **Notifications** (ADR 0037): the app acts as a Web Push browser. `Push` gets an FCM token and hands the page a subscription whose endpoint is the push gateway (`https://push.pocketmoneypal.app/v1/fcm/<token>`), with its own P-256 keys and auth secret (`PushKeys`, stored wrapped by a Keystore key). The page stores it on the server like a browser's. `PushService` decrypts what FCM delivers (`WebPushCrypto`, RFC 8291) and `Notifications` shows it on one channel, "Claims and family alerts"; a tap opens the message's page, in place when the app is open (the `pmp:open` event). FCM stays off until a parent turns notifications on. Only this app has Google services; the kiosk app has none.
+- **Firebase config:** `android/parent/google-services.json` (project `pocket-money-pal`, both packages), committed. It isn't a secret: its API key is restricted to the two packages and the signing certificates. The build fails without it.
 - **Launcher label** **PMP Parent**; the icon is the kiosk's pig on gold. Cleartext is allowed everywhere (LAN addresses can't be listed). `targetSdk` 36 needs no local-network permission; 37 will (ADR 0035).
 
-Decisions: ADR 0033 and ADR 0035.
+Decisions: ADR 0033, ADR 0035 and ADR 0037.
 
 ## Build
 
@@ -46,7 +48,7 @@ npm run mobile:apk:parent                             # the parents' app: debug 
 npm run mobile:release:parent                         # the parents' app: signed release APK and .aab
 ```
 
-The parents' app has no server inside, so its scripts (`apk:parent`, `release:parent`) are Gradle alone. Its outputs are in `android/parent/build/outputs/` (`parent-debug.apk`, `parent-release.apk`, `parent-release.aab`). The debug build is `com.pocketmoneypal.parent.debug` ("Parent (debug)"); `chrome://inspect` on the PC can debug its WebView. Logs: `adb logcat -s PmpParent PmpShell`.
+The parents' app has no server inside, so its scripts (`apk:parent`, `release:parent`) are Gradle alone. Its outputs are in `android/parent/build/outputs/` (`parent-debug.apk`, `parent-release.apk`, `parent-release.aab`). The debug build is `com.pocketmoneypal.parent.debug` ("Parent (debug)"); `chrome://inspect` on the PC can debug its WebView. Logs: `adb logcat -s PmpParent PmpShell PmpPush`. Unit tests (the Web Push decryption): `npm run gradle -w @pmp/mobile -- :parent:testDebugUnitTest`.
 
 `mobile:apk` and `mobile:release` (the kiosk) run `npm run build` first. The per-app scripts in `@pmp/mobile` (`apk:kiosk`, `release:kiosk`) expect it built. The kiosk's run:
 

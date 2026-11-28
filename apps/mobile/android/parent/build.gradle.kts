@@ -4,6 +4,8 @@
 // staging step.
 plugins {
     id("pmp.android-app")
+    // Firebase's config from google-services.json (ADR 0037).
+    id("pmp.firebase")
 }
 
 android {
@@ -34,4 +36,10 @@ dependencies {
     // Google's code scanner: Play services shows the camera and hands back the code, so the app
     // needs no camera permission or scanner screen of its own (ADR 0035).
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+    // Notifications from the push gateway (ADR 0036, ADR 0037). Only the parents' app has
+    // Google services; the kiosk app stays free of them.
+    implementation(platform("com.google.firebase:firebase-bom:35.2.0"))
+    implementation("com.google.firebase:firebase-messaging")
+
+    testImplementation("junit:junit:4.13.2")
 }

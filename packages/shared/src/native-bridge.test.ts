@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   NATIVE_BRIDGE_VERSION,
   deviceClientOf,
+  isParentPath,
   nativeAddressesOf,
   nativeCan,
   nativeInfoSchema,
@@ -140,6 +141,30 @@ describe('nativeResponseSchema', () => {
     expect(nativeResponseSchema.safeParse({ ok: true, result: {} }).success).toBe(false);
     expect(nativeResponseSchema.safeParse({ id: '1', result: {} }).success).toBe(false);
     expect(nativeResponseSchema.safeParse({ id: '1', ok: false }).success).toBe(false);
+  });
+});
+
+describe('push.permission result', () => {
+  it('takes subscribed, and reads an older app without it', () => {
+    const schema = nativeResultSchemas['push.permission'];
+    expect(schema.parse({ state: 'granted', subscribed: true })).toEqual({
+      state: 'granted',
+      subscribed: true,
+    });
+    expect(schema.parse({ state: 'prompt' }).subscribed).toBeUndefined();
+  });
+});
+
+describe('isParentPath', () => {
+  it('accepts paths under /parent only', () => {
+    expect(isParentPath('/parent')).toBe(true);
+    expect(isParentPath('/parent?tray=1')).toBe(true);
+    expect(isParentPath('/parent/pair?code=x')).toBe(true);
+    expect(isParentPath('/parentx')).toBe(false);
+    expect(isParentPath('/kiosk')).toBe(false);
+    expect(isParentPath('https://evil.example/parent')).toBe(false);
+    expect(isParentPath('//evil.example/parent')).toBe(false);
+    expect(isParentPath(null)).toBe(false);
   });
 });
 

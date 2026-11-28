@@ -1,7 +1,12 @@
 package com.pocketmoneypal.parent;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Insets;
 import android.graphics.Typeface;
 import android.net.Uri;
@@ -58,7 +63,10 @@ import java.util.List;
  *   <li><b>Offline</b>: HTTPS has the page's service worker (ADR 0017). On plain HTTP the page is
  *       retried from the WebView's own cache; with nothing cached, "Can't reach the family PC".
  *   <li><b>The bridge</b> ({@link NativeBridge}): {@code info}, {@code scanQr},
- *       {@code openExternal} and {@code session}, for the family's own addresses only.
+ *       {@code openExternal}, {@code session} and {@code push.*}, for the family's own
+ *       addresses only.
+ *   <li><b>Notifications</b> ({@link Push}, ADR 0037): Android's question, the subscription the
+ *       page stores, and a tapped notification opening its page (in place, when it's open).
  * </ul>
  */
 public final class MainActivity extends Activity implements NativeBridge.Handler {
@@ -66,7 +74,10 @@ public final class MainActivity extends Activity implements NativeBridge.Handler
     private static final String HOME_PATH = "/parent";
     /** Back from the background after this long: check the app is on the best address. */
     private static final long RECHECK_AFTER_MS = 60_000;
-    private static final List<String> FEATURES = Arrays.asList("scanQr", "openExternal", "session");
+    private static final List<String> FEATURES = Arrays.asList("scanQr", "openExternal", "session", "push");
+    private static final int ASK_NOTIFICATIONS = 1;
+    /** {@code NATIVE_OPEN_EVENT} in @pmp/shared. */
+    private static final String OPEN_EVENT = "pmp:open";
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private Addresses addresses;
@@ -88,14 +99,42 @@ public final class MainActivity extends Activity implements NativeBridge.Handler
     private int failures;
     private static final int MAX_FAILURES = 3;
     private long pausedAt;
+    /** The page's push.permission waiting on Android's question. */
+    private NativeBridge.Reply askingNotifications;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         addresses = new Addresses(this);
+        Notifications.createChannel(this);
         buildViews();
         if (addresses.isEmpty()) showFirstRun();
-        else open(HOME_PATH);
+        else open(tappedPath(getIntent()));
+    }
+
+    /** A notification tapped while the app is running (ADR 0037). */
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        String path = intent.getStringExtra(Notifications.EXTRA_URL);
+        if (path == null || !Notifications.isParentPath(path) || addresses.isEmpty()) return;
+        String url = web.getUrl();
+        boolean pageOpen = web.getVisibility() == View.VISIBLE && url != null
+                && addresses.isKnown(Addresses.originOf(Uri.parse(url)));
+        if (pageOpen) {
+            // The page opens the tray or tab in place, keeping whatever the parent had open.
+            web.evaluateJavascript("window.dispatchEvent(new CustomEvent(" + JSONObject.quote(OPEN_EVENT)
+                    + ", { detail: " + JSONObject.quote(path) + " }))", null);
+        } else {
+            open(path);
+        }
+    }
+
+    /** Where to open: a tapped notification's page, else the app's home. */
+    private static String tappedPath(Intent intent) {
+        String path = intent == null ? null : intent.getStringExtra(Notifications.EXTRA_URL);
+        return Notifications.isParentPath(path) ? path : HOME_PATH;
     }
 
     @Override
@@ -519,9 +558,84 @@ public final class MainActivity extends Activity implements NativeBridge.Handler
                 onSession(request);
                 reply.ok(null);
                 return true;
+            case "push.permission":
+                onPushPermission(request.optBoolean("ask"), reply);
+                return true;
+            case "push.subscribe":
+                if (!"granted".equals(notificationPermission())) {
+                    reply.error("denied", null);
+                    return true;
+                }
+                new Thread(() -> {
+                    try {
+                        reply.ok(Push.subscribe(getApplicationContext()));
+                    } catch (Exception e) {
+                        Log.w(TAG, "push subscribe failed", e);
+                        reply.error("failed", "Couldn't set up notifications. Check this phone is online.");
+                    }
+                }, "push-subscribe").start();
+                return true;
+            case "push.unsubscribe":
+                new Thread(() -> {
+                    Push.unsubscribe(getApplicationContext());
+                    reply.ok(null);
+                }, "push-unsubscribe").start();
+                return true;
             default:
                 return false;
         }
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Notifications: Android's question (13+), asked from the page's opt-in or Setup switch.
+
+    private void onPushPermission(boolean ask, NativeBridge.Reply reply) {
+        String state = notificationPermission();
+        if (ask && "prompt".equals(state) && Build.VERSION.SDK_INT >= 33) {
+            if (askingNotifications != null) askingNotifications.error("cancelled", null);
+            askingNotifications = reply;
+            Push.markAskedPermission(this);
+            requestPermissions(new String[] {Manifest.permission.POST_NOTIFICATIONS}, ASK_NOTIFICATIONS);
+            return;
+        }
+        replyPermission(reply, state);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode != ASK_NOTIFICATIONS || askingNotifications == null) return;
+        NativeBridge.Reply reply = askingNotifications;
+        askingNotifications = null;
+        replyPermission(reply, notificationPermission());
+    }
+
+    private void replyPermission(NativeBridge.Reply reply, String state) {
+        try {
+            reply.ok(new JSONObject().put("state", state).put("subscribed", Push.enabled(this)));
+        } catch (org.json.JSONException e) {
+            reply.error("failed", null);
+        }
+    }
+
+    /**
+     * {@code granted}, {@code prompt} (Android can still ask) or {@code denied} (turned off in
+     * Android's settings, or refused for good). Android 13+ asks; older versions allow
+     * notifications unless they're switched off in settings.
+     */
+    @SuppressWarnings("InlinedApi")
+    private String notificationPermission() {
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        NotificationChannel channel = manager.getNotificationChannel(Notifications.CHANNEL);
+        boolean channelOff = channel != null && channel.getImportance() == NotificationManager.IMPORTANCE_NONE;
+        if (manager.areNotificationsEnabled()) return channelOff ? "denied" : "granted";
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                && (!Push.askedPermission(this)
+                        || shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS))) {
+            return "prompt";
+        }
+        return "denied";
     }
 
     private void onSession(JSONObject session) {
@@ -569,6 +683,7 @@ public final class MainActivity extends Activity implements NativeBridge.Handler
     private void forgetPairing() {
         Log.i(TAG, "unpaired: back to the first-run screen");
         addresses.clear();
+        Push.forget(this);
         WebStorage.getInstance().deleteAllData();
         web.clearCache(true);
         bridge.setOrigins(addresses.candidates());

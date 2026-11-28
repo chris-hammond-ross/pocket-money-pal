@@ -3,6 +3,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Android 13+: asked from the page's opt-in or the Setup tab's switch (ADR 0037). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- No camera permission: Google's code scanner (Play services) shows the camera itself and
          hands back only the code it read (ADR 0035). Local-network access needs nothing while
          targetSdk is 36; at 37, ACCESS_LOCAL_NETWORK is needed for LAN addresses (ADR 0035). -->
@@ -25,6 +27,20 @@
         <meta-data
             android:name="com.google.mlkit.vision.DEPENDENCIES"
             android:value="barcode_ui" />
+
+        <!-- No FCM token until a parent turns notifications on (ADR 0037). -->
+        <meta-data
+            android:name="firebase_messaging_auto_init_enabled"
+            android:value="false" />
+
+        <!-- The push gateway's messages (ADR 0036), decrypted and shown here. -->
+        <service
+            android:name=".PushService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
 
         <activity
             android:name=".MainActivity"

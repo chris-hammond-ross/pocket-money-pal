@@ -152,13 +152,16 @@ function PushRow() {
   const ui = useParentUi();
   const [state, setState] = useState<PushState | null>(null);
   const [busy, setBusy] = useState(false);
+  // In the parents' app these are the app's own notifications (ADR 0037), not the browser's.
+  const inApp = isNativeShell();
+  const settings = inApp ? 'Android’s settings' : 'Chrome’s settings';
   useEffect(() => {
-    void pushState().then(setState);
+    pushState().then(setState, () => setState('unavailable'));
   }, []);
 
-  // The parents' app has its own notifications (session 12.4), never the browser's.
-  if (isNativeShell()) return null;
-  if (!canPush()) {
+  // An app from before notifications: nothing to switch.
+  if (inApp && state === 'unavailable') return null;
+  if (!inApp && !canPush()) {
     return (
       <div className={classes.row}>
         <span className={classes.rowIcon}>🔕</span>
@@ -183,7 +186,9 @@ function PushRow() {
         ui.notify({
           icon: '🔕',
           title: 'Notifications are blocked',
-          body: 'Allow them for this site in Chrome’s settings, then try again.',
+          body: inApp
+            ? 'Allow them for this app in Android’s settings, then try again.'
+            : 'Allow them for this site in Chrome’s settings, then try again.',
           tone: 'error',
         });
       }
@@ -220,9 +225,7 @@ function PushRow() {
       <label className={classes.toggleRow}>
         <span>
           🔔 Claimed chores on this phone
-          {state === 'denied' && (
-            <small className={classes.dimLine}>Blocked in Chrome’s settings</small>
-          )}
+          {state === 'denied' && <small className={classes.dimLine}>Blocked in {settings}</small>}
         </span>
         <Switch
           color="gold"

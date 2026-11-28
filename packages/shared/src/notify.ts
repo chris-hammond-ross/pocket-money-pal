@@ -69,6 +69,25 @@ export function claimPushText(
 /** Where tapping a money notification leads: the phone's Payday tab. */
 export const PAYDAY_PUSH_URL = '/parent?tab=payday';
 
+/**
+ * What a notification's `url` opens on the phone: the tray (`?tray=1`) and/or a tab
+ * (`?tab=payday`). Read from the address on a fresh load, and from the native app's
+ * `NATIVE_OPEN_EVENT` while the page is open (ADR 0037).
+ */
+export function pushTargetOf(url: string): { tray: boolean; tab: 'payday' | null } {
+  let parsed: URL;
+  try {
+    parsed = new URL(url, 'http://x');
+  } catch {
+    return { tray: false, tab: null };
+  }
+  const params = parsed.searchParams;
+  return {
+    tray: params.get('tray') === '1',
+    tab: params.get('tab') === 'payday' ? 'payday' : null,
+  };
+}
+
 /** "Payday is ready" in "When I press start" mode (spec 004, ADR 0010). */
 export function paydayReadyPushText(): { title: string; body: string; tag: string } {
   return {

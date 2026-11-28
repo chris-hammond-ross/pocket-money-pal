@@ -455,7 +455,10 @@ function PairedPhones() {
               {d.name}
               {d.client !== 'browser' && ' (app)'} · {d.parent.name}
             </b>
-            <small>{d.current ? 'this phone' : lastSeen(d)}</small>
+            <small>
+              {d.current ? 'this phone' : lastSeen(d)} ·{' '}
+              {d.notifications ? '🔔 notifications' : '🔕 no notifications'}
+            </small>
           </div>
           <button
             type="button"

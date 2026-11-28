@@ -7,7 +7,7 @@ import { browserTimeZone } from '../../lib/format';
 import { useFamilyPc } from '../../lib/offline';
 import { useRefetchAfterSend } from '../../lib/outbox';
 import { useLiveEvents } from '../../lib/live-events';
-import { isNativeShell, tellShell } from '../../lib/native';
+import { isNativeShell, onNativeOpen, tellShell } from '../../lib/native';
 import { useOutbox } from '../../lib/outbox';
 import { useMuted } from '../../lib/parent-prefs';
 import {
@@ -48,6 +48,7 @@ import {
   asksPushHere,
   finishSetupShows,
   nativeAddressesOf,
+  pushTargetOf,
   formatMoney,
   surpriseBanner,
   type DayPlan,
@@ -258,6 +259,18 @@ export function ParentShell({ welcome }: { welcome: Banner | null }) {
     return () => navigator.serviceWorker.removeEventListener('message', onMessage);
   }, []);
 
+  // The parents' app: a notification tapped while this page is open (ADR 0037). Opened in
+  // place, so whatever the parent had open (a quest being edited) stays.
+  useEffect(
+    () =>
+      onNativeOpen((url) => {
+        const target = pushTargetOf(url);
+        if (target.tab) setTab(target.tab);
+        if (target.tray) setTrayOpen(true);
+      }),
+    [],
+  );
+
   const items = tray.data ?? [];
   const pickDraft = (draft: SetupChore) => {
     setPicking(null);
@@ -432,8 +445,10 @@ function openTrayFromUrl(): boolean {
 }
 
 /**
- * After pairing, over HTTPS: "Notify this phone about claimed chores?" once per phone
- * (spec 003), and in the installed app rather than its browser tab (spec 009). Either answer is final here; the Setup tab has the switch afterwards.
+ * After pairing: "Notify this phone about claimed chores?" once per phone (spec 003). In a
+ * browser, over HTTPS and in the installed app rather than its tab (spec 009); in the parents'
+ * app, on any address, through its bridge (ADR 0037). Either answer is final here; the Setup
+ * tab has the switch afterwards.
  */
 function PushOptIn() {
   const ui = useParentUi();
@@ -450,7 +465,10 @@ function PushOptIn() {
     });
     if (!asks) return;
     const timer = setTimeout(() => {
-      void pushState().then((state) => setOpen(state === 'off'));
+      pushState().then(
+        (state) => setOpen(state === 'off'),
+        () => undefined,
+      );
     }, 1500);
     return () => clearTimeout(timer);
   }, []);

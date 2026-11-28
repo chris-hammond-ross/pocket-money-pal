@@ -1,4 +1,9 @@
-import { PUSH_BATCH_MS, zonedTimeToInstant, type PushSubscriptionInput } from '@pmp/shared';
+import {
+  deviceListSchema,
+  PUSH_BATCH_MS,
+  zonedTimeToInstant,
+  type PushSubscriptionInput,
+} from '@pmp/shared';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance, InjectOptions } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -123,6 +128,47 @@ describe('push subscriptions', () => {
     const del = await phone(f.mum, { method: 'DELETE', url: '/api/devices/me/push-subscription' });
     expect(del.statusCode).toBe(204);
     expect(stored()).toEqual([null, null]);
+  });
+
+  it('shows who gets notifications in the Paired phones list, and tells every screen (ADR 0037)', async () => {
+    await start();
+    const f = seed();
+    const broadcast = vi.spyOn(app.hub, 'broadcast');
+    // The parents' app: an ordinary subscription whose endpoint is the push gateway.
+    const appSub = {
+      endpoint: 'https://push.pocketmoneypal.app/v1/fcm/dGVzdC10b2tlbg:APA91b-x_y',
+      expirationTime: null,
+      keys: { p256dh: 'B'.repeat(87), auth: 'a'.repeat(22) },
+    };
+    const res = await phone(f.mum, {
+      method: 'POST',
+      url: '/api/devices/me/push-subscription',
+      payload: appSub,
+    });
+    expect(res.statusCode).toBe(204);
+    expect(broadcast).toHaveBeenCalledWith({ type: 'devices.changed' });
+    const list = async () =>
+      deviceListSchema
+        .parse((await phone(f.dad, { method: 'GET', url: '/api/devices' })).json())
+        .map((d) => [d.parent.name, d.notifications]);
+    expect(await list()).toEqual([
+      ['Mum', true],
+      ['Dad', false],
+    ]);
+
+    // The gateway says the token is gone (410): cleared, so the list says so too.
+    gone.add(appSub.endpoint);
+    expect(
+      (await phone(f.mum, { method: 'POST', url: '/api/devices/me/push-test' })).statusCode,
+    ).toBe(409);
+    expect(await list()).toEqual([
+      ['Mum', false],
+      ['Dad', false],
+    ]);
+
+    broadcast.mockClear();
+    await phone(f.dad, { method: 'DELETE', url: '/api/devices/me/push-subscription' });
+    expect(broadcast).toHaveBeenCalledWith({ type: 'devices.changed' });
   });
 
   it('refuses a subscription that isn’t one, and an unpaired phone', async () => {

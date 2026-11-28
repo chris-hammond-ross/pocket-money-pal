@@ -3,9 +3,34 @@ import {
   claimPushText,
   DEFAULT_QUIET_HOURS,
   isQuietTime,
+  CLAIM_PUSH_URL,
+  PAYDAY_PUSH_URL,
   paydayReadyPushText,
+  pushTargetOf,
   smashPushText,
 } from './notify';
+
+describe('pushTargetOf', () => {
+  it('opens the tray for a claim', () => {
+    expect(pushTargetOf(CLAIM_PUSH_URL)).toEqual({ tray: true, tab: null });
+  });
+
+  it('opens the Payday tab for money', () => {
+    expect(pushTargetOf(PAYDAY_PUSH_URL)).toEqual({ tray: false, tab: 'payday' });
+  });
+
+  it('opens nothing special for the plain app or anything unknown', () => {
+    expect(pushTargetOf('/parent')).toEqual({ tray: false, tab: null });
+    expect(pushTargetOf('/parent?tab=moon&tray=0')).toEqual({ tray: false, tab: null });
+  });
+
+  it('reads full addresses too', () => {
+    expect(pushTargetOf('https://a.pocketmoneypal.app/parent?tray=1')).toEqual({
+      tray: true,
+      tab: null,
+    });
+  });
+});
 
 describe('isQuietTime', () => {
   it('is never quiet with no quiet hours', () => {
