@@ -18,13 +18,14 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
  * The Android side of the page↔app bridge (ADR 0034, contract in
- * {@code packages/shared/src/native-bridge.ts}). It puts {@code pmpNative} in pages from the
- * family's own addresses only ({@link #setOrigins}), never in anything else the WebView shows.
+ * {@code packages/shared/src/native-bridge.ts}). It answers {@code pmpNative} in pages from the
+ * family's own addresses only ({@link #setOrigins}), never anything else the WebView shows.
  * Requests are JSON strings with an {@code id} and {@code type}; each gets exactly one answer.
  *
  * <p>The shell answers {@code info} and {@code openExternal} itself; everything else goes to the
@@ -123,33 +124,31 @@ public final class NativeBridge {
     }
 
     /**
-     * The origins whose pages get the bridge, e.g. {@code https://k7qm.pocketmoneypal.app} and
-     * {@code http://192.168.0.10:4789}. It applies to pages loaded after this call, so call it
-     * before loading a new address.
+     * The origins whose pages the bridge answers, e.g. {@code https://k7qm.pocketmoneypal.app}
+     * and {@code http://192.168.0.10:4789}. Takes effect at once, for the open page too.
+     *
+     * <p>The listener is installed once and never swapped: removing and re-adding it while a page
+     * is open leaves that page's {@code pmpNative} pointing at a listener that's gone, and its
+     * next message crashes the WebView natively (seen on WebView 157, Samsung S20+, when the
+     * family's secure address first arrived). So WebView puts the object in every page and the
+     * bridge itself answers only the family's addresses; any other page gets no answer at all.
      */
     public void setOrigins(Collection<String> next) {
         Set<String> wanted = new LinkedHashSet<>();
         for (String origin : next) {
             if (origin != null && !origin.isEmpty()) wanted.add(origin);
         }
-        if (installed && wanted.equals(origins)) return;
-        if (installed) {
-            WebViewCompat.removeWebMessageListener(web, OBJECT);
-            installed = false;
-        }
         origins = wanted;
-        if (wanted.isEmpty() || !isSupported()) return;
-        try {
-            WebViewCompat.addWebMessageListener(web, OBJECT, wanted, this::onMessage);
-            installed = true;
-        } catch (IllegalArgumentException e) {
-            Log.w(TAG, "not a valid origin among " + wanted, e);
-        }
+        if (installed || wanted.isEmpty() || !isSupported()) return;
+        WebViewCompat.addWebMessageListener(web, OBJECT, Collections.singleton("*"), this::onMessage);
+        installed = true;
     }
 
     private void onMessage(WebView view, WebMessageCompat message, Uri sourceOrigin, boolean isMainFrame,
             JavaScriptReplyProxy proxy) {
         if (!isMainFrame || message.getData() == null) return;
+        // Only the family's own addresses: anything else the WebView shows is never answered.
+        if (sourceOrigin == null || !origins.contains(sourceOrigin.toString())) return;
         JSONObject request;
         String id;
         String type;
