@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "226355257697",
+    "project_id": "pocket-money-pal-16708",
+    "storage_bucket": "pocket-money-pal-16708.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:226355257697:android:bdc1437fbbed5e110a2520",
+        "android_client_info": {
+          "package_name": "com.pocketmoneypal.parent"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_lqVzhmOrjbbDlpXbopIFbKNiVOFlwOc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:226355257697:android:66e5de58894ba68a0a2520",
+        "android_client_info": {
+          "package_name": "com.pocketmoneypal.parent.debug"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_lqVzhmOrjbbDlpXbopIFbKNiVOFlwOc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
